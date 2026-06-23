@@ -191,6 +191,37 @@ export function drawBackgroundGrid(
   g.stroke({ width: 1, color, alpha })
 }
 
+/** 每張地圖的地表色斑色系（兩色交替，疊在底色上製造起伏）。 */
+const PATCH_COLORS: Record<MapKind, readonly [number, number]> = {
+  plains: [0x16361f, 0x0f2614],
+  lava: [0x301009, 0x241410],
+  tundra: [0x143049, 0x0e2034],
+}
+
+/** 地表色斑層：大格點疊柔和半透明大色斑（三層同心 falloff），取代網格提供地表質感。 */
+function groundPatches(
+  g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number,
+): void {
+  const CELL = 220
+  const gx0 = Math.floor((cx - viewW / 2 - CELL) / CELL)
+  const gy0 = Math.floor((cy - viewH / 2 - CELL) / CELL)
+  const gx1 = Math.ceil((cx + viewW / 2 + CELL) / CELL)
+  const gy1 = Math.ceil((cy + viewH / 2 + CELL) / CELL)
+  const colors = PATCH_COLORS[kind]
+  for (let gx = gx0; gx <= gx1; gx++) {
+    for (let gy = gy0; gy <= gy1; gy++) {
+      const h = bgHash(gx * 3 + 1, gy * 3 + 1)
+      const px = gx * CELL + bgHash(gx + 11, gy + 23) * CELL
+      const py = gy * CELL + bgHash(gx + 29, gy + 41) * CELL
+      const rad = 70 + h * 95
+      const col = colors[h < 0.5 ? 0 : 1]
+      g.circle(px, py, rad).fill({ color: col, alpha: 0.05 })
+      g.circle(px, py, rad * 0.66).fill({ color: col, alpha: 0.05 })
+      g.circle(px, py, rad * 0.33).fill({ color: col, alpha: 0.05 })
+    }
+  }
+}
+
 /** 地面特徵層：依 kind 在可視範圍格點散布專屬地貌（世界座標、隨鏡頭捲動）。 */
 function drawTerrain(
   g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number, clock: number,
@@ -202,37 +233,59 @@ function drawTerrain(
   const gy1 = Math.ceil((cy + viewH / 2 + TILE) / TILE)
   for (let gx = gx0; gx <= gx1; gx++) {
     for (let gy = gy0; gy <= gy1; gy++) {
-      if (bgHash(gx, gy) > 0.55) continue // ~45% 格子有特徵
+      if (bgHash(gx, gy) > 0.5) continue // ~50% 格子有特徵
       const px = gx * TILE + bgHash(gx + 31, gy + 17) * TILE
       const py = gy * TILE + bgHash(gx + 53, gy + 97) * TILE
       const v = bgHash(gx + 7, gy + 13)
       if (kind === 'lava') {
         if (v < 0.6) {
-          g.moveTo(px - 10, py).lineTo(px - 2, py - 4).lineTo(px + 4, py + 3).lineTo(px + 12, py - 2)
-          g.stroke({ width: 2, color: 0x4a1f1a, alpha: 0.7 })
+          // 岩裂：深色陰影底 + 橙紅內光雙線
+          const path = (): void => {
+            g.moveTo(px - 11, py + 1).lineTo(px - 3, py - 5).lineTo(px + 4, py + 3).lineTo(px + 12, py - 3)
+          }
+          path(); g.stroke({ width: 3, color: 0x1a0805, alpha: 0.6 })
+          path(); g.stroke({ width: 1.2, color: 0xff6a30, alpha: 0.45 })
         } else {
+          // 餘燼：外發光暈 + 亮核（脈動）
           const a = 0.4 + 0.35 * Math.sin(clock * 3 + v * 6.28)
+          g.circle(px, py, 6).fill({ color: 0xff5722, alpha: a * 0.22 })
           g.circle(px, py, 3).fill({ color: 0xff7043, alpha: a })
-          g.circle(px, py, 1.5).fill({ color: 0xffd180, alpha: a })
+          g.circle(px, py, 1.4).fill({ color: 0xffe0b2, alpha: a })
         }
       } else if (kind === 'tundra') {
         if (v < 0.5) {
-          g.moveTo(px - 10, py - 3).lineTo(px, py).lineTo(px + 3, py - 6).lineTo(px + 11, py + 2)
-          g.stroke({ width: 2, color: 0x9fd8ff, alpha: 0.5 })
+          // 冰裂：暗藍底 + 亮藍高光雙線
+          const path = (): void => {
+            g.moveTo(px - 11, py - 3).lineTo(px, py).lineTo(px + 3, py - 6).lineTo(px + 11, py + 2)
+          }
+          path(); g.stroke({ width: 2.5, color: 0x4a7fa5, alpha: 0.4 })
+          path(); g.stroke({ width: 1, color: 0xcdeaff, alpha: 0.6 })
         } else {
-          g.ellipse(px, py, 9, 4).fill({ color: 0xffffff, alpha: 0.18 })
+          // 雪堆：雙層柔化橢圓
+          g.ellipse(px, py, 10, 4.5).fill({ color: 0xffffff, alpha: 0.1 })
+          g.ellipse(px, py - 0.5, 6, 2.8).fill({ color: 0xffffff, alpha: 0.14 })
         }
       } else {
         // plains
-        if (v < 0.7) {
-          for (let k = -1; k <= 1; k++) {
-            const lean = (bgHash(gx + k, gy + 5) - 0.5) * 8
-            g.moveTo(px + k * 4, py + 6).lineTo(px + k * 4 + lean, py - 9)
+        if (v < 0.68) {
+          // 草叢：暗綠底筆觸 + 亮綠覆蓋（5 筆、長度隨機）
+          for (let k = -2; k <= 2; k++) {
+            const lean = (bgHash(gx + k, gy + 5) - 0.5) * 10
+            const h = 7 + bgHash(gx + k, gy + 2) * 8
+            g.moveTo(px + k * 3, py + 5).lineTo(px + k * 3 + lean, py - h)
           }
-          g.stroke({ width: 2, color: 0x3a7d4a, alpha: 0.5 })
+          g.stroke({ width: 2.5, color: 0x24501a, alpha: 0.55 })
+          for (let k = -2; k <= 2; k++) {
+            const lean = (bgHash(gx + k, gy + 5) - 0.5) * 10
+            const h = 7 + bgHash(gx + k, gy + 2) * 8
+            g.moveTo(px + k * 3, py + 5).lineTo(px + k * 3 + lean * 0.9, py - h)
+          }
+          g.stroke({ width: 1, color: 0x6abf4a, alpha: 0.5 })
         } else {
-          g.circle(px, py, 4).fill({ color: 0x555555, alpha: 0.45 })
-          g.circle(px - 1, py - 1, 2).fill({ color: 0x777777, alpha: 0.4 })
+          // 碎石：落地影 + 立體高光
+          g.ellipse(px, py + 2, 5, 2.5).fill({ color: 0x000000, alpha: 0.2 })
+          g.circle(px, py, 4).fill({ color: 0x5a5a5a, alpha: 0.6 })
+          g.circle(px - 1.2, py - 1.2, 1.8).fill({ color: 0x8a8a8a, alpha: 0.6 })
         }
       }
     }
@@ -267,12 +320,11 @@ function drawAmbient(
   }
 }
 
-/** 地圖背景：淡網格 + 地面特徵 + 氛圍粒子。取代 renderer 對 drawBackgroundGrid 的直接呼叫。 */
+/** 地圖背景：柔和地表色斑 + 地面特徵 + 氛圍粒子（無網格）。取代 renderer 直接呼叫。 */
 export function drawMapBackground(
-  g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number,
-  clock: number, gridColor: number, gridAlpha: number,
+  g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number, clock: number,
 ): void {
-  drawBackgroundGrid(g, cx, cy, viewW, viewH, gridColor, gridAlpha)
+  groundPatches(g, kind, cx, cy, viewW, viewH)
   drawTerrain(g, kind, cx, cy, viewW, viewH, clock)
   drawAmbient(g, kind, cx, cy, viewW, viewH, clock)
 }

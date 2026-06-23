@@ -98,8 +98,7 @@ export class PixiRenderer {
     this.grid.clear()
     drawMapBackground(
       this.grid, world.mapKind, world.player.pos.x, world.player.pos.y,
-      this.app.renderer.width, this.app.renderer.height,
-      this.clock, world.mapGridColor, world.mapGridAlpha,
+      this.app.renderer.width, this.app.renderer.height, this.clock,
     )
 
     // 大蒜光環：持有時呼吸脈動。
