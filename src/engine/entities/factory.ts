@@ -36,10 +36,10 @@ export function createPlayer(pos: Vec2): Entity {
 /**
  * 建立敵人 entity。
  * @param pos  生成位置（會被複製）。
- * @param kind 敵人種類（預設 'basic'）；數值取自 `ENEMY_DEFS`。
+ * @param kind 敵人種類（預設 'virus'）；數值取自 `ENEMY_DEFS`。
  * @returns 新的 enemy entity，帶接觸傷害、掉落經驗值與行為相位時鐘。
  */
-export function createEnemy(pos: Vec2, kind: EnemyKind = 'basic'): Entity {
+export function createEnemy(pos: Vec2, kind: EnemyKind = 'virus'): Entity {
   const def = ENEMY_DEFS[kind]
   return {
     ...base(),
@@ -62,9 +62,12 @@ export function createEnemy(pos: Vec2, kind: EnemyKind = 'basic'): Entity {
  * @param dir 單位方向向量（呼叫端需先正規化）。
  * @param speed 飛行速度，與 `dir` 相乘成為 `vel`。
  * @param damage 命中造成的傷害。
+ * @param shape  造型來源（抗體／穿孔素）；純視覺，預設抗體。
  * @returns 新的 projectile entity，`life` 預設 1.5 秒後自動失效。
  */
-export function createProjectile(pos: Vec2, dir: Vec2, speed: number, damage: number): Entity {
+export function createProjectile(
+  pos: Vec2, dir: Vec2, speed: number, damage: number, shape: 'antibody' | 'perforin' = 'antibody',
+): Entity {
   return {
     ...base(),
     kind: 'projectile',
@@ -75,6 +78,7 @@ export function createProjectile(pos: Vec2, dir: Vec2, speed: number, damage: nu
     maxHp: 1,
     damage,
     life: 1.5,
+    projShape: shape,
   }
 }
 

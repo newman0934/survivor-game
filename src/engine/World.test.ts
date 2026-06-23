@@ -17,7 +17,7 @@ describe('World', () => {
 
   it('擊殺敵人發出 kill 事件', () => {
     const w = new World(1)
-    const e = w.spawnEnemyAt({ x: 60, y: 0 }, 'basic')
+    const e = w.spawnEnemyAt({ x: 60, y: 0 }, 'virus')
     e.hp = 1
     w.forceFire()
     for (let i = 0; i < 20; i++) w.step(1 / 60)
@@ -51,7 +51,7 @@ describe('World', () => {
   it('一般敵人死亡不掉寶箱', () => {
     const w = new World(1)
     w.stats.pickupRadius = 0
-    const e = w.spawnEnemyAt({ x: w.player.pos.x + 50, y: w.player.pos.y }, 'basic')
+    const e = w.spawnEnemyAt({ x: w.player.pos.x + 50, y: w.player.pos.y }, 'virus')
     e.hp = 1
     w.forceFire()
     for (let i = 0; i < 40; i++) w.step(1 / 60)
@@ -74,59 +74,59 @@ describe('World', () => {
     expect(w.consumeLevelUp()).toBe(true)
   })
 
-  it('熔岩地圖：敵人 hp ×1.25、視覺欄位正確', () => {
-    const w = new World(1, 'warrior', 'lava')
-    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')
+  it('胃地圖：敵人 hp ×1.25、視覺欄位正確', () => {
+    const w = new World(1, 'macrophage', 'stomach')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBeCloseTo(10 * 1.25, 5) // basic 基礎 hp 10
     expect(e.maxHp).toBeCloseTo(10 * 1.25, 5)
     expect(w.mapBgColor).toBe(0x1a0a0a)
     expect(w.mapGridColor).toBe(0xff7043)
   })
 
-  it('冰原地圖：敵人 hp ×0.9', () => {
-    const w = new World(1, 'warrior', 'tundra')
-    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')
+  it('肺泡地圖：敵人 hp ×0.9', () => {
+    const w = new World(1, 'macrophage', 'lung')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBeCloseTo(10 * 0.9, 5)
   })
 
-  it('熔岩 Boss hp 疊乘地圖倍率', () => {
-    const w = new World(1, 'warrior', 'lava')
+  it('胃 Boss hp 疊乘地圖倍率', () => {
+    const w = new World(1, 'macrophage', 'stomach')
     const b = w.spawnBossAt({ x: 100, y: 0 })
     expect(b.maxHp).toBeCloseTo(220 * 1 * 1.25, 5) // 第一隻 boss：220×1×1.25
   })
 
-  it('省略地圖預設平原（倍率皆 1、視覺同現況）', () => {
-    const w = new World(1, 'warrior')
-    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')
+  it('省略地圖預設血管（倍率皆 1、視覺同現況）', () => {
+    const w = new World(1, 'macrophage')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBe(10)
     expect(w.mapBgColor).toBe(0x0c0c12)
   })
 
-  it('預設角色為戰士（warrior）起始狀態', () => {
+  it('預設角色為巨噬細胞（macrophage）起始狀態', () => {
     const w = new World(1)
-    expect(w.weapons[0].kind).toBe('wand')
+    expect(w.weapons[0].kind).toBe('antibody')
     expect(w.player.maxHp).toBe(140)
     expect(w.player.hp).toBe(140)
     expect(w.stats.armor).toBeGreaterThan(0)
   })
 
-  it('遊俠起始：飛刀、高移速、薄血、顏色', () => {
-    const w = new World(1, 'ranger')
-    expect(w.weapons[0].kind).toBe('knife')
+  it('嗜中性球起始：穿孔素飛鏢、高移速、薄血、顏色', () => {
+    const w = new World(1, 'neutrophil')
+    expect(w.weapons[0].kind).toBe('perforin')
     expect(w.stats.moveSpeed).toBe(240)
     expect(w.player.maxHp).toBe(80)
     expect(w.playerColor).toBe(0x6bff8c)
   })
 
-  it('法師起始：聖經、高傷害乘區', () => {
-    const w = new World(1, 'mage')
-    expect(w.weapons[0].kind).toBe('bible')
+  it('NK 細胞起始：補體環、高傷害乘區', () => {
+    const w = new World(1, 'nkcell')
+    expect(w.weapons[0].kind).toBe('complement')
     expect(w.stats.damageMult).toBeCloseTo(1.25, 5)
   })
 
-  it('豐收者起始：大蒜 + 皇冠被動（xpGain>1）', () => {
-    const w = new World(1, 'harvester')
-    expect(w.weapons[0].kind).toBe('garlic')
+  it('樹突細胞起始：發炎場 + 記憶細胞被動（xpGain>1）', () => {
+    const w = new World(1, 'dendritic')
+    expect(w.weapons[0].kind).toBe('inflammation')
     expect(w.passives.some((p) => p.kind === 'crown')).toBe(true)
     expect(w.stats.xpGain).toBeGreaterThan(1)
   })
@@ -144,13 +144,13 @@ describe('World', () => {
     const before = w.enemies.length
     w.spawnSwarmAt({ x: 100, y: 0 })
     expect(w.enemies.length - before).toBe(4)
-    expect(w.enemies.slice(-4).every((e) => e.enemyKind === 'swarm')).toBe(true)
+    expect(w.enemies.slice(-4).every((e) => e.enemyKind === 'bacteria')).toBe(true)
   })
 
   it('spawnBossAt 生成一隻 boss', () => {
     const w = new World(1)
     const b = w.spawnBossAt({ x: 100, y: 0 })
-    expect(b.enemyKind).toBe('boss')
+    expect(b.enemyKind).toBe('superbug')
     expect(w.enemies.includes(b)).toBe(true)
   })
 
@@ -164,7 +164,7 @@ describe('World', () => {
   it('Boss 於 60s 里程碑出現', () => {
     const w = new World(1)
     for (let i = 0; i < 61 * 60; i++) w.step(1 / 60)
-    expect(w.enemies.some((e) => e.enemyKind === 'boss')).toBe(true)
+    expect(w.enemies.some((e) => e.enemyKind === 'superbug')).toBe(true)
   })
 
   it('summary 在有 Boss 時回報血條資料、無 Boss 時歸零', () => {
@@ -255,7 +255,7 @@ describe('World', () => {
 
   it('大蒜只傷害半徑內敵人（網格候選正確）', () => {
     const w = new World(1)
-    w.applyUpgrade('unlock:garlic')
+    w.applyUpgrade('unlock:inflammation')
     const inside = w.spawnEnemyAt({ x: 20, y: 0 })
     const outside = w.spawnEnemyAt({ x: 800, y: 0 })
     const insideHp0 = inside.hp
@@ -285,13 +285,13 @@ describe('World', () => {
 
   it('起始只持有魔杖', () => {
     const w = new World(1)
-    expect(w.weapons.map((x) => x.kind)).toEqual(['wand'])
+    expect(w.weapons.map((x) => x.kind)).toEqual(['antibody'])
   })
 
   it('套用 unlock 後新增武器並共存', () => {
     const w = new World(1)
-    w.applyUpgrade('unlock:knife')
-    expect(w.weapons.map((x) => x.kind).sort()).toEqual(['knife', 'wand'])
+    w.applyUpgrade('unlock:perforin')
+    expect(w.weapons.map((x) => x.kind).sort()).toEqual(['antibody', 'perforin'])
   })
 
   it('魔杖在有敵人時會產生投射物', () => {
@@ -304,7 +304,7 @@ describe('World', () => {
 
   it('大蒜對靠近的敵人造成傷害', () => {
     const w = new World(1)
-    w.applyUpgrade('unlock:garlic')
+    w.applyUpgrade('unlock:inflammation')
     const e = w.spawnEnemyAt({ x: 20, y: 0 }) // 在大蒜半徑內
     const hp0 = e.hp
     w.step(1 / 60)
@@ -313,7 +313,7 @@ describe('World', () => {
 
   it('持有聖經時 orbits 數量等於聖經等級的 count', () => {
     const w = new World(1)
-    w.applyUpgrade('unlock:bible') // Lv1 → count 1
+    w.applyUpgrade('unlock:complement') // Lv1 → count 1
     w.step(1 / 60)
     expect(w.orbits().length).toBe(1)
   })

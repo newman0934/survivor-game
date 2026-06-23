@@ -14,7 +14,7 @@ export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit' | '
 export type SoundEvent = 'shoot' | 'hit' | 'kill' | 'pickup' | 'levelup' | 'hurt' | 'boss' | 'chest'
 
 /** 敵人子種類；僅 kind==='enemy' 的 entity 使用，決定數值/顏色/行為。 */
-export type EnemyKind = 'basic' | 'swarm' | 'tank' | 'charger' | 'boss'
+export type EnemyKind = 'virus' | 'bacteria' | 'spore' | 'spiral' | 'superbug'
 
 /**
  * ECS 中的單一 entity（純資料）。
@@ -49,6 +49,8 @@ export interface Entity {
   enemyKind?: EnemyKind
   /** charger 行為相位時鐘（秒）；其他敵種忽略。 */
   behaviorTimer?: number
+  /** projectile 造型來源（抗體＝Y 形；穿孔素＝尖刺）；其他種類忽略。 */
+  projShape?: 'antibody' | 'perforin'
 }
 
 /**
@@ -79,7 +81,7 @@ export interface PlayerStats {
 }
 
 /** 武器種類。 */
-export type WeaponKind = 'wand' | 'knife' | 'bible' | 'garlic'
+export type WeaponKind = 'antibody' | 'perforin' | 'complement' | 'inflammation'
 
 /**
  * 一把武器的執行期狀態（純資料，存於 `World.weapons`）。
@@ -175,7 +177,7 @@ export interface PassiveDef {
 }
 
 /** 可選的起始角色種類。 */
-export type CharacterKind = 'warrior' | 'ranger' | 'mage' | 'harvester'
+export type CharacterKind = 'macrophage' | 'neutrophil' | 'nkcell' | 'dendritic'
 
 /**
  * 一個可選角色的定義（純資料）：決定起始武器、起始數值、起始被動與顏色。
@@ -198,7 +200,7 @@ export interface CharacterDef {
 }
 
 /** 可選的地圖種類。 */
-export type MapKind = 'plains' | 'lava' | 'tundra'
+export type MapKind = 'vessel' | 'stomach' | 'lung'
 
 /**
  * 一張地圖的定義（純資料）：背景視覺與難度修正。

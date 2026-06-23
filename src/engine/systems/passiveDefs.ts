@@ -18,14 +18,14 @@ export const PASSIVE_ORDER: PassiveKind[] = [
 
 /** 全部被動道具的定義表。 */
 export const PASSIVE_DEFS: Record<PassiveKind, PassiveDef> = {
-  spinach: { kind: 'spinach', label: '菠菜（傷害）', maxLevel: 5, apply: (c) => { c.stats.damageMult *= 1.1 } },
-  tome: { kind: 'tome', label: '空書（攻速）', maxLevel: 5, apply: (c) => { c.stats.cooldownMult *= 0.92 } },
-  bracer: { kind: 'bracer', label: '護腕（彈速）', maxLevel: 5, apply: (c) => { c.stats.projectileSpeedMult *= 1.1 } },
-  wings: { kind: 'wings', label: '翅膀（移速）', maxLevel: 5, apply: (c) => { c.stats.moveSpeed *= 1.08 } },
-  magnet: { kind: 'magnet', label: '吸引石（吸取）', maxLevel: 5, apply: (c) => { c.stats.pickupRadius *= 1.15 } },
-  candle: { kind: 'candle', label: '燭台（範圍）', maxLevel: 5, apply: (c) => { c.stats.areaMult *= 1.1 } },
-  heart: { kind: 'heart', label: '空心之心（最大血）', maxLevel: 5, apply: (c) => { c.player.maxHp += 25; c.player.hp += 25 } },
-  tomato: { kind: 'tomato', label: '番茄（回復）', maxLevel: 5, apply: (c) => { c.stats.regen += 0.6 } },
-  armor: { kind: 'armor', label: '護甲（減傷）', maxLevel: 5, apply: (c) => { c.stats.armor += 2 } },
-  crown: { kind: 'crown', label: '皇冠（經驗）', maxLevel: 5, apply: (c) => { c.stats.xpGain += 0.15 } },
+  spinach: { kind: 'spinach', label: '細胞激素（傷害）', maxLevel: 5, apply: (c) => { c.stats.damageMult *= 1.1 } },
+  tome: { kind: 'tome', label: '干擾素（攻速）', maxLevel: 5, apply: (c) => { c.stats.cooldownMult *= 0.92 } },
+  bracer: { kind: 'bracer', label: '趨化因子（彈速）', maxLevel: 5, apply: (c) => { c.stats.projectileSpeedMult *= 1.1 } },
+  wings: { kind: 'wings', label: '偽足（移速）', maxLevel: 5, apply: (c) => { c.stats.moveSpeed *= 1.08 } },
+  magnet: { kind: 'magnet', label: '受體（吸取）', maxLevel: 5, apply: (c) => { c.stats.pickupRadius *= 1.15 } },
+  candle: { kind: 'candle', label: '組織胺（範圍）', maxLevel: 5, apply: (c) => { c.stats.areaMult *= 1.1 } },
+  heart: { kind: 'heart', label: '幹細胞（最大血）', maxLevel: 5, apply: (c) => { c.player.maxHp += 25; c.player.hp += 25 } },
+  tomato: { kind: 'tomato', label: '生長因子（回復）', maxLevel: 5, apply: (c) => { c.stats.regen += 0.6 } },
+  armor: { kind: 'armor', label: '細胞膜（減傷）', maxLevel: 5, apply: (c) => { c.stats.armor += 2 } },
+  crown: { kind: 'crown', label: '記憶細胞（經驗）', maxLevel: 5, apply: (c) => { c.stats.xpGain += 0.15 } },
 }

@@ -6,14 +6,14 @@
  */
 import type { WeaponDef, WeaponKind } from '../types'
 
-/** 解鎖時提供候選的順序（wand 為起始武器，恆持有）。 */
-export const WEAPON_ORDER: WeaponKind[] = ['wand', 'knife', 'bible', 'garlic']
+/** 解鎖時提供候選的順序（antibody 為起始武器，恆持有）。 */
+export const WEAPON_ORDER: WeaponKind[] = ['antibody', 'perforin', 'complement', 'inflammation']
 
 /** 全部武器的等級表。 */
 export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
-  wand: {
-    kind: 'wand',
-    label: '魔杖',
+  antibody: {
+    kind: 'antibody',
+    label: '抗體',
     maxLevel: 5,
     levels: [
       { cooldown: 0.5, damage: 5, count: 1, projectileSpeed: 400 },
@@ -23,9 +23,9 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { cooldown: 0.4, damage: 8, count: 3, projectileSpeed: 400 },
     ],
   },
-  knife: {
-    kind: 'knife',
-    label: '飛刀',
+  perforin: {
+    kind: 'perforin',
+    label: '穿孔素飛鏢',
     maxLevel: 5,
     levels: [
       { cooldown: 0.35, damage: 4, count: 1, projectileSpeed: 600 },
@@ -35,9 +35,9 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { cooldown: 0.28, damage: 6, count: 3, projectileSpeed: 600 },
     ],
   },
-  bible: {
-    kind: 'bible',
-    label: '聖經',
+  complement: {
+    kind: 'complement',
+    label: '補體環',
     maxLevel: 5,
     levels: [
       { damage: 6, count: 1, radius: 90, angularSpeed: 2.5 },
@@ -47,9 +47,9 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { damage: 6, count: 3, radius: 120, angularSpeed: 3.25 },
     ],
   },
-  garlic: {
-    kind: 'garlic',
-    label: '大蒜',
+  inflammation: {
+    kind: 'inflammation',
+    label: '發炎場',
     maxLevel: 5,
     levels: [
       { damage: 3, radius: 70 },

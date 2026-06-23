@@ -1,8 +1,8 @@
 /**
  * 敵人 AI system（enemyAI）。
  *
- * 無狀態純函式：依敵人 enemyKind 設定其速度向量。basic/swarm/tank 直線追玩家；
- * charger 依 behaviorTimer 跑「走路↔衝刺」狀態機。實際位移仍由 movement.applyVelocity 處理。
+ * 無狀態純函式：依敵人 enemyKind 設定其速度向量。virus/bacteria/spore 直線追玩家；
+ * spiral 依 behaviorTimer 跑「走路↔衝刺」狀態機。實際位移仍由 movement.applyVelocity 處理。
  * 不依賴 Vue/Pinia。
  */
 import type { Entity } from '../types'
@@ -18,16 +18,16 @@ import { ENEMY_DEFS } from './enemyDefs'
  * @param dt     固定步長秒數。
  */
 export function steerEnemy(e: Entity, target: Vec2, dt: number): void {
-  if (e.enemyKind === 'charger') {
+  if (e.enemyKind === 'spiral') {
     steerCharger(e, target, dt)
     return
   }
-  steerTowards(e, target) // basic / swarm / tank：直線追擊
+  steerTowards(e, target) // virus / bacteria / spore：直線追擊
 }
 
-/** charger 狀態機：走路相慢速轉向；跨入衝刺相鎖定方向加速；衝刺相維持速度。 */
+/** spiral 狀態機：走路相慢速轉向；跨入衝刺相鎖定方向加速；衝刺相維持速度。 */
 function steerCharger(e: Entity, target: Vec2, dt: number): void {
-  const def = ENEMY_DEFS.charger
+  const def = ENEMY_DEFS.spiral
   const walkTime = def.walkTime!
   const dashTime = def.dashTime!
   const cycle = walkTime + dashTime

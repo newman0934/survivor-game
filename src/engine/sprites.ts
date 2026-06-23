@@ -5,7 +5,7 @@
  * 閃白）由 PixiRenderer 以 transform 每幀套用。純繪製、不修改模擬狀態。
  */
 import { Graphics } from 'pixi.js'
-import type { Entity, MapKind } from './types'
+import type { Entity, MapKind, CharacterKind } from './types'
 import { ENEMY_DEFS } from './systems/enemyDefs'
 
 /** 把顏色各通道乘上係數 f（<1 變暗），用來產生描邊/陰影色。 */
@@ -53,113 +53,231 @@ function shaded(g: Graphics, cx: number, cy: number, rad: number, color: number)
   g.circle(cx - rad * 0.32, cy - rad * 0.34, rad * 0.42).fill({ color: lighten(color, 0.5), alpha: 0.6 })
 }
 
-/** 玩家：機尾雙鰭 + 立體圓身 + 駕駛艙 + 朝 +x 槍口（顏色為角色色；由 renderer 依 lastMoveDir 旋轉）。 */
-export function drawPlayer(g: Graphics, e: Entity, color: number): void {
+/**
+ * 玩家：四種免疫細胞各有獨特輪廓（依玩法定位 + 生物特徵），顏色為角色色。
+ * 由 renderer 依 lastMoveDir 旋轉朝 +x。
+ */
+export function drawPlayer(g: Graphics, e: Entity, color: number, character: CharacterKind): void {
   const r = e.radius
   groundShadow(g, r)
-  // 機尾雙鰭（後方 -x）
-  g.poly([-r * 0.6, -r * 0.7, -r * 1.15, 0, -r * 0.6, r * 0.7]).fill(dim(color, 0.5))
-  // 立體圓身
-  shaded(g, 0, 0, r, color)
-  // 駕駛艙（前偏）
-  g.circle(r * 0.15, 0, r * 0.4).fill(dim(color, 0.4))
-  g.circle(r * 0.05, -r * 0.12, r * 0.18).fill({ color: lighten(color, 0.6), alpha: 0.85 })
-  // 前方槍口
-  g.poly([r - 1, -5, r + 8, 0, r - 1, 5]).fill(0xffffff)
+  const stroke = dim(color, 0.5)
+  switch (character) {
+    case 'neutrophil': {
+      // 嗜中性球（遊俠）：流線細胞 + 前導偽足（+x 衝刺方向）+ 多分葉核 + 顆粒
+      g.poly([r * 1.35, 0, r * 0.2, -r * 0.5, r * 0.2, r * 0.5]).fill({ color: lighten(color, 0.15), alpha: 0.9 })
+      g.ellipse(0, 0, r * 0.95, r * 0.82).fill({ color, alpha: 0.85 })
+      g.ellipse(0, 0, r * 0.95, r * 0.82).stroke({ width: 2, color: stroke })
+      g.circle(-r * 0.3, -r * 0.26, r * 0.32).fill({ color: lighten(color, 0.5), alpha: 0.3 })
+      // 多分葉核（3 葉相連，嗜中性球特徵）
+      for (const [lx, ly] of [[-r * 0.2, 0], [r * 0.1, -r * 0.18], [r * 0.1, r * 0.18]] as const) {
+        g.circle(lx, ly, r * 0.2).fill(dim(color, 0.4))
+      }
+      // 細胞顆粒
+      for (const [px, py] of [[-r * 0.42, r * 0.28], [r * 0.3, r * 0.34], [-r * 0.46, -r * 0.22]] as const) {
+        g.circle(px, py, r * 0.08).fill({ color: lighten(color, 0.6), alpha: 0.75 })
+      }
+      break
+    }
+    case 'nkcell': {
+      // NK 細胞（法師）：圓潤膜身 + 偏側大核 + 一叢明亮細胞毒顆粒（殺傷裝載感）
+      g.circle(0, 0, r).fill({ color, alpha: 0.85 })
+      g.circle(0, 0, r).stroke({ width: 2, color: stroke })
+      g.circle(-r * 0.28, -r * 0.28, r * 0.34).fill({ color: lighten(color, 0.5), alpha: 0.3 })
+      g.circle(-r * 0.25, r * 0.08, r * 0.4).fill(dim(color, 0.4))
+      for (const [px, py] of [[r * 0.3, -r * 0.15], [r * 0.48, r * 0.08], [r * 0.26, r * 0.26], [r * 0.5, -r * 0.28]] as const) {
+        g.circle(px, py, r * 0.12).fill({ color: lighten(color, 0.7), alpha: 0.85 })
+      }
+      break
+    }
+    case 'dendritic': {
+      // 樹突細胞（豐收者）：多條長樹突向外放射（採集/呈現抗原）+ 小膜身 + 核
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2
+        g.moveTo(Math.cos(a) * r * 0.6, Math.sin(a) * r * 0.6)
+          .lineTo(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.5)
+      }
+      g.stroke({ width: 2, color: dim(color, 0.35) })
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2
+        g.circle(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.5, r * 0.12).fill({ color: lighten(color, 0.3), alpha: 0.85 })
+      }
+      g.circle(0, 0, r * 0.72).fill({ color, alpha: 0.88 })
+      g.circle(0, 0, r * 0.72).stroke({ width: 2, color: stroke })
+      g.circle(0, 0, r * 0.32).fill(dim(color, 0.4))
+      break
+    }
+    default: {
+      // macrophage 巨噬細胞（戰士）：大型變形蟲，周身一圈短偽足（吞噬）+ 大核
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * Math.PI * 2
+        g.circle(Math.cos(a) * r * 1.0, Math.sin(a) * r * 1.0, r * 0.3).fill({ color, alpha: 0.85 })
+      }
+      g.circle(0, 0, r * 1.04).fill({ color, alpha: 0.85 })
+      g.circle(0, 0, r * 1.04).stroke({ width: 2, color: stroke })
+      g.circle(-r * 0.3, -r * 0.3, r * 0.4).fill({ color: lighten(color, 0.5), alpha: 0.3 })
+      g.circle(r * 0.08, 0, r * 0.46).fill(dim(color, 0.4))
+      g.circle(r * 0.03, -r * 0.1, r * 0.15).fill({ color: lighten(color, 0.55), alpha: 0.7 })
+    }
+  }
 }
 
 /** 敵人：依 enemyKind 畫多部件立體造型，顏色取自 ENEMY_DEFS。 */
 export function drawEnemy(g: Graphics, e: Entity): void {
   const r = e.radius
   const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
-  const dark = dim(color, 0.5)
   groundShadow(g, r)
   switch (e.enemyKind) {
-    case 'swarm': {
-      // 蜘蛛：6 條腿 + 立體小身 + 兩眼
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2
-        g.moveTo(0, 0).lineTo(Math.cos(a) * (r + 6), Math.sin(a) * (r + 6))
-      }
-      g.stroke({ width: 2, color: dark })
-      shaded(g, 0, 0, r, color)
-      g.circle(-r * 0.3, -r * 0.1, r * 0.18).fill(0xffffff)
-      g.circle(r * 0.3, -r * 0.1, r * 0.18).fill(0xffffff)
+    case 'bacteria': {
+      // 桿菌：膠囊身（兩圓覆蓋橢圓）+ 鞭毛尾曲線 + 細胞壁描邊 + 微高光
+      const bw = r * 1.6  // 膠囊半長
+      g.ellipse(0, 0, bw, r * 0.75).fill(dim(color, 0.55))     // 暗部底
+      g.ellipse(0, 0, bw, r * 0.7).fill(color)                  // 主體
+      g.ellipse(0, 0, bw, r * 0.7).stroke({ width: 1.5, color: dim(color, 0.4) }) // 細胞壁
+      g.circle(-bw * 0.6, 0, r * 0.68).fill(dim(color, 0.55))  // 後端半球暗
+      g.circle(-bw * 0.6, 0, r * 0.65).fill(color)             // 後端半球
+      g.circle(bw * 0.6, 0, r * 0.68).fill(dim(color, 0.55))   // 前端半球暗
+      g.circle(bw * 0.6, 0, r * 0.65).fill(color)              // 前端半球
+      // 鞭毛：從後端延伸的 S 形曲線（兩條）
+      g.moveTo(-bw - r * 0.3, 0)
+        .quadraticCurveTo(-bw - r * 1.1, -r * 0.7, -bw - r * 1.8, r * 0.2)
+      g.stroke({ width: 1.5, color: dim(color, 0.5) })
+      g.moveTo(-bw - r * 0.3, r * 0.2)
+        .quadraticCurveTo(-bw - r * 0.9, r * 0.9, -bw - r * 1.6, -r * 0.15)
+      g.stroke({ width: 1.2, color: dim(color, 0.45) })
+      // 高光：左上亮斑
+      g.circle(bw * 0.2, -r * 0.25, r * 0.22).fill({ color: lighten(color, 0.5), alpha: 0.55 })
       break
     }
-    case 'tank': {
-      // 重甲：立體身 + 厚裝甲環 + 4 鉚釘 + 深核心
-      shaded(g, 0, 0, r, color)
-      g.circle(0, 0, r).stroke({ width: 5, color: dim(color, 0.4) })
-      for (let i = 0; i < 4; i++) {
-        const a = i * (Math.PI / 2) + Math.PI / 4
-        g.circle(Math.cos(a) * r * 0.82, Math.sin(a) * r * 0.82, r * 0.1).fill(lighten(color, 0.3))
+    case 'spore': {
+      // 真菌孢子：厚外壁環 + 內體 + 內含顆粒小點
+      g.circle(0, 0, r).fill(dim(color, 0.35))                              // 外壁底色
+      g.circle(0, 0, r).stroke({ width: r * 0.28, color: dim(color, 0.5) }) // 厚外壁描邊
+      g.circle(0, 0, r * 0.72).fill(color)                                  // 內體
+      g.circle(0, 0, r * 0.72).stroke({ width: 1.5, color: dim(color, 0.45) })
+      // 內含顆粒：5 個小暗點散布於內部
+      const pts = [[0.3, -0.25], [-0.25, -0.3], [0.1, 0.35], [-0.35, 0.15], [0.38, 0.28]]
+      for (const [px, py] of pts) {
+        g.circle(px * r, py * r, r * 0.1).fill(dim(color, 0.4))
       }
-      g.circle(0, 0, r * 0.42).fill(dim(color, 0.3))
-      g.circle(0, 0, r * 0.42).stroke({ width: 2, color: lighten(color, 0.2) })
+      // 高光：右上亮斑
+      g.circle(-r * 0.28, -r * 0.3, r * 0.28).fill({ color: lighten(color, 0.45), alpha: 0.5 })
       break
     }
-    case 'charger': {
-      // 尖角衝刺：水滴身（前尖 +x）+ 雙角 + 單眼（renderer 依 vel 旋轉）
-      g.poly([r * 1.1, 0, 0, r * 0.8, -r * 0.8, 0, 0, -r * 0.8]).fill(dim(color, 0.55))
-      g.poly([r * 1.0, 0, 0, r * 0.7, -r * 0.7, 0, 0, -r * 0.7]).fill(color)
-      g.poly([r * 1.1, 0, 0, r * 0.8, -r * 0.8, 0, 0, -r * 0.8]).stroke({ width: 2, color: dim(color, 0.4) })
-      g.circle(-r * 0.1, -r * 0.2, r * 0.3).fill({ color: lighten(color, 0.5), alpha: 0.4 })
-      g.poly([r * 0.5, -r * 0.45, r * 1.1, -r * 0.7, r * 0.7, -r * 0.15]).fill(dim(color, 0.4))
-      g.poly([r * 0.5, r * 0.45, r * 1.1, r * 0.7, r * 0.7, r * 0.15]).fill(dim(color, 0.4))
-      g.circle(r * 0.25, 0, r * 0.16).fill(0xffffff)
-      g.circle(r * 0.32, 0, r * 0.08).fill(0x222222)
+    case 'spiral': {
+      // 螺旋體：沿 +x 軸的正弦波粗體（前端略大），renderer 依 vel 方向旋轉
+      const SEGS = 14
+      const len = r * 2.2
+      // 先畫陰影粗線
+      for (let i = 0; i < SEGS; i++) {
+        const t0 = i / SEGS, t1 = (i + 1) / SEGS
+        const x0 = -len * 0.5 + t0 * len, x1 = -len * 0.5 + t1 * len
+        const y0 = Math.sin(t0 * Math.PI * 2.5) * r * 0.55
+        const y1 = Math.sin(t1 * Math.PI * 2.5) * r * 0.55
+        const sw = r * 0.28 + t0 * r * 0.18   // 前端（+x）較粗
+        g.moveTo(x0, y0).lineTo(x1, y1)
+        g.stroke({ width: sw + 2, color: dim(color, 0.4) })
+      }
+      // 主色粗線
+      for (let i = 0; i < SEGS; i++) {
+        const t0 = i / SEGS, t1 = (i + 1) / SEGS
+        const x0 = -len * 0.5 + t0 * len, x1 = -len * 0.5 + t1 * len
+        const y0 = Math.sin(t0 * Math.PI * 2.5) * r * 0.55
+        const y1 = Math.sin(t1 * Math.PI * 2.5) * r * 0.55
+        const sw = r * 0.28 + t0 * r * 0.18
+        g.moveTo(x0, y0).lineTo(x1, y1)
+        g.stroke({ width: sw, color })
+      }
+      // 前端頭部小圓（+x 一側）
+      g.circle(len * 0.45, 0, r * 0.28).fill(lighten(color, 0.25))
+      g.circle(len * 0.45, 0, r * 0.28).stroke({ width: 1.5, color: dim(color, 0.4) })
       break
     }
-    case 'boss': {
-      // 巨獸：鋸齒尖冠 + 立體身 + 內核 + 兩發光眼
-      for (let i = 0; i < 10; i++) {
-        const a = (i * Math.PI) / 5
-        g.poly([
-          Math.cos(a) * r, Math.sin(a) * r,
-          Math.cos(a + 0.15) * (r + 12), Math.sin(a + 0.15) * (r + 12),
-          Math.cos(a + 0.3) * r, Math.sin(a + 0.3) * r,
-        ]).fill(dim(color, 0.5))
+    case 'superbug': {
+      // 超級病原：不規則團塊（5 個交疊圓 lobes）+ 暗核 + 兩發光亮點
+      const lobes = [
+        [0, 0, 1.0],          // 中央主體
+        [r * 0.55, -r * 0.4, 0.75],
+        [-r * 0.5, -r * 0.38, 0.72],
+        [r * 0.45, r * 0.5, 0.68],
+        [-r * 0.38, r * 0.52, 0.65],
+      ] as const
+      // 暗部底：每個 lobe 略下偏
+      for (const [lx, ly, lf] of lobes) {
+        g.circle(lx, ly + r * 0.1, r * lf).fill(dim(color, 0.5))
       }
-      shaded(g, 0, 0, r, color)
-      g.circle(0, 0, r * 0.5).fill(dim(color, 0.35))
-      g.circle(-r * 0.3, -r * 0.1, r * 0.16).fill(0xfff176)
-      g.circle(r * 0.3, -r * 0.1, r * 0.16).fill(0xfff176)
+      // 主色 lobes
+      for (const [lx, ly, lf] of lobes) {
+        g.circle(lx, ly, r * lf).fill(color)
+      }
+      // 外輪廓描邊
+      g.circle(0, 0, r * 1.05).stroke({ width: 2, color: dim(color, 0.4) })
+      // 暗核
+      g.circle(0, 0, r * 0.45).fill(dim(color, 0.3))
+      // 發光亮點（模擬眼睛/內核高光，保留脈動縮放空間）
+      g.circle(-r * 0.28, -r * 0.12, r * 0.17).fill(0xce93d8)
+      g.circle(-r * 0.28, -r * 0.12, r * 0.17).stroke({ width: 1.5, color: 0xffffff })
+      g.circle(r * 0.28, -r * 0.12, r * 0.17).fill(0xce93d8)
+      g.circle(r * 0.28, -r * 0.12, r * 0.17).stroke({ width: 1.5, color: 0xffffff })
       break
     }
     default: {
-      // basic（黏液）：立體身 + 兩眼（含瞳）+ 嘴/獠牙
+      // virus（多刺二十面體殼）：立體圓身 + 一圈三角棘突 + 衣殼核心
       shaded(g, 0, 0, r, color)
-      g.circle(-r * 0.3, -r * 0.15, r * 0.2).fill(0xffffff)
-      g.circle(-r * 0.26, -r * 0.1, r * 0.1).fill(0x222222)
-      g.circle(r * 0.3, -r * 0.15, r * 0.2).fill(0xffffff)
-      g.circle(r * 0.34, -r * 0.1, r * 0.1).fill(0x222222)
-      g.poly([-r * 0.22, r * 0.32, 0, r * 0.55, r * 0.22, r * 0.32]).fill(dim(color, 0.4))
+      // 12 枚棘突（三角形，從表面向外輻射）
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2
+        const ax = Math.cos(a), ay = Math.sin(a)
+        const bx = Math.cos(a - 0.22), by = Math.sin(a - 0.22)
+        const cx2 = Math.cos(a + 0.22), cy2 = Math.sin(a + 0.22)
+        g.poly([
+          ax * (r + r * 0.35), ay * (r + r * 0.35),   // 尖端
+          bx * r * 0.92,       by * r * 0.92,           // 基底左
+          cx2 * r * 0.92,      cy2 * r * 0.92,          // 基底右
+        ]).fill(dim(color, 0.6))
+      }
+      // 衣殼核心（深色小圓）
+      g.circle(0, 0, r * 0.45).fill(dim(color, 0.3))
     }
   }
 }
 
-/** 經驗寶石：旋轉菱形 + 亮心（旋轉由 PixiRenderer 套用）。 */
+/** 抗原碎片：偏黃菱形 + 亮心（旋轉由 PixiRenderer 套用）。 */
 export function drawGem(g: Graphics, e: Entity): void {
   const r = e.radius
-  g.poly([0, -r, r, 0, 0, r, -r, 0]).fill(0x6bff6b)
-  g.poly([0, -r, r, 0, 0, r, -r, 0]).stroke({ width: 1.5, color: 0xd6ffd6 })
+  g.poly([0, -r, r, 0, 0, r, -r, 0]).fill(0xffd54a)
+  g.poly([0, -r, r, 0, 0, r, -r, 0]).stroke({ width: 1.5, color: 0xfff3c4 })
   g.circle(0, 0, r * 0.35).fill(0xffffff)
 }
 
-/** 投射物：亮核 + 柔光暈（拉長方向由 PixiRenderer 依 vel 旋轉）。 */
+/** 中和彈：依 projShape 區分抗體（Y 形）與穿孔素（尖刺）；方向由 PixiRenderer 依 vel 旋轉（指向 +x）。 */
 export function drawProjectile(g: Graphics, e: Entity): void {
   const r = e.radius
-  g.circle(0, 0, r * 2.2).fill({ color: 0xffe27a, alpha: 0.25 })
-  g.ellipse(0, 0, r * 1.8, r * 0.8).fill(0xfff3b0)
+  if (e.projShape === 'perforin') {
+    // 穿孔素飛鏢：細長琥珀色尖針（前尖 +x）+ 後方拖尾（明顯比抗體長）
+    g.poly([-r * 2.6, 0, -r * 0.4, -r * 0.18, -r * 0.4, r * 0.18]).fill({ color: 0xffcc55, alpha: 0.5 })
+    g.poly([r * 2.7, 0, -r * 0.3, -r * 0.42, -r * 0.95, 0, -r * 0.3, r * 0.42]).fill(0xffa000)
+    g.poly([r * 2.7, 0, -r * 0.1, -r * 0.2, -r * 0.1, r * 0.2]).fill(0xfff3c4)
+  } else {
+    // 抗體：青色 Y 形（雙叉朝 +x、叉端亮球）+ 冷光暈（緊湊、與尖針對比）
+    g.circle(0, 0, r * 2.0).fill({ color: 0x4ad6ff, alpha: 0.22 })
+    g.moveTo(-r * 1.2, 0).lineTo(0, 0)
+    g.moveTo(0, 0).lineTo(r * 1.2, -r * 1.05)
+    g.moveTo(0, 0).lineTo(r * 1.2, r * 1.05)
+    g.stroke({ width: 3, color: 0x8be9ff })
+    g.circle(r * 1.2, -r * 1.05, r * 0.3).fill(0xeaffff)
+    g.circle(r * 1.2, r * 1.05, r * 0.3).fill(0xeaffff)
+    g.circle(0, 0, r * 0.42).fill(0x4ad6ff)
+  }
 }
 
-/** 聖經環繞物：書本造型（旋轉由 PixiRenderer 套用）。 */
+/** 補體蛋白球：發光蛋白球體（旋轉由 PixiRenderer 套用）。 */
 export function drawOrbit(g: Graphics, e: Entity): void {
   const r = e.radius
-  g.roundRect(-r, -r * 0.8, r * 2, r * 1.6, 2).fill(0x8d6e63)
-  g.rect(-r * 0.85, -r * 0.65, r * 1.7, r * 1.3).fill(0xfff8e1)
-  g.moveTo(0, -r * 0.65).lineTo(0, r * 0.65).stroke({ width: 1.5, color: 0x8d6e63 })
+  // 蛋白球主體
+  g.circle(0, 0, r).fill(0xbfeaff)
+  g.circle(0, 0, r).stroke({ width: 1.5, color: dim(0xbfeaff, 0.55) })
+  // 亮心點（發光感）
+  g.circle(0, 0, r * 0.38).fill(0xffffff)
 }
 
 /** 寶箱：金棕箱身 + 蓋線金條 + 中央鎖扣。 */
@@ -193,9 +311,9 @@ export function drawBackgroundGrid(
 
 /** 每張地圖的地表色斑色系（兩色交替，疊在底色上製造起伏）。 */
 const PATCH_COLORS: Record<MapKind, readonly [number, number]> = {
-  plains: [0x16361f, 0x0f2614],
-  lava: [0x301009, 0x241410],
-  tundra: [0x143049, 0x0e2034],
+  vessel:  [0x3a0d12, 0x2a0a0e],   // 暗紅血漿
+  stomach: [0x3a1c0a, 0x2c1408],   // 胃黏膜暖褐
+  lung:    [0x16303f, 0x102330],   // 藍灰肺泡
 }
 
 /** 地表色斑層：大格點疊柔和半透明大色斑（三層同心 falloff），取代網格提供地表質感。 */
@@ -237,55 +355,48 @@ function drawTerrain(
       const px = gx * TILE + bgHash(gx + 31, gy + 17) * TILE
       const py = gy * TILE + bgHash(gx + 53, gy + 97) * TILE
       const v = bgHash(gx + 7, gy + 13)
-      if (kind === 'lava') {
+      if (kind === 'stomach') {
         if (v < 0.6) {
-          // 岩裂：深色陰影底 + 橙紅內光雙線
+          // 胃黏膜皺褶：暖褐曲線雙線（陰影底 + 亮線）
+          const ox = (bgHash(gx + 71, gy + 83) - 0.5) * 12
           const path = (): void => {
-            g.moveTo(px - 11, py + 1).lineTo(px - 3, py - 5).lineTo(px + 4, py + 3).lineTo(px + 12, py - 3)
+            g.moveTo(px - 13, py + ox)
+              .quadraticCurveTo(px, py + ox - 7, px + 13, py + ox + 4)
           }
-          path(); g.stroke({ width: 3, color: 0x1a0805, alpha: 0.6 })
-          path(); g.stroke({ width: 1.2, color: 0xff6a30, alpha: 0.45 })
+          path(); g.stroke({ width: 3.2, color: 0x1a0900, alpha: 0.55 })
+          path(); g.stroke({ width: 1.4, color: 0xc07838, alpha: 0.55 })
         } else {
-          // 餘燼：外發光暈 + 亮核（脈動）
+          // 酸泡：外發光暈（暖橙）+ 亮核（脈動，沿用 clock）
           const a = 0.4 + 0.35 * Math.sin(clock * 3 + v * 6.28)
-          g.circle(px, py, 6).fill({ color: 0xff5722, alpha: a * 0.22 })
-          g.circle(px, py, 3).fill({ color: 0xff7043, alpha: a })
-          g.circle(px, py, 1.4).fill({ color: 0xffe0b2, alpha: a })
+          g.circle(px, py, 6).fill({ color: 0xffb74d, alpha: a * 0.22 })
+          g.circle(px, py, 3).fill({ color: 0xffb74d, alpha: a })
+          g.circle(px, py, 1.4).fill({ color: 0xfff0c4, alpha: a })
         }
-      } else if (kind === 'tundra') {
-        if (v < 0.5) {
-          // 冰裂：暗藍底 + 亮藍高光雙線
-          const path = (): void => {
-            g.moveTo(px - 11, py - 3).lineTo(px, py).lineTo(px + 3, py - 6).lineTo(px + 11, py + 2)
-          }
-          path(); g.stroke({ width: 2.5, color: 0x4a7fa5, alpha: 0.4 })
-          path(); g.stroke({ width: 1, color: 0xcdeaff, alpha: 0.6 })
+      } else if (kind === 'lung') {
+        if (v < 0.6) {
+          // 肺泡氣囊：淡藍柔化圓 + 內陰影（兩層圓環製造立體感）
+          const rad = 9 + v * 7
+          g.circle(px, py, rad).fill({ color: 0x4a9fbf, alpha: 0.12 })
+          g.circle(px, py, rad).stroke({ width: 1.5, color: 0x8fcfe0, alpha: 0.35 })
+          g.circle(px + rad * 0.22, py + rad * 0.22, rad * 0.6).fill({ color: 0x0a1a28, alpha: 0.1 })
         } else {
-          // 雪堆：雙層柔化橢圓
-          g.ellipse(px, py, 10, 4.5).fill({ color: 0xffffff, alpha: 0.1 })
-          g.ellipse(px, py - 0.5, 6, 2.8).fill({ color: 0xffffff, alpha: 0.14 })
+          // 氣孔小點
+          g.circle(px, py, 2).fill({ color: 0x9fd4e8, alpha: 0.4 })
+          g.circle(px, py, 1).fill({ color: 0xcdeaff, alpha: 0.55 })
         }
       } else {
-        // plains
+        // vessel
         if (v < 0.68) {
-          // 草叢：暗綠底筆觸 + 亮綠覆蓋（5 筆、長度隨機）
-          for (let k = -2; k <= 2; k++) {
-            const lean = (bgHash(gx + k, gy + 5) - 0.5) * 10
-            const h = 7 + bgHash(gx + k, gy + 2) * 8
-            g.moveTo(px + k * 3, py + 5).lineTo(px + k * 3 + lean, py - h)
-          }
-          g.stroke({ width: 2.5, color: 0x24501a, alpha: 0.55 })
-          for (let k = -2; k <= 2; k++) {
-            const lean = (bgHash(gx + k, gy + 5) - 0.5) * 10
-            const h = 7 + bgHash(gx + k, gy + 2) * 8
-            g.moveTo(px + k * 3, py + 5).lineTo(px + k * 3 + lean * 0.9, py - h)
-          }
-          g.stroke({ width: 1, color: 0x6abf4a, alpha: 0.5 })
+          // 漂浮紅血球：雙色凹環橢圓（外紅環 + 暗中心凹）
+          const rw = 9 + v * 5
+          const rh = rw * 0.55
+          g.ellipse(px, py, rw, rh).fill({ color: 0xc62828, alpha: 0.55 })
+          g.ellipse(px, py, rw * 0.6, rh * 0.6).fill({ color: 0x7b1010, alpha: 0.6 })
+          g.ellipse(px, py, rw, rh).stroke({ width: 1, color: 0xe57373, alpha: 0.35 })
         } else {
-          // 碎石：落地影 + 立體高光
-          g.ellipse(px, py + 2, 5, 2.5).fill({ color: 0x000000, alpha: 0.2 })
-          g.circle(px, py, 4).fill({ color: 0x5a5a5a, alpha: 0.6 })
-          g.circle(px - 1.2, py - 1.2, 1.8).fill({ color: 0x8a8a8a, alpha: 0.6 })
+          // 血小板：不規則小點
+          g.circle(px, py, 2.5).fill({ color: 0xef9a9a, alpha: 0.5 })
+          g.circle(px - 1, py - 0.8, 1).fill({ color: 0xffcdd2, alpha: 0.5 })
         }
       }
     }
@@ -303,19 +414,21 @@ function drawAmbient(
   for (let i = 0; i < N; i++) {
     const fx = bgHash(i, 101)
     const fy = bgHash(i, 202)
-    if (kind === 'tundra') {
+    if (kind === 'lung') {
+      // 緩慢上飄淡藍氣流粒
       const sx = L + wrap(fx * viewW + Math.sin(clock * 0.8 + i) * 14, viewW)
-      const sy = T + wrap(fy * viewH + clock * (18 + fx * 22), viewH)
-      g.circle(sx, sy, 1.4 + fx * 1.6).fill({ color: 0xffffff, alpha: 0.55 })
-    } else if (kind === 'lava') {
+      const sy = T + wrap(fy * viewH - clock * (18 + fx * 22), viewH)
+      g.circle(sx, sy, 1.4 + fx * 1.6).fill({ color: 0xbfdcef, alpha: 0.55 })
+    } else if (kind === 'stomach') {
+      // 上升酸泡粒（沿用上升模式，暖黃色）
       const sx = L + wrap(fx * viewW + Math.sin(clock + i) * 8, viewW)
-      const sy = T + wrap(fy * viewH - clock * (20 + fx * 25), viewH) // 火星上升
-      g.circle(sx, sy, 1 + fx * 1.4).fill({ color: 0xffab40, alpha: 0.5 })
+      const sy = T + wrap(fy * viewH - clock * (20 + fx * 25), viewH)
+      g.circle(sx, sy, 1 + fx * 1.4).fill({ color: 0xffd180, alpha: 0.5 })
     } else {
-      // plains 草屑/光點
+      // vessel：隨血流漂移的微紅粒（低 alpha）
       const sx = L + wrap(fx * viewW + Math.sin(clock * 0.5 + i) * 20, viewW)
       const sy = T + wrap(fy * viewH + clock * (6 + fx * 8), viewH)
-      g.circle(sx, sy, 1 + fx).fill({ color: 0xaed581, alpha: 0.35 })
+      g.circle(sx, sy, 1 + fx).fill({ color: 0xff8a80, alpha: 0.28 })
     }
   }
 }
@@ -329,10 +442,10 @@ export function drawMapBackground(
   drawAmbient(g, kind, cx, cy, viewW, viewH, clock)
 }
 
-/** 大蒜光環：環形（描邊 + 極淡填充），半徑/alpha 隨時鐘 t 呼吸。 */
+/** 發炎場/ROS 光環：環形（描邊 + 極淡填充），半徑/alpha 隨時鐘 t 呼吸。 */
 export function drawGarlicAura(g: Graphics, cx: number, cy: number, radius: number, t: number): void {
   const pr = radius * (1 + 0.04 * Math.sin(t * 3))
   const a = 0.12 + 0.05 * Math.sin(t * 3)
-  g.circle(cx, cy, pr).fill({ color: 0x9b59b6, alpha: a })
-  g.circle(cx, cy, pr).stroke({ width: 2, color: 0x9b59b6, alpha: 0.4 })
+  g.circle(cx, cy, pr).fill({ color: 0xff6e40, alpha: a })
+  g.circle(cx, cy, pr).stroke({ width: 2, color: 0xff6e40, alpha: 0.4 })
 }

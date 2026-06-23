@@ -33,7 +33,7 @@ export function fireWand(
     const dx = t.pos.x - origin.x
     const dy = t.pos.y - origin.y
     const len = Math.hypot(dx, dy) || 1 // 防止與目標重疊時除以零
-    return createProjectile(origin, { x: dx / len, y: dy / len }, speed, damage)
+    return createProjectile(origin, { x: dx / len, y: dy / len }, speed, damage, 'antibody')
   })
 }
 
@@ -63,7 +63,7 @@ export function fireKnife(
     // 以中央對稱展開：i 對應的角度偏移量
     const offset = (i - (count - 1) / 2) * KNIFE_SPREAD
     const a = baseAngle + offset
-    out.push(createProjectile(origin, { x: Math.cos(a), y: Math.sin(a) }, speed, damage))
+    out.push(createProjectile(origin, { x: Math.cos(a), y: Math.sin(a) }, speed, damage, 'perforin'))
   }
   return out
 }

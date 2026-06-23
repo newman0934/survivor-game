@@ -7,16 +7,16 @@
 import type { EnemyDef, EnemyKind } from '../types'
 
 /** 確定性迭代用的固定順序。 */
-export const ENEMY_ORDER: EnemyKind[] = ['basic', 'swarm', 'tank', 'charger', 'boss']
+export const ENEMY_ORDER: EnemyKind[] = ['virus', 'bacteria', 'spore', 'spiral', 'superbug']
 
 /** 全部敵人的定義表。 */
 export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
-  basic: { kind: 'basic', hp: 10, speed: 60, damage: 5, radius: 12, xp: 1, color: 0xff5252, unlockTime: 0, spawnWeight: 50 },
-  swarm: { kind: 'swarm', hp: 4, speed: 110, damage: 3, radius: 8, xp: 1, color: 0xff9d5c, unlockTime: 0, spawnWeight: 35 },
-  tank: { kind: 'tank', hp: 60, speed: 35, damage: 12, radius: 20, xp: 5, color: 0x8e2b2b, unlockTime: 45, spawnWeight: 12 },
-  charger: {
-    kind: 'charger', hp: 18, speed: 45, damage: 10, radius: 13, xp: 4, color: 0xe91e63,
+  virus: { kind: 'virus', hp: 10, speed: 60, damage: 5, radius: 12, xp: 1, color: 0xff5252, unlockTime: 0, spawnWeight: 50 },
+  bacteria: { kind: 'bacteria', hp: 4, speed: 110, damage: 3, radius: 8, xp: 1, color: 0xff9d5c, unlockTime: 0, spawnWeight: 35 },
+  spore: { kind: 'spore', hp: 60, speed: 35, damage: 12, radius: 20, xp: 5, color: 0x8e2b2b, unlockTime: 45, spawnWeight: 12 },
+  spiral: {
+    kind: 'spiral', hp: 18, speed: 45, damage: 10, radius: 13, xp: 4, color: 0xe91e63,
     unlockTime: 90, spawnWeight: 10, dashSpeed: 320, walkTime: 2.5, dashTime: 0.5,
   },
-  boss: { kind: 'boss', hp: 220, speed: 30, damage: 20, radius: 34, xp: 50, color: 0x9c27b0, unlockTime: 0, spawnWeight: 0 },
+  superbug: { kind: 'superbug', hp: 220, speed: 30, damage: 20, radius: 34, xp: 50, color: 0x9c27b0, unlockTime: 0, spawnWeight: 0 },
 }
