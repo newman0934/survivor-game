@@ -253,18 +253,20 @@ export function drawGem(g: Graphics, e: Entity): void {
 export function drawProjectile(g: Graphics, e: Entity): void {
   const r = e.radius
   if (e.projShape === 'perforin') {
-    // 穿孔素飛鏢：細長尖刺微粒（前尖 +x）+ 暖白光暈
-    g.circle(0, 0, r * 1.8).fill({ color: 0xfff0d0, alpha: 0.22 })
-    g.poly([r * 1.9, 0, -r * 0.7, -r * 0.55, -r * 0.4, 0, -r * 0.7, r * 0.55]).fill(0xfff3c4)
-    g.poly([r * 1.9, 0, -r * 0.4, -r * 0.28, -r * 0.4, r * 0.28]).fill(0xffffff)
+    // 穿孔素飛鏢：細長琥珀色尖針（前尖 +x）+ 後方拖尾（明顯比抗體長）
+    g.poly([-r * 2.6, 0, -r * 0.4, -r * 0.18, -r * 0.4, r * 0.18]).fill({ color: 0xffcc55, alpha: 0.5 })
+    g.poly([r * 2.7, 0, -r * 0.3, -r * 0.42, -r * 0.95, 0, -r * 0.3, r * 0.42]).fill(0xffa000)
+    g.poly([r * 2.7, 0, -r * 0.1, -r * 0.2, -r * 0.1, r * 0.2]).fill(0xfff3c4)
   } else {
-    // 抗體：冰藍柔光暈 + Y 形輪廓（雙臂朝 +x 開口）+ 亮心
-    g.circle(0, 0, r * 2.2).fill({ color: 0xbfefff, alpha: 0.25 })
-    g.moveTo(-r * 1.1, 0).lineTo(0, 0)
-    g.moveTo(0, 0).lineTo(r * 1.1, -r * 0.9)
-    g.moveTo(0, 0).lineTo(r * 1.1, r * 0.9)
-    g.stroke({ width: 2.2, color: 0xeaffff })
-    g.circle(0, 0, r * 0.55).fill(0xffffff)
+    // 抗體：青色 Y 形（雙叉朝 +x、叉端亮球）+ 冷光暈（緊湊、與尖針對比）
+    g.circle(0, 0, r * 2.0).fill({ color: 0x4ad6ff, alpha: 0.22 })
+    g.moveTo(-r * 1.2, 0).lineTo(0, 0)
+    g.moveTo(0, 0).lineTo(r * 1.2, -r * 1.05)
+    g.moveTo(0, 0).lineTo(r * 1.2, r * 1.05)
+    g.stroke({ width: 3, color: 0x8be9ff })
+    g.circle(r * 1.2, -r * 1.05, r * 0.3).fill(0xeaffff)
+    g.circle(r * 1.2, r * 1.05, r * 0.3).fill(0xeaffff)
+    g.circle(0, 0, r * 0.42).fill(0x4ad6ff)
   }
 }
 
