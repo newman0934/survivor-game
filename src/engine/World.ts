@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind } from './types'
+import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind, SoundEvent } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -94,6 +94,9 @@ export class World {
   /** 由上層每格寫入的玩家移動方向（已正規化的 -1..1 向量）。 */
   moveInput: Vec2 = { x: 0, y: 0 }
 
+  /** 本格累積的語意音效事件；由上層每幀 consumeSoundEvents 排空。 */
+  private soundEventQueue: SoundEvent[] = []
+
   /** 確定性亂數來源（seeded）；模擬內所有隨機都走這裡。 */
   private rng: Rng
   /** 累積遊戲時間（秒）。 */
@@ -153,6 +156,13 @@ export class World {
     return this.chestEntities
   }
 
+  /** 取走並清空本格累積的音效事件（供上層交給音訊層播放）。 */
+  consumeSoundEvents(): SoundEvent[] {
+    const out = this.soundEventQueue
+    this.soundEventQueue = []
+    return out
+  }
+
   /**
    * 在指定位置生成一隻敵人並加入場上。
    * @param pos 生成位置。
@@ -198,6 +208,7 @@ export class World {
     this.scaleEnemyHp(b)
     this.bossCount += 1
     this.enemies.push(b)
+    this.soundEventQueue.push('boss')
     return b
   }
 
@@ -249,6 +260,7 @@ export class World {
       this.xp -= xpForLevel(this.level)
       this.level += 1
       this.pendingLevelUps += 1
+      this.soundEventQueue.push('levelup')
     }
   }
 
@@ -334,6 +346,7 @@ export class World {
               ? fireWand(this.player.pos, this.enemies, count, damage, speed)
               : fireKnife(this.player.pos, this.lastMoveDir, count, damage, speed)
           this.projectiles.push(...projs)
+          if (projs.length > 0) this.soundEventQueue.push('shoot')
         }
       } else if (weapon.kind === 'garlic') {
         // 大蒜：每格對範圍內敵人連續扣血（dmg*dt），命中後結算死亡。
@@ -365,6 +378,7 @@ export class World {
         if (!e.active) continue
         if (circlesOverlap(p, e)) {
           e.hp -= p.damage
+          this.soundEventQueue.push('hit')
           p.active = false // 子彈單體命中即消耗
           if (e.hp <= 0) this.killEnemy(e)
           break // 一發子彈只命中一隻敵人
@@ -380,6 +394,7 @@ export class World {
       if (distance(g.pos, this.player.pos) <= this.player.radius) {
         g.active = false
         this.grantXp(g.xp * this.stats.xpGain)
+        this.soundEventQueue.push('pickup')
       }
     }
 
@@ -391,6 +406,7 @@ export class World {
       if (distance(c.pos, this.player.pos) <= this.player.radius) {
         c.active = false
         this.pendingLevelUps += 1
+        this.soundEventQueue.push('chest')
       }
     }
 
@@ -402,6 +418,7 @@ export class World {
       if (!e.active) continue
       if (circlesOverlap(e, this.player)) {
         this.player.hp -= Math.max(0, e.damage - this.stats.armor) * dt * 10
+        this.soundEventQueue.push('hurt')
       }
     }
 
@@ -492,6 +509,7 @@ export class World {
     this.kills += 1
     this.gemEntities.push(createGem(e.pos, e.xp))
     if (e.enemyKind === 'boss') this.chestEntities.push(createChest(e.pos))
+    this.soundEventQueue.push('kill')
   }
 
   /** @returns 玩家是否已死亡（hp <= 0）。 */

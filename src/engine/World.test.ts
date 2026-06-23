@@ -9,6 +9,30 @@ describe('World', () => {
     expect(w.activeEnemies().length).toBe(0)
   })
 
+  it('擊殺敵人發出 kill、Boss 生成發出 boss 事件', () => {
+    const w = new World(1)
+    w.spawnBossAt({ x: 50, y: 0 })
+    expect(w.consumeSoundEvents()).toContain('boss')
+    const e = w.spawnEnemyAt({ x: 60, y: 0 }, 'basic')
+    e.hp = 1
+    w.forceFire()
+    for (let i = 0; i < 20; i++) w.step(1 / 60)
+    expect(w.consumeSoundEvents()).toContain('kill')
+  })
+
+  it('升級發出 levelup 事件', () => {
+    const w = new World(1)
+    w.grantXp(xpForLevel(1))
+    expect(w.consumeSoundEvents()).toContain('levelup')
+  })
+
+  it('consumeSoundEvents 回傳後清空', () => {
+    const w = new World(1)
+    w.spawnBossAt({ x: 0, y: 0 })
+    expect(w.consumeSoundEvents().length).toBeGreaterThan(0)
+    expect(w.consumeSoundEvents()).toEqual([])
+  })
+
   it('擊殺 Boss 掉落寶箱', () => {
     const w = new World(1)
     w.stats.pickupRadius = 0 // 避免寶箱/寶石被吸走，便於觀察
