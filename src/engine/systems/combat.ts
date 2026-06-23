@@ -34,3 +34,23 @@ export function findNearest(from: Vec2, enemies: Entity[]): Entity | null {
   }
   return best
 }
+
+/**
+ * 找出距離 from 最近的 n 隻存活敵人，由近到遠排序。
+ *
+ * 用於多投射物武器（如高等魔杖）一次鎖定多個目標：先濾掉失效者，依距離排序後取前 n 隻。
+ * 不足 n 隻時回傳全部存活者。
+ *
+ * @param from    量測距離的起點（通常是玩家座標）。
+ * @param enemies 候選敵人陣列。
+ * @param n       想取得的目標數量。
+ * @returns 最多 n 隻、由近到遠的存活敵人。
+ */
+export function findNearestN(from: Vec2, enemies: Entity[], n: number): Entity[] {
+  return enemies
+    .filter((e) => e.active)
+    .map((e) => ({ e, d: distance(from, e.pos) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, n)
+    .map((x) => x.e)
+}
