@@ -16,13 +16,43 @@ function dim(color: number, f: number): number {
   return (Math.round(r * f) << 16) | (Math.round(g * f) << 8) | Math.round(b * f)
 }
 
-/** 玩家：柔光圈 + 圓身 + 描邊 + 朝 +x 的槍口三角（顏色為所選角色色）。 */
+/** 把顏色各通道朝白色混合 f（0..1，越大越亮），用來產生高光色。 */
+function lighten(color: number, f: number): number {
+  const r = (color >> 16) & 0xff
+  const g = (color >> 8) & 0xff
+  const b = color & 0xff
+  const lr = Math.round(r + (255 - r) * f)
+  const lg = Math.round(g + (255 - g) * f)
+  const lb = Math.round(b + (255 - b) * f)
+  return (lr << 16) | (lg << 8) | lb
+}
+
+/** 落地陰影：壓扁的半透明深色橢圓，墊在造型最底，讓單位「站」在地上。 */
+function groundShadow(g: Graphics, rad: number): void {
+  g.ellipse(0, rad * 0.85, rad * 0.9, rad * 0.4).fill({ color: 0x000000, alpha: 0.25 })
+}
+
+/** 立體圓身：暗部底（略下偏）+ 主色 + 描邊 + 左上高光。 */
+function shaded(g: Graphics, cx: number, cy: number, rad: number, color: number): void {
+  g.circle(cx, cy + rad * 0.12, rad).fill(dim(color, 0.55))
+  g.circle(cx, cy, rad).fill(color)
+  g.circle(cx, cy, rad).stroke({ width: 2, color: dim(color, 0.45) })
+  g.circle(cx - rad * 0.32, cy - rad * 0.34, rad * 0.42).fill({ color: lighten(color, 0.5), alpha: 0.6 })
+}
+
+/** 玩家：機尾雙鰭 + 立體圓身 + 駕駛艙 + 朝 +x 槍口（顏色為角色色；由 renderer 依 lastMoveDir 旋轉）。 */
 export function drawPlayer(g: Graphics, e: Entity, color: number): void {
   const r = e.radius
-  g.circle(0, 0, r * 1.8).fill({ color, alpha: 0.15 })
-  g.circle(0, 0, r).fill(color)
-  g.circle(0, 0, r).stroke({ width: 2, color: 0xffffff })
-  g.poly([r - 1, -5, r + 7, 0, r - 1, 5]).fill(0xffffff)
+  groundShadow(g, r)
+  // 機尾雙鰭（後方 -x）
+  g.poly([-r * 0.6, -r * 0.7, -r * 1.15, 0, -r * 0.6, r * 0.7]).fill(dim(color, 0.5))
+  // 立體圓身
+  shaded(g, 0, 0, r, color)
+  // 駕駛艙（前偏）
+  g.circle(r * 0.15, 0, r * 0.4).fill(dim(color, 0.4))
+  g.circle(r * 0.05, -r * 0.12, r * 0.18).fill({ color: lighten(color, 0.6), alpha: 0.85 })
+  // 前方槍口
+  g.poly([r - 1, -5, r + 8, 0, r - 1, 5]).fill(0xffffff)
 }
 
 /** 敵人：依 enemyKind 畫不同造型，顏色取自 ENEMY_DEFS。 */
