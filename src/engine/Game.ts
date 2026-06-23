@@ -16,6 +16,7 @@ import { World } from './World'
 import { PixiRenderer } from './PixiRenderer'
 import { KeyboardInput } from './core/input'
 import { TouchInput } from './core/touchInput'
+import { soundManager } from './core/soundManager'
 import { rollUpgrades } from './systems/leveling'
 import { createRng } from './core/rng'
 import { useGameStore } from '../stores/game'
@@ -64,6 +65,8 @@ export class Game {
     const game = new Game(world, renderer, seed)
     game.input.attach()
     game.touch.attach(canvasParent)
+    soundManager.resume()
+    soundManager.startMusic()
     game.store.onUpgradePicked = (id: string) => {
       world.applyUpgrade(id)
       game.paused = false
@@ -115,6 +118,7 @@ export class Game {
         // 死亡即推送最終 summary、通知 store 遊戲結束並停掉迴圈。
         if (this.world.isPlayerDead()) {
           this.store.updateSummary(this.world.summary())
+          soundManager.play('gameover')
           this.store.gameOver()
           this.stop()
           return
@@ -122,6 +126,8 @@ export class Game {
       }
       // 每幀（消化完該幀步數後）推送一次 summary 給 store 更新 HUD。
       this.store.updateSummary(this.world.summary())
+      // 排空本幀累積的語意音效事件交由音訊層播放。
+      for (const ev of this.world.consumeSoundEvents()) soundManager.play(ev)
     }
 
     this.renderer.render(this.world)
@@ -135,6 +141,7 @@ export class Game {
     cancelAnimationFrame(this.rafId)
     this.input.detach()
     this.touch.detach()
+    soundManager.stopMusic()
     this.renderer.destroy()
   }
 }
