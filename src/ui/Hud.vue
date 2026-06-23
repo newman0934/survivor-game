@@ -35,6 +35,8 @@ const mmss = computed(() => {
 .hud { position: absolute; inset: 0; pointer-events: none; color: #fff;
   font-family: sans-serif; display: flex; flex-direction: column; }
 .topbar { display: flex; justify-content: space-between; padding: 0.5rem 1rem;
+  /* 右側預留靜音鈕（2.4rem + 右距 0.5rem）空間，避免蓋住「擊殺」 */
+  padding-right: 3.4rem;
   font-size: 1.1rem; text-shadow: 0 1px 2px #000; }
 .time { font-size: 1.4rem; font-weight: bold; }
 .bar { height: 8px; margin: 2px 1rem; background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
