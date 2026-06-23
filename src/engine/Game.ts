@@ -98,7 +98,7 @@ export class Game {
 
         // 升級握手：偵測到本步升級即提供 3 選 1、設定選後 callback、暫停迴圈並中斷消化。
         if (this.world.consumeLevelUp()) {
-          const opts = rollUpgrades(this.upgradeRng, 3)
+          const opts = rollUpgrades(this.upgradeRng, 3, this.world.upgradeContext())
           this.store.offerUpgrades(opts.map((o) => ({ id: o.id, label: o.label })))
           this.store.onUpgradePicked = (id: string) => {
             this.world.applyUpgrade(id)
