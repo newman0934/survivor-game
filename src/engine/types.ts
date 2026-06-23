@@ -198,7 +198,7 @@ export interface CharacterDef {
 }
 
 /** 可選的地圖種類。 */
-export type MapKind = 'plains' | 'lava' | 'tundra'
+export type MapKind = 'vessel' | 'stomach' | 'lung'
 
 /**
  * 一張地圖的定義（純資料）：背景視覺與難度修正。

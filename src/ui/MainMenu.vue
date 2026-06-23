@@ -10,7 +10,7 @@ import type { CharacterKind, MapKind } from '../engine/types'
 
 const emit = defineEmits<{ start: [opts: { character: CharacterKind; map: MapKind }] }>()
 const character = ref<CharacterKind>('macrophage')
-const map = ref<MapKind>('plains')
+const map = ref<MapKind>('vessel')
 
 /** 把顏色數字轉成 CSS hex 字串。 */
 function css(color: number): string {

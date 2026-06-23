@@ -73,7 +73,7 @@ export class World {
   /** 玩家圓顏色（取自所選角色）；供 renderer 取用。 */
   playerColor = 0x4aa3ff
   /** 所選地圖種類（供 renderer 決定背景地貌）。 */
-  mapKind: MapKind = 'plains'
+  mapKind: MapKind = 'vessel'
   /** 背景底色（取自所選地圖）；供 renderer 取用。 */
   mapBgColor = 0x0c0c12
   /** 背景網格線顏色（取自所選地圖）。 */
@@ -130,7 +130,7 @@ export class World {
    * @param seed      本場的亂數種子，決定生怪位置等隨機序列（可重現）。
    * @param character 起始角色（預設戰士）；決定起始武器/數值/血/被動/顏色。
    */
-  constructor(seed: number, character: CharacterKind = 'macrophage', map: MapKind = 'plains') {
+  constructor(seed: number, character: CharacterKind = 'macrophage', map: MapKind = 'vessel') {
     this.rng = createRng(seed)
     this.player = createPlayer({ x: 0, y: 0 })
     const def = CHARACTER_DEFS[character]

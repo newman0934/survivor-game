@@ -74,8 +74,8 @@ describe('World', () => {
     expect(w.consumeLevelUp()).toBe(true)
   })
 
-  it('熔岩地圖：敵人 hp ×1.25、視覺欄位正確', () => {
-    const w = new World(1, 'macrophage', 'lava')
+  it('胃地圖：敵人 hp ×1.25、視覺欄位正確', () => {
+    const w = new World(1, 'macrophage', 'stomach')
     const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBeCloseTo(10 * 1.25, 5) // basic 基礎 hp 10
     expect(e.maxHp).toBeCloseTo(10 * 1.25, 5)
@@ -83,19 +83,19 @@ describe('World', () => {
     expect(w.mapGridColor).toBe(0xff7043)
   })
 
-  it('冰原地圖：敵人 hp ×0.9', () => {
-    const w = new World(1, 'macrophage', 'tundra')
+  it('肺泡地圖：敵人 hp ×0.9', () => {
+    const w = new World(1, 'macrophage', 'lung')
     const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBeCloseTo(10 * 0.9, 5)
   })
 
-  it('熔岩 Boss hp 疊乘地圖倍率', () => {
-    const w = new World(1, 'macrophage', 'lava')
+  it('胃 Boss hp 疊乘地圖倍率', () => {
+    const w = new World(1, 'macrophage', 'stomach')
     const b = w.spawnBossAt({ x: 100, y: 0 })
     expect(b.maxHp).toBeCloseTo(220 * 1 * 1.25, 5) // 第一隻 boss：220×1×1.25
   })
 
-  it('省略地圖預設平原（倍率皆 1、視覺同現況）', () => {
+  it('省略地圖預設血管（倍率皆 1、視覺同現況）', () => {
     const w = new World(1, 'macrophage')
     const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBe(10)

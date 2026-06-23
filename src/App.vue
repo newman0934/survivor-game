@@ -28,7 +28,7 @@ let game: Game | null = null
 // 每場遊戲遞增的亂數種子，確保不同場次有不同（但可重現）的隨機序列。
 let seed = 1
 // 記住目前選定的角色與地圖（供「再玩一次」沿用）；預設戰士 + 平原。
-let selected: { character: CharacterKind; map: MapKind } = { character: 'macrophage', map: 'plains' }
+let selected: { character: CharacterKind; map: MapKind } = { character: 'macrophage', map: 'vessel' }
 
 // 開始一場新遊戲：先把 store 重置為 playing，再非同步啟動引擎並掛上畫布。
 async function startGame(opts: { character: CharacterKind; map: MapKind } = selected) {

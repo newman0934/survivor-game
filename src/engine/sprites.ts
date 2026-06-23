@@ -193,9 +193,9 @@ export function drawBackgroundGrid(
 
 /** 每張地圖的地表色斑色系（兩色交替，疊在底色上製造起伏）。 */
 const PATCH_COLORS: Record<MapKind, readonly [number, number]> = {
-  plains: [0x16361f, 0x0f2614],
-  lava: [0x301009, 0x241410],
-  tundra: [0x143049, 0x0e2034],
+  vessel: [0x16361f, 0x0f2614],
+  stomach: [0x301009, 0x241410],
+  lung: [0x143049, 0x0e2034],
 }
 
 /** 地表色斑層：大格點疊柔和半透明大色斑（三層同心 falloff），取代網格提供地表質感。 */
@@ -237,7 +237,7 @@ function drawTerrain(
       const px = gx * TILE + bgHash(gx + 31, gy + 17) * TILE
       const py = gy * TILE + bgHash(gx + 53, gy + 97) * TILE
       const v = bgHash(gx + 7, gy + 13)
-      if (kind === 'lava') {
+      if (kind === 'stomach') {
         if (v < 0.6) {
           // 岩裂：深色陰影底 + 橙紅內光雙線
           const path = (): void => {
@@ -252,7 +252,7 @@ function drawTerrain(
           g.circle(px, py, 3).fill({ color: 0xff7043, alpha: a })
           g.circle(px, py, 1.4).fill({ color: 0xffe0b2, alpha: a })
         }
-      } else if (kind === 'tundra') {
+      } else if (kind === 'lung') {
         if (v < 0.5) {
           // 冰裂：暗藍底 + 亮藍高光雙線
           const path = (): void => {
@@ -303,11 +303,11 @@ function drawAmbient(
   for (let i = 0; i < N; i++) {
     const fx = bgHash(i, 101)
     const fy = bgHash(i, 202)
-    if (kind === 'tundra') {
+    if (kind === 'lung') {
       const sx = L + wrap(fx * viewW + Math.sin(clock * 0.8 + i) * 14, viewW)
       const sy = T + wrap(fy * viewH + clock * (18 + fx * 22), viewH)
       g.circle(sx, sy, 1.4 + fx * 1.6).fill({ color: 0xffffff, alpha: 0.55 })
-    } else if (kind === 'lava') {
+    } else if (kind === 'stomach') {
       const sx = L + wrap(fx * viewW + Math.sin(clock + i) * 8, viewW)
       const sy = T + wrap(fy * viewH - clock * (20 + fx * 25), viewH) // 火星上升
       g.circle(sx, sy, 1 + fx * 1.4).fill({ color: 0xffab40, alpha: 0.5 })
