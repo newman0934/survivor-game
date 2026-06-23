@@ -46,9 +46,44 @@ describe('World', () => {
 
   it('applyUpgrade mutates player stats', () => {
     const w = new World(1)
-    const before = w.stats.projectileDamage
+    const before = w.stats.damageMult
     w.applyUpgrade('damage')
-    expect(w.stats.projectileDamage).toBeGreaterThan(before)
+    expect(w.stats.damageMult).toBeGreaterThan(before)
+  })
+
+  it('起始只持有魔杖', () => {
+    const w = new World(1)
+    expect(w.weapons.map((x) => x.kind)).toEqual(['wand'])
+  })
+
+  it('套用 unlock 後新增武器並共存', () => {
+    const w = new World(1)
+    w.applyUpgrade('unlock:knife')
+    expect(w.weapons.map((x) => x.kind).sort()).toEqual(['knife', 'wand'])
+  })
+
+  it('魔杖在有敵人時會產生投射物', () => {
+    const w = new World(1)
+    // 敵人放遠，讓投射物在數步內仍在飛行（避免命中後被清除導致誤判）。
+    w.spawnEnemyAt({ x: 300, y: 0 })
+    for (let i = 0; i < 5; i++) w.step(1 / 60)
+    expect(w.projectiles.length).toBeGreaterThan(0)
+  })
+
+  it('大蒜對靠近的敵人造成傷害', () => {
+    const w = new World(1)
+    w.applyUpgrade('unlock:garlic')
+    const e = w.spawnEnemyAt({ x: 20, y: 0 }) // 在大蒜半徑內
+    const hp0 = e.hp
+    w.step(1 / 60)
+    expect(e.hp).toBeLessThan(hp0)
+  })
+
+  it('持有聖經時 orbits 數量等於聖經等級的 count', () => {
+    const w = new World(1)
+    w.applyUpgrade('unlock:bible') // Lv1 → count 1
+    w.step(1 / 60)
+    expect(w.orbits().length).toBe(1)
   })
 
   it('isPlayerDead reflects player hp dropping to zero', () => {

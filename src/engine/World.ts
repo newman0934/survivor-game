@@ -10,17 +10,18 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats } from './types'
+import type { Entity, PlayerStats, Weapon, UpgradeContext } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
-import { createPlayer, createEnemy, createProjectile, createGem } from './entities/factory'
+import { createPlayer, createEnemy, createGem, createOrbit } from './entities/factory'
 import { applyVelocity, steerTowards } from './systems/movement'
 import { spawnInterval, spawnPositionAround } from './systems/spawn'
-import { findNearest } from './systems/combat'
+import { fireWand, fireKnife, orbitPositions, garlicTick } from './systems/weapons'
+import { WEAPON_DEFS } from './systems/weaponDefs'
 import { circlesOverlap } from './systems/collision'
 import { attractGem } from './systems/pickup'
-import { xpForLevel, ALL_UPGRADES } from './systems/leveling'
+import { xpForLevel, applyUpgradeById } from './systems/leveling'
 import type { Summary } from '../stores/game'
 
 /** 敵人生成的距離：在玩家周圍此半徑的圓上隨機生怪（畫面外）。 */
@@ -38,14 +39,26 @@ export class World {
   /** 場上所有經驗寶石。 */
   gemEntities: Entity[] = []
 
-  /** 玩家數值，會被升級就地修改。 */
+  /** 玩家數值（全域乘區），會被升級就地修改。 */
   stats: PlayerStats = {
     moveSpeed: 200,
-    fireCooldown: 0.5,
-    projectileDamage: 5,
-    projectileSpeed: 400,
     pickupRadius: 120,
+    damageMult: 1,
+    cooldownMult: 1,
+    projectileSpeedMult: 1,
+    areaMult: 1,
   }
+
+  /** 玩家持有的武器（起始只有魔杖）；各自獨立計時與升級、共存開火。 */
+  weapons: Weapon[] = [{ kind: 'wand', level: 1, cooldownTimer: 0 }]
+  /** 玩家最後一次非零移動方向（飛刀發射方向用）；預設朝右。 */
+  lastMoveDir: Vec2 = { x: 1, y: 0 }
+  /** 聖經環繞基準角（每格隨角速度累加）。 */
+  private bibleAngle = 0
+  /** 聖經環繞物 entity（每格依等級重建/更新位置）。 */
+  private orbitEntities: Entity[] = []
+  /** 聖經 per-enemy 命中冷卻（秒）；避免每幀重複扣血。 */
+  private bibleHitTimers = new Map<Entity, number>()
 
   /** 由上層每格寫入的玩家移動方向（已正規化的 -1..1 向量）。 */
   moveInput: Vec2 = { x: 0, y: 0 }
@@ -56,8 +69,6 @@ export class World {
   private elapsed = 0
   /** 生怪倒數計時器（秒）；歸零即生怪並重置。 */
   private spawnTimer = 0
-  /** 開火倒數計時器（秒）；歸零即嘗試開火並重置為 `fireCooldown`。 */
-  private fireTimer = 0
   /** 目前等級。 */
   private level = 1
   /** 目前等級內已累積的經驗值。 */
@@ -95,9 +106,38 @@ export class World {
     return e
   }
 
-  /** 強制下一格立即開火（重置開火計時器）。 */
+  /** 強制下一格立即開火（重置所有武器的開火計時器）。 */
   forceFire(): void {
-    this.fireTimer = 0
+    for (const w of this.weapons) w.cooldownTimer = 0
+  }
+
+  /** @returns 目前的聖經環繞物（供 renderer 顯示）。 */
+  orbits(): Entity[] {
+    return this.orbitEntities
+  }
+
+  /**
+   * 建立升級套用所需的上下文（stats + weapons + heal）。
+   * @returns 指向 World 內部狀態的上下文，供 leveling 就地修改。
+   */
+  upgradeContext(): UpgradeContext {
+    return {
+      stats: this.stats,
+      weapons: this.weapons,
+      heal: (amount: number) => {
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + amount)
+      },
+    }
+  }
+
+  /**
+   * @returns 目前大蒜場域半徑（已套乘區）；未持有大蒜則回 0。供 renderer 畫場域圓。
+   */
+  garlicRadius(): number {
+    const g = this.weapons.find((w) => w.kind === 'garlic')
+    if (!g) return 0
+    const lvl = WEAPON_DEFS.garlic.levels[g.level - 1]
+    return (lvl.radius ?? 0) * this.stats.areaMult
   }
 
   /**
@@ -128,12 +168,11 @@ export class World {
   }
 
   /**
-   * 套用指定 id 的升級效果到玩家數值（升級握手的最後一步）。
-   * @param id 升級選項 id；找不到時安靜略過。
+   * 套用指定 id 的升級效果（升級握手的最後一步）。委派給 leveling.applyUpgradeById。
+   * @param id 升級選項 id；未知 id 安靜略過。
    */
   applyUpgrade(id: string): void {
-    const up = ALL_UPGRADES.find((u) => u.id === id)
-    up?.apply(this.stats)
+    applyUpgradeById(id, this.upgradeContext())
   }
 
   /**
@@ -147,6 +186,12 @@ export class World {
     // 1) 玩家移動：依輸入方向與移動速度設定速度，再套用位移。
     this.player.vel = { x: this.moveInput.x * this.stats.moveSpeed, y: this.moveInput.y * this.stats.moveSpeed }
     applyVelocity(this.player, dt)
+
+    // 記錄最後非零移動方向（飛刀發射方向用）。
+    if (this.moveInput.x !== 0 || this.moveInput.y !== 0) {
+      const len = Math.hypot(this.moveInput.x, this.moveInput.y) || 1
+      this.lastMoveDir = { x: this.moveInput.x / len, y: this.moveInput.y / len }
+    }
 
     // 2) 生怪：計時器歸零時，依目前時間決定下次間隔（難度曲線），並在玩家周圍隨機生一隻。
     this.spawnTimer -= dt
@@ -163,27 +208,34 @@ export class World {
       applyVelocity(e, dt)
     }
 
-    // 4) 自動開火：冷卻歸零時鎖定最近敵人，朝其方向發射一發 projectile。
-    this.fireTimer -= dt
-    if (this.fireTimer <= 0) {
-      const target = findNearest(this.player.pos, this.enemies)
-      if (target) {
-        this.fireTimer = this.stats.fireCooldown
-        const dir = {
-          x: target.pos.x - this.player.pos.x,
-          y: target.pos.y - this.player.pos.y,
+    // 4) 武器：遍歷每把武器，各自倒數冷卻並結算行為（生效值 = 等級值 × 全域乘區）。
+    for (const weapon of this.weapons) {
+      const lvl = WEAPON_DEFS[weapon.kind].levels[weapon.level - 1]
+      const damage = lvl.damage * this.stats.damageMult
+
+      if (weapon.kind === 'wand' || weapon.kind === 'knife') {
+        weapon.cooldownTimer -= dt
+        if (weapon.cooldownTimer <= 0) {
+          weapon.cooldownTimer = (lvl.cooldown ?? 0.5) * this.stats.cooldownMult
+          const speed = (lvl.projectileSpeed ?? 400) * this.stats.projectileSpeedMult
+          const count = lvl.count ?? 1
+          const projs =
+            weapon.kind === 'wand'
+              ? fireWand(this.player.pos, this.enemies, count, damage, speed)
+              : fireKnife(this.player.pos, this.lastMoveDir, count, damage, speed)
+          this.projectiles.push(...projs)
         }
-        // 正規化方向；`|| 1` 防止與玩家重疊時除以零。
-        const len = Math.hypot(dir.x, dir.y) || 1
-        const proj = createProjectile(
-          this.player.pos,
-          { x: dir.x / len, y: dir.y / len },
-          this.stats.projectileSpeed,
-          this.stats.projectileDamage,
-        )
-        this.projectiles.push(proj)
+      } else if (weapon.kind === 'garlic') {
+        // 大蒜：每格對範圍內敵人連續扣血（dmg*dt），命中後結算死亡。
+        const radius = (lvl.radius ?? 70) * this.stats.areaMult
+        garlicTick(this.player.pos, this.enemies, radius, damage, dt)
+        this.checkKills()
       }
+      // bible 的位置與命中於下方步驟 4b 統一處理
     }
+
+    // 4b) 聖經：依目前持有的聖經（若有）重建環繞物、更新位置並結算命中。
+    this.updateBible(dt)
 
     // 5) 子彈飛行與命中：先位移、再倒數壽命；命中第一隻敵人即扣血並讓子彈失效，
     //    敵人血量歸零則記擊殺並在原地掉落經驗寶石。
@@ -234,6 +286,67 @@ export class World {
     this.enemies = this.enemies.filter((e) => e.active)
     this.projectiles = this.projectiles.filter((p) => p.active)
     this.gemEntities = this.gemEntities.filter((g) => g.active)
+  }
+
+  /**
+   * 聖經：依目前持有的聖經重建/更新環繞物位置，並結算對敵人的命中（含 per-enemy 命中冷卻）。
+   * 未持有聖經時清空環繞物。
+   * @param dt 固定步長秒數。
+   */
+  private updateBible(dt: number): void {
+    const bible = this.weapons.find((w) => w.kind === 'bible')
+    if (!bible) {
+      this.orbitEntities = []
+      return
+    }
+    const lvl = WEAPON_DEFS.bible.levels[bible.level - 1]
+    const count = lvl.count ?? 1
+    const radius = (lvl.radius ?? 90) * this.stats.areaMult
+    const damage = lvl.damage * this.stats.damageMult
+    this.bibleAngle += (lvl.angularSpeed ?? 2.5) * dt
+
+    // 重建環繞物數量以對齊 count，並更新位置與傷害。
+    const pts = orbitPositions(this.player.pos, count, radius, this.bibleAngle)
+    if (this.orbitEntities.length !== count) {
+      this.orbitEntities = pts.map((p) => createOrbit(p, damage))
+    } else {
+      for (let i = 0; i < count; i++) {
+        this.orbitEntities[i].pos = pts[i]
+        this.orbitEntities[i].damage = damage
+      }
+    }
+
+    // 命中冷卻倒數（過期或敵人失效即移除）。
+    for (const [e, t] of this.bibleHitTimers) {
+      const nt = t - dt
+      if (nt <= 0 || !e.active) this.bibleHitTimers.delete(e)
+      else this.bibleHitTimers.set(e, nt)
+    }
+    // 環繞物對重疊敵人扣血（冷卻外才扣）。
+    for (const orb of this.orbitEntities) {
+      for (const e of this.enemies) {
+        if (!e.active) continue
+        if (this.bibleHitTimers.has(e)) continue
+        const dx = orb.pos.x - e.pos.x
+        const dy = orb.pos.y - e.pos.y
+        if (Math.hypot(dx, dy) <= orb.radius + e.radius) {
+          e.hp -= orb.damage
+          this.bibleHitTimers.set(e, 0.5) // 0.5 秒內不再被同武器扣血
+        }
+      }
+    }
+    this.checkKills()
+  }
+
+  /** 掃描敵人，凡 hp<=0 者記擊殺、掉寶並失效（供場域/環繞型武器命中後結算）。 */
+  private checkKills(): void {
+    for (const e of this.enemies) {
+      if (e.active && e.hp <= 0) {
+        e.active = false
+        this.kills += 1
+        this.gemEntities.push(createGem(e.pos, e.xp))
+      }
+    }
   }
 
   /** @returns 玩家是否已死亡（hp <= 0）。 */
