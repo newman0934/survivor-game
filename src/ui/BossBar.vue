@@ -13,10 +13,12 @@ const pct = computed(() => (store.bossMaxHp ? (store.bossHp / store.bossMaxHp) *
 </script>
 
 <template>
-  <div v-if="store.bossActive" class="bossbar">
-    <div class="label">BOSS</div>
-    <div class="bar"><div class="fill" :style="{ width: pct + '%' }" /></div>
-  </div>
+  <Transition name="boss">
+    <div v-if="store.bossActive" class="bossbar">
+      <div class="label">BOSS</div>
+      <div class="bar"><div class="fill" :class="{ low: pct < 25 }" :style="{ width: pct + '%' }" /></div>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -27,4 +29,15 @@ const pct = computed(() => (store.bossMaxHp ? (store.bossHp / store.bossMaxHp) *
   text-shadow: 0 1px 2px #000; margin-bottom: 2px; }
 .bar { height: 14px; background: rgba(255, 255, 255, 0.15); border-radius: 7px; overflow: hidden; }
 .fill { background: #9c27b0; height: 100%; border-radius: 7px; transition: width 0.1s linear; }
+.boss-enter-active, .boss-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
+.boss-enter-from, .boss-leave-to { opacity: 0; transform: translate(-50%, -12px); }
+.fill.low { animation: bosslow 0.6s ease-in-out infinite; }
+@keyframes bosslow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(229, 115, 246, 0); }
+  50% { box-shadow: 0 0 10px 2px rgba(229, 115, 246, 0.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss-enter-active, .boss-leave-active { transition: none; }
+  .fill.low { animation: none; }
+}
 </style>
