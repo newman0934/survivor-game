@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createPlayer, createEnemy, createProjectile, createGem } from './factory'
+import { createPlayer, createEnemy, createProjectile, createGem, createChest } from './factory'
 import { ENEMY_DEFS } from '../systems/enemyDefs'
 
 describe('entity factory', () => {
@@ -50,5 +50,15 @@ describe('createEnemy by kind', () => {
   it('charger 初始 behaviorTimer 為 0', () => {
     const c = createEnemy({ x: 0, y: 0 }, 'charger')
     expect(c.behaviorTimer).toBe(0)
+  })
+})
+
+describe('createChest', () => {
+  it('建立 chest entity（radius 14）', () => {
+    const c = createChest({ x: 5, y: 6 })
+    expect(c.kind).toBe('chest')
+    expect(c.pos).toEqual({ x: 5, y: 6 })
+    expect(c.radius).toBe(14)
+    expect(c.active).toBe(true)
   })
 })

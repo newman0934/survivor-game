@@ -100,6 +100,15 @@ export function drawOrbit(g: Graphics, e: Entity): void {
   g.moveTo(0, -r * 0.65).lineTo(0, r * 0.65).stroke({ width: 1.5, color: 0x8d6e63 })
 }
 
+/** 寶箱：金棕箱身 + 蓋線金條 + 中央鎖扣。 */
+export function drawChest(g: Graphics, e: Entity): void {
+  const r = e.radius
+  g.roundRect(-r, -r * 0.75, r * 2, r * 1.5, 3).fill(0x8d6e63)
+  g.roundRect(-r, -r * 0.75, r * 2, r * 1.5, 3).stroke({ width: 2, color: 0x5d4037 })
+  g.rect(-r, -r * 0.2, r * 2, r * 0.14).fill(0xffd54a) // 蓋線金條
+  g.rect(-r * 0.22, -r * 0.18, r * 0.44, r * 0.5).fill(0xffd54a) // 中央鎖扣
+}
+
 /** 背景網格：在世界座標、玩家可視範圍內畫間距 64 的細線（無限捲動）；顏色/透明度由地圖決定。 */
 export function drawBackgroundGrid(
   g: Graphics, cx: number, cy: number, viewW: number, viewH: number, color: number, alpha: number,

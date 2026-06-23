@@ -8,7 +8,7 @@
 import type { Vec2 } from './core/vector'
 
 /** entity 的種類標籤；renderer 依此決定顏色，system 依此決定行為。 */
-export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit'
+export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit' | 'chest'
 
 /** 敵人子種類；僅 kind==='enemy' 的 entity 使用，決定數值/顏色/行為。 */
 export type EnemyKind = 'basic' | 'swarm' | 'tank' | 'charger' | 'boss'

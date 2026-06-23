@@ -98,3 +98,12 @@ export function createGem(pos: Vec2, xp: number): Entity {
 export function createOrbit(pos: Vec2, damage: number): Entity {
   return { ...base(), kind: 'orbit', pos: { ...pos }, radius: 12, damage }
 }
+
+/**
+ * 建立寶箱 entity（Boss 死亡掉落）。
+ * @param pos 掉落位置（會被複製）。
+ * @returns 新的 chest entity。
+ */
+export function createChest(pos: Vec2): Entity {
+  return { ...base(), kind: 'chest', pos: { ...pos }, radius: 14 }
+}
