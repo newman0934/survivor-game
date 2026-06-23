@@ -9,7 +9,6 @@
 目標是盡可能存活久一點。
 
 目前進度為**階段 0 + 1**（引擎地基 + 完整核心循環）。狀態與路線圖見 `progress.md`；
-設計與計畫文件在 `../docs/superpowers/specs/` 與 `../docs/superpowers/plans/`。
 
 ## 架構 — 最重要的一條規則
 
