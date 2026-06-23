@@ -9,6 +9,35 @@ describe('World', () => {
     expect(w.activeEnemies().length).toBe(0)
   })
 
+  it('預設角色為戰士（warrior）起始狀態', () => {
+    const w = new World(1)
+    expect(w.weapons[0].kind).toBe('wand')
+    expect(w.player.maxHp).toBe(140)
+    expect(w.player.hp).toBe(140)
+    expect(w.stats.armor).toBeGreaterThan(0)
+  })
+
+  it('遊俠起始：飛刀、高移速、薄血、顏色', () => {
+    const w = new World(1, 'ranger')
+    expect(w.weapons[0].kind).toBe('knife')
+    expect(w.stats.moveSpeed).toBe(240)
+    expect(w.player.maxHp).toBe(80)
+    expect(w.playerColor).toBe(0x6bff8c)
+  })
+
+  it('法師起始：聖經、高傷害乘區', () => {
+    const w = new World(1, 'mage')
+    expect(w.weapons[0].kind).toBe('bible')
+    expect(w.stats.damageMult).toBeCloseTo(1.25, 5)
+  })
+
+  it('豐收者起始：大蒜 + 皇冠被動（xpGain>1）', () => {
+    const w = new World(1, 'harvester')
+    expect(w.weapons[0].kind).toBe('garlic')
+    expect(w.passives.some((p) => p.kind === 'crown')).toBe(true)
+    expect(w.stats.xpGain).toBeGreaterThan(1)
+  })
+
   it('生怪會帶 enemyKind', () => {
     const w = new World(1)
     for (let i = 0; i < 180; i++) w.step(1 / 60)

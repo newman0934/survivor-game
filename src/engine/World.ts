@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive } from './types'
+import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, CharacterKind } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -20,6 +20,8 @@ import { spawnInterval, spawnPositionAround, pickEnemyKind } from './systems/spa
 import { steerEnemy } from './systems/enemyAI'
 import { ENEMY_DEFS, ENEMY_ORDER } from './systems/enemyDefs'
 import { SpatialGrid } from './core/spatialGrid'
+import { CHARACTER_DEFS } from './systems/characterDefs'
+import { PASSIVE_DEFS } from './systems/passiveDefs'
 import { fireWand, fireKnife, orbitPositions, garlicTick } from './systems/weapons'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 import { circlesOverlap } from './systems/collision'
@@ -65,6 +67,8 @@ export class World {
   weapons: Weapon[] = [{ kind: 'wand', level: 1, cooldownTimer: 0 }]
   /** 玩家持有的被動道具（起始為空）。 */
   passives: Passive[] = []
+  /** 玩家圓顏色（取自所選角色）；供 renderer 取用。 */
+  playerColor = 0x4aa3ff
   /** 玩家最後一次非零移動方向（飛刀發射方向用）；預設朝右。 */
   lastMoveDir: Vec2 = { x: 1, y: 0 }
   /** 聖經環繞基準角（每格隨角速度累加）。 */
@@ -99,11 +103,22 @@ export class World {
   private pendingLevelUps = 0
 
   /**
-   * @param seed 本場的亂數種子，決定生怪位置等隨機序列（可重現）。
+   * @param seed      本場的亂數種子，決定生怪位置等隨機序列（可重現）。
+   * @param character 起始角色（預設戰士）；決定起始武器/數值/血/被動/顏色。
    */
-  constructor(seed: number) {
+  constructor(seed: number, character: CharacterKind = 'warrior') {
     this.rng = createRng(seed)
     this.player = createPlayer({ x: 0, y: 0 })
+    const def = CHARACTER_DEFS[character]
+    this.playerColor = def.color
+    this.player.maxHp = def.maxHp
+    this.player.hp = def.maxHp
+    Object.assign(this.stats, def.statMods)
+    this.weapons = [{ kind: def.startWeapon, level: 1, cooldownTimer: 0 }]
+    for (const pk of def.startPassives) {
+      this.passives.push({ kind: pk, level: 1 })
+      PASSIVE_DEFS[pk].apply(this.upgradeContext())
+    }
   }
 
   /** @returns 目前存活的敵人（過濾掉 `active === false`）。 */
