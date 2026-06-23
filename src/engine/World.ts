@@ -72,6 +72,8 @@ export class World {
   passives: Passive[] = []
   /** 玩家圓顏色（取自所選角色）；供 renderer 取用。 */
   playerColor = 0x4aa3ff
+  /** 所選地圖種類（供 renderer 決定背景地貌）。 */
+  mapKind: MapKind = 'plains'
   /** 背景底色（取自所選地圖）；供 renderer 取用。 */
   mapBgColor = 0x0c0c12
   /** 背景網格線顏色（取自所選地圖）。 */
@@ -136,6 +138,7 @@ export class World {
       PASSIVE_DEFS[pk].apply(this.upgradeContext())
     }
     const m = MAP_DEFS[map]
+    this.mapKind = map
     this.mapBgColor = m.bgColor
     this.mapGridColor = m.gridColor
     this.mapGridAlpha = m.gridAlpha

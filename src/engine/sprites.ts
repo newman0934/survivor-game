@@ -5,7 +5,7 @@
  * 閃白）由 PixiRenderer 以 transform 每幀套用。純繪製、不修改模擬狀態。
  */
 import { Graphics } from 'pixi.js'
-import type { Entity } from './types'
+import type { Entity, MapKind } from './types'
 import { ENEMY_DEFS } from './systems/enemyDefs'
 
 /** 把顏色各通道乘上係數 f（<1 變暗），用來產生描邊/陰影色。 */
@@ -189,6 +189,92 @@ export function drawBackgroundGrid(
     g.moveTo(left, y).lineTo(right, y)
   }
   g.stroke({ width: 1, color, alpha })
+}
+
+/** 地面特徵層：依 kind 在可視範圍格點散布專屬地貌（世界座標、隨鏡頭捲動）。 */
+function drawTerrain(
+  g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number, clock: number,
+): void {
+  const TILE = 128
+  const gx0 = Math.floor((cx - viewW / 2 - TILE) / TILE)
+  const gy0 = Math.floor((cy - viewH / 2 - TILE) / TILE)
+  const gx1 = Math.ceil((cx + viewW / 2 + TILE) / TILE)
+  const gy1 = Math.ceil((cy + viewH / 2 + TILE) / TILE)
+  for (let gx = gx0; gx <= gx1; gx++) {
+    for (let gy = gy0; gy <= gy1; gy++) {
+      if (bgHash(gx, gy) > 0.55) continue // ~45% 格子有特徵
+      const px = gx * TILE + bgHash(gx + 31, gy + 17) * TILE
+      const py = gy * TILE + bgHash(gx + 53, gy + 97) * TILE
+      const v = bgHash(gx + 7, gy + 13)
+      if (kind === 'lava') {
+        if (v < 0.6) {
+          g.moveTo(px - 10, py).lineTo(px - 2, py - 4).lineTo(px + 4, py + 3).lineTo(px + 12, py - 2)
+          g.stroke({ width: 2, color: 0x4a1f1a, alpha: 0.7 })
+        } else {
+          const a = 0.4 + 0.35 * Math.sin(clock * 3 + v * 6.28)
+          g.circle(px, py, 3).fill({ color: 0xff7043, alpha: a })
+          g.circle(px, py, 1.5).fill({ color: 0xffd180, alpha: a })
+        }
+      } else if (kind === 'tundra') {
+        if (v < 0.5) {
+          g.moveTo(px - 10, py - 3).lineTo(px, py).lineTo(px + 3, py - 6).lineTo(px + 11, py + 2)
+          g.stroke({ width: 2, color: 0x9fd8ff, alpha: 0.5 })
+        } else {
+          g.ellipse(px, py, 9, 4).fill({ color: 0xffffff, alpha: 0.18 })
+        }
+      } else {
+        // plains
+        if (v < 0.7) {
+          for (let k = -1; k <= 1; k++) {
+            const lean = (bgHash(gx + k, gy + 5) - 0.5) * 8
+            g.moveTo(px + k * 4, py + 6).lineTo(px + k * 4 + lean, py - 9)
+          }
+          g.stroke({ width: 2, color: 0x3a7d4a, alpha: 0.5 })
+        } else {
+          g.circle(px, py, 4).fill({ color: 0x555555, alpha: 0.45 })
+          g.circle(px - 1, py - 1, 2).fill({ color: 0x777777, alpha: 0.4 })
+        }
+      }
+    }
+  }
+}
+
+/** 氛圍粒子層：依 kind 畫相對螢幕的飄動粒子（固定上限、靠 clock 動，不累積）。 */
+function drawAmbient(
+  g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number, clock: number,
+): void {
+  const N = 50
+  const L = cx - viewW / 2
+  const T = cy - viewH / 2
+  const wrap = (val: number, max: number): number => ((val % max) + max) % max
+  for (let i = 0; i < N; i++) {
+    const fx = bgHash(i, 101)
+    const fy = bgHash(i, 202)
+    if (kind === 'tundra') {
+      const sx = L + wrap(fx * viewW + Math.sin(clock * 0.8 + i) * 14, viewW)
+      const sy = T + wrap(fy * viewH + clock * (18 + fx * 22), viewH)
+      g.circle(sx, sy, 1.4 + fx * 1.6).fill({ color: 0xffffff, alpha: 0.55 })
+    } else if (kind === 'lava') {
+      const sx = L + wrap(fx * viewW + Math.sin(clock + i) * 8, viewW)
+      const sy = T + wrap(fy * viewH - clock * (20 + fx * 25), viewH) // 火星上升
+      g.circle(sx, sy, 1 + fx * 1.4).fill({ color: 0xffab40, alpha: 0.5 })
+    } else {
+      // plains 草屑/光點
+      const sx = L + wrap(fx * viewW + Math.sin(clock * 0.5 + i) * 20, viewW)
+      const sy = T + wrap(fy * viewH + clock * (6 + fx * 8), viewH)
+      g.circle(sx, sy, 1 + fx).fill({ color: 0xaed581, alpha: 0.35 })
+    }
+  }
+}
+
+/** 地圖背景：淡網格 + 地面特徵 + 氛圍粒子。取代 renderer 對 drawBackgroundGrid 的直接呼叫。 */
+export function drawMapBackground(
+  g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number,
+  clock: number, gridColor: number, gridAlpha: number,
+): void {
+  drawBackgroundGrid(g, cx, cy, viewW, viewH, gridColor, gridAlpha)
+  drawTerrain(g, kind, cx, cy, viewW, viewH, clock)
+  drawAmbient(g, kind, cx, cy, viewW, viewH, clock)
 }
 
 /** 大蒜光環：環形（描邊 + 極淡填充），半徑/alpha 隨時鐘 t 呼吸。 */

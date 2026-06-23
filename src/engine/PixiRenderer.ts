@@ -10,7 +10,7 @@ import type { World } from './World'
 import type { Entity } from './types'
 import {
   drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit, drawChest,
-  drawBackgroundGrid, drawGarlicAura,
+  drawMapBackground, drawGarlicAura,
 } from './sprites'
 
 /** 每個 entity 的顯示物件：body（造型）+ flash（命中閃白用的白色覆蓋圓）。 */
@@ -96,10 +96,10 @@ export class PixiRenderer {
     // 背景網格：依玩家可視範圍重畫（世界座標，隨容器平移捲動）。
     this.app.renderer.background.color = world.mapBgColor
     this.grid.clear()
-    drawBackgroundGrid(
-      this.grid, world.player.pos.x, world.player.pos.y,
+    drawMapBackground(
+      this.grid, world.mapKind, world.player.pos.x, world.player.pos.y,
       this.app.renderer.width, this.app.renderer.height,
-      world.mapGridColor, world.mapGridAlpha,
+      this.clock, world.mapGridColor, world.mapGridAlpha,
     )
 
     // 大蒜光環：持有時呼吸脈動。
