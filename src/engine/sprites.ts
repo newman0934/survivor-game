@@ -75,7 +75,7 @@ export function drawEnemy(g: Graphics, e: Entity): void {
   const dark = dim(color, 0.5)
   groundShadow(g, r)
   switch (e.enemyKind) {
-    case 'swarm': {
+    case 'bacteria': {
       // 蜘蛛：6 條腿 + 立體小身 + 兩眼
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * Math.PI * 2
@@ -87,7 +87,7 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       g.circle(r * 0.3, -r * 0.1, r * 0.18).fill(0xffffff)
       break
     }
-    case 'tank': {
+    case 'spore': {
       // 重甲：立體身 + 厚裝甲環 + 4 鉚釘 + 深核心
       shaded(g, 0, 0, r, color)
       g.circle(0, 0, r).stroke({ width: 5, color: dim(color, 0.4) })
@@ -99,7 +99,7 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       g.circle(0, 0, r * 0.42).stroke({ width: 2, color: lighten(color, 0.2) })
       break
     }
-    case 'charger': {
+    case 'spiral': {
       // 尖角衝刺：水滴身（前尖 +x）+ 雙角 + 單眼（renderer 依 vel 旋轉）
       g.poly([r * 1.1, 0, 0, r * 0.8, -r * 0.8, 0, 0, -r * 0.8]).fill(dim(color, 0.55))
       g.poly([r * 1.0, 0, 0, r * 0.7, -r * 0.7, 0, 0, -r * 0.7]).fill(color)
@@ -111,7 +111,7 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       g.circle(r * 0.32, 0, r * 0.08).fill(0x222222)
       break
     }
-    case 'boss': {
+    case 'superbug': {
       // 巨獸：鋸齒尖冠 + 立體身 + 內核 + 兩發光眼
       for (let i = 0; i < 10; i++) {
         const a = (i * Math.PI) / 5

@@ -20,23 +20,23 @@ describe('spawn', () => {
 })
 
 describe('pickEnemyKind', () => {
-  it('t=0 只會選到已解鎖的 basic / swarm', () => {
+  it('t=0 只會選到已解鎖的 virus / bacteria', () => {
     const rng = createRng(1)
     for (let i = 0; i < 200; i++) {
       const k = pickEnemyKind(0, rng)
-      expect(['basic', 'swarm']).toContain(k)
+      expect(['virus', 'bacteria']).toContain(k)
     }
   })
 
-  it('t>=45 候選含 tank、t>=90 候選含 charger', () => {
+  it('t>=45 候選含 spore、t>=90 候選含 spiral', () => {
     const rng = createRng(2)
     const at60 = new Set<string>()
     const at120 = new Set<string>()
     for (let i = 0; i < 500; i++) at60.add(pickEnemyKind(60, rng))
     for (let i = 0; i < 500; i++) at120.add(pickEnemyKind(120, rng))
-    expect(at60.has('tank')).toBe(true)
-    expect(at60.has('charger')).toBe(false)
-    expect(at120.has('charger')).toBe(true)
+    expect(at60.has('spore')).toBe(true)
+    expect(at60.has('spiral')).toBe(false)
+    expect(at120.has('spiral')).toBe(true)
   })
 
   it('確定性：相同 seed 產生相同序列', () => {
@@ -47,10 +47,10 @@ describe('pickEnemyKind', () => {
     expect(seqA).toEqual(seqB)
   })
 
-  it('一般生怪永不選到 boss（即使時間極大）', () => {
+  it('一般生怪永不選到 superbug（即使時間極大）', () => {
     const rng = createRng(3)
     for (let i = 0; i < 500; i++) {
-      expect(pickEnemyKind(100000, rng)).not.toBe('boss')
+      expect(pickEnemyKind(100000, rng)).not.toBe('superbug')
     }
   })
 })

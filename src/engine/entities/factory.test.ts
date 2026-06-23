@@ -31,24 +31,24 @@ describe('entity factory', () => {
 })
 
 describe('createEnemy by kind', () => {
-  it('未指定種類時建立 basic', () => {
+  it('未指定種類時建立 virus', () => {
     const e = createEnemy({ x: 0, y: 0 })
-    expect(e.enemyKind).toBe('basic')
-    expect(e.hp).toBe(ENEMY_DEFS.basic.hp)
+    expect(e.enemyKind).toBe('virus')
+    expect(e.hp).toBe(ENEMY_DEFS.virus.hp)
   })
 
   it('依種類套用對應數值', () => {
-    const t = createEnemy({ x: 0, y: 0 }, 'tank')
-    expect(t.enemyKind).toBe('tank')
-    expect(t.hp).toBe(ENEMY_DEFS.tank.hp)
-    expect(t.speed).toBe(ENEMY_DEFS.tank.speed)
-    expect(t.damage).toBe(ENEMY_DEFS.tank.damage)
-    expect(t.radius).toBe(ENEMY_DEFS.tank.radius)
-    expect(t.xp).toBe(ENEMY_DEFS.tank.xp)
+    const t = createEnemy({ x: 0, y: 0 }, 'spore')
+    expect(t.enemyKind).toBe('spore')
+    expect(t.hp).toBe(ENEMY_DEFS.spore.hp)
+    expect(t.speed).toBe(ENEMY_DEFS.spore.speed)
+    expect(t.damage).toBe(ENEMY_DEFS.spore.damage)
+    expect(t.radius).toBe(ENEMY_DEFS.spore.radius)
+    expect(t.xp).toBe(ENEMY_DEFS.spore.xp)
   })
 
-  it('charger 初始 behaviorTimer 為 0', () => {
-    const c = createEnemy({ x: 0, y: 0 }, 'charger')
+  it('spiral 初始 behaviorTimer 為 0', () => {
+    const c = createEnemy({ x: 0, y: 0 }, 'spiral')
     expect(c.behaviorTimer).toBe(0)
   })
 })

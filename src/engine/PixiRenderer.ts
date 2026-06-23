@@ -188,8 +188,8 @@ export class PixiRenderer {
         s.root.rotation = Math.atan2(world.lastMoveDir.y, world.lastMoveDir.x)
         break
       case 'enemy':
-        if (e.enemyKind === 'boss') s.root.scale.set(1 + 0.04 * Math.sin(this.clock * 4))
-        else if (e.enemyKind === 'charger') s.root.rotation = Math.atan2(e.vel.y, e.vel.x)
+        if (e.enemyKind === 'superbug') s.root.scale.set(1 + 0.04 * Math.sin(this.clock * 4))
+        else if (e.enemyKind === 'spiral') s.root.rotation = Math.atan2(e.vel.y, e.vel.x)
         break
     }
   }

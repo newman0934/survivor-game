@@ -177,7 +177,7 @@ export class World {
    * @param pos 生成位置。
    * @returns 新建立的敵人 entity。
    */
-  spawnEnemyAt(pos: Vec2, kind: EnemyKind = 'basic'): Entity {
+  spawnEnemyAt(pos: Vec2, kind: EnemyKind = 'virus'): Entity {
     const e = createEnemy(pos, kind)
     this.scaleEnemyHp(e)
     this.enemies.push(e)
@@ -198,7 +198,7 @@ export class World {
     const offsets = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]
     const r = 24
     for (const a of offsets) {
-      const e = createEnemy({ x: pos.x + Math.cos(a) * r, y: pos.y + Math.sin(a) * r }, 'swarm')
+      const e = createEnemy({ x: pos.x + Math.cos(a) * r, y: pos.y + Math.sin(a) * r }, 'bacteria')
       this.scaleEnemyHp(e)
       this.enemies.push(e)
     }
@@ -210,9 +210,9 @@ export class World {
    * @returns 新建立的 Boss entity。
    */
   spawnBossAt(pos: Vec2): Entity {
-    const b = createEnemy(pos, 'boss')
+    const b = createEnemy(pos, 'superbug')
     const scale = 1 + 0.5 * this.bossCount
-    b.hp = ENEMY_DEFS.boss.hp * scale
+    b.hp = ENEMY_DEFS.superbug.hp * scale
     b.maxHp = b.hp
     this.scaleEnemyHp(b)
     this.bossCount += 1
@@ -317,7 +317,7 @@ export class World {
       this.spawnTimer = spawnInterval(this.elapsed) * this.mapSpawnIntervalMult
       const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
       const kind = pickEnemyKind(this.elapsed, this.rng)
-      if (kind === 'swarm') this.spawnSwarmAt(pos)
+      if (kind === 'bacteria') this.spawnSwarmAt(pos)
       else this.spawnEnemyAt(pos, kind)
     }
 
@@ -517,7 +517,7 @@ export class World {
     e.active = false
     this.kills += 1
     this.gemEntities.push(createGem(e.pos, e.xp))
-    if (e.enemyKind === 'boss') this.chestEntities.push(createChest(e.pos))
+    if (e.enemyKind === 'superbug') this.chestEntities.push(createChest(e.pos))
     this.soundEventQueue.push('kill')
   }
 
@@ -531,7 +531,7 @@ export class World {
    * @returns 經四捨五入／取整的 `Summary`，由上層轉交給 store。
    */
   summary(): Summary {
-    const boss = this.enemies.find((e) => e.active && e.enemyKind === 'boss')
+    const boss = this.enemies.find((e) => e.active && e.enemyKind === 'superbug')
     return {
       hp: Math.max(0, Math.round(this.player.hp)),
       maxHp: this.player.maxHp,

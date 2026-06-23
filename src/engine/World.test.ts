@@ -17,7 +17,7 @@ describe('World', () => {
 
   it('擊殺敵人發出 kill 事件', () => {
     const w = new World(1)
-    const e = w.spawnEnemyAt({ x: 60, y: 0 }, 'basic')
+    const e = w.spawnEnemyAt({ x: 60, y: 0 }, 'virus')
     e.hp = 1
     w.forceFire()
     for (let i = 0; i < 20; i++) w.step(1 / 60)
@@ -51,7 +51,7 @@ describe('World', () => {
   it('一般敵人死亡不掉寶箱', () => {
     const w = new World(1)
     w.stats.pickupRadius = 0
-    const e = w.spawnEnemyAt({ x: w.player.pos.x + 50, y: w.player.pos.y }, 'basic')
+    const e = w.spawnEnemyAt({ x: w.player.pos.x + 50, y: w.player.pos.y }, 'virus')
     e.hp = 1
     w.forceFire()
     for (let i = 0; i < 40; i++) w.step(1 / 60)
@@ -76,7 +76,7 @@ describe('World', () => {
 
   it('熔岩地圖：敵人 hp ×1.25、視覺欄位正確', () => {
     const w = new World(1, 'warrior', 'lava')
-    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBeCloseTo(10 * 1.25, 5) // basic 基礎 hp 10
     expect(e.maxHp).toBeCloseTo(10 * 1.25, 5)
     expect(w.mapBgColor).toBe(0x1a0a0a)
@@ -85,7 +85,7 @@ describe('World', () => {
 
   it('冰原地圖：敵人 hp ×0.9', () => {
     const w = new World(1, 'warrior', 'tundra')
-    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBeCloseTo(10 * 0.9, 5)
   })
 
@@ -97,7 +97,7 @@ describe('World', () => {
 
   it('省略地圖預設平原（倍率皆 1、視覺同現況）', () => {
     const w = new World(1, 'warrior')
-    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBe(10)
     expect(w.mapBgColor).toBe(0x0c0c12)
   })
@@ -144,13 +144,13 @@ describe('World', () => {
     const before = w.enemies.length
     w.spawnSwarmAt({ x: 100, y: 0 })
     expect(w.enemies.length - before).toBe(4)
-    expect(w.enemies.slice(-4).every((e) => e.enemyKind === 'swarm')).toBe(true)
+    expect(w.enemies.slice(-4).every((e) => e.enemyKind === 'bacteria')).toBe(true)
   })
 
   it('spawnBossAt 生成一隻 boss', () => {
     const w = new World(1)
     const b = w.spawnBossAt({ x: 100, y: 0 })
-    expect(b.enemyKind).toBe('boss')
+    expect(b.enemyKind).toBe('superbug')
     expect(w.enemies.includes(b)).toBe(true)
   })
 
@@ -164,7 +164,7 @@ describe('World', () => {
   it('Boss 於 60s 里程碑出現', () => {
     const w = new World(1)
     for (let i = 0; i < 61 * 60; i++) w.step(1 / 60)
-    expect(w.enemies.some((e) => e.enemyKind === 'boss')).toBe(true)
+    expect(w.enemies.some((e) => e.enemyKind === 'superbug')).toBe(true)
   })
 
   it('summary 在有 Boss 時回報血條資料、無 Boss 時歸零', () => {

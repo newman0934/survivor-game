@@ -36,10 +36,10 @@ export function createPlayer(pos: Vec2): Entity {
 /**
  * 建立敵人 entity。
  * @param pos  生成位置（會被複製）。
- * @param kind 敵人種類（預設 'basic'）；數值取自 `ENEMY_DEFS`。
+ * @param kind 敵人種類（預設 'virus'）；數值取自 `ENEMY_DEFS`。
  * @returns 新的 enemy entity，帶接觸傷害、掉落經驗值與行為相位時鐘。
  */
-export function createEnemy(pos: Vec2, kind: EnemyKind = 'basic'): Entity {
+export function createEnemy(pos: Vec2, kind: EnemyKind = 'virus'): Entity {
   const def = ENEMY_DEFS[kind]
   return {
     ...base(),

@@ -14,7 +14,7 @@ export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit' | '
 export type SoundEvent = 'shoot' | 'hit' | 'kill' | 'pickup' | 'levelup' | 'hurt' | 'boss' | 'chest'
 
 /** 敵人子種類；僅 kind==='enemy' 的 entity 使用，決定數值/顏色/行為。 */
-export type EnemyKind = 'basic' | 'swarm' | 'tank' | 'charger' | 'boss'
+export type EnemyKind = 'virus' | 'bacteria' | 'spore' | 'spiral' | 'superbug'
 
 /**
  * ECS 中的單一 entity（純資料）。
