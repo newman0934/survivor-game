@@ -10,13 +10,14 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, UpgradeContext } from './types'
+import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
 import { createPlayer, createEnemy, createGem, createOrbit } from './entities/factory'
-import { applyVelocity, steerTowards } from './systems/movement'
-import { spawnInterval, spawnPositionAround } from './systems/spawn'
+import { applyVelocity } from './systems/movement'
+import { spawnInterval, spawnPositionAround, pickEnemyKind } from './systems/spawn'
+import { steerEnemy } from './systems/enemyAI'
 import { fireWand, fireKnife, orbitPositions, garlicTick } from './systems/weapons'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 import { circlesOverlap } from './systems/collision'
@@ -100,10 +101,22 @@ export class World {
    * @param pos 生成位置。
    * @returns 新建立的敵人 entity。
    */
-  spawnEnemyAt(pos: Vec2): Entity {
-    const e = createEnemy(pos)
+  spawnEnemyAt(pos: Vec2, kind: EnemyKind = 'basic'): Entity {
+    const e = createEnemy(pos, kind)
     this.enemies.push(e)
     return e
+  }
+
+  /**
+   * 在指定位置附近一次生成一小群 swarm（4 隻，固定角度偏移，維持確定性）。
+   * @param pos 群襲中心位置。
+   */
+  spawnSwarmAt(pos: Vec2): void {
+    const offsets = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]
+    const r = 24
+    for (const a of offsets) {
+      this.enemies.push(createEnemy({ x: pos.x + Math.cos(a) * r, y: pos.y + Math.sin(a) * r }, 'swarm'))
+    }
   }
 
   /** 強制下一格立即開火（重置所有武器的開火計時器）。 */
@@ -198,13 +211,15 @@ export class World {
     if (this.spawnTimer <= 0) {
       this.spawnTimer = spawnInterval(this.elapsed)
       const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
-      this.spawnEnemyAt(pos)
+      const kind = pickEnemyKind(this.elapsed, this.rng)
+      if (kind === 'swarm') this.spawnSwarmAt(pos)
+      else this.spawnEnemyAt(pos, kind)
     }
 
     // 3) 敵人 AI：每隻朝玩家轉向後位移。
     for (const e of this.enemies) {
       if (!e.active) continue
-      steerTowards(e, this.player.pos)
+      steerEnemy(e, this.player.pos, dt)
       applyVelocity(e, dt)
     }
 

@@ -9,6 +9,22 @@ describe('World', () => {
     expect(w.activeEnemies().length).toBe(0)
   })
 
+  it('生怪會帶 enemyKind', () => {
+    const w = new World(1)
+    for (let i = 0; i < 180; i++) w.step(1 / 60)
+    const kinds = w.activeEnemies().map((e) => e.enemyKind)
+    expect(kinds.length).toBeGreaterThan(0)
+    expect(kinds.every((k) => k !== undefined)).toBe(true)
+  })
+
+  it('spawnSwarmAt 一次生成 4 隻 swarm', () => {
+    const w = new World(1)
+    const before = w.enemies.length
+    w.spawnSwarmAt({ x: 100, y: 0 })
+    expect(w.enemies.length - before).toBe(4)
+    expect(w.enemies.slice(-4).every((e) => e.enemyKind === 'swarm')).toBe(true)
+  })
+
   it('spawns enemies over time', () => {
     const w = new World(1)
     for (let i = 0; i < 180; i++) w.step(1 / 60)
