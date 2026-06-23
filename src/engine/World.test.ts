@@ -110,7 +110,7 @@ describe('World', () => {
     expect(w.stats.armor).toBeGreaterThan(0)
   })
 
-  it('嗜中性球起始：飛刀、高移速、薄血、顏色', () => {
+  it('嗜中性球起始：穿孔素飛鏢、高移速、薄血、顏色', () => {
     const w = new World(1, 'neutrophil')
     expect(w.weapons[0].kind).toBe('perforin')
     expect(w.stats.moveSpeed).toBe(240)
@@ -118,13 +118,13 @@ describe('World', () => {
     expect(w.playerColor).toBe(0x6bff8c)
   })
 
-  it('NK 細胞起始：聖經、高傷害乘區', () => {
+  it('NK 細胞起始：補體環、高傷害乘區', () => {
     const w = new World(1, 'nkcell')
     expect(w.weapons[0].kind).toBe('complement')
     expect(w.stats.damageMult).toBeCloseTo(1.25, 5)
   })
 
-  it('樹突細胞起始：大蒜 + 記憶細胞被動（xpGain>1）', () => {
+  it('樹突細胞起始：發炎場 + 記憶細胞被動（xpGain>1）', () => {
     const w = new World(1, 'dendritic')
     expect(w.weapons[0].kind).toBe('inflammation')
     expect(w.passives.some((p) => p.kind === 'crown')).toBe(true)
