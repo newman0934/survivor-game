@@ -10,10 +10,11 @@ const store = useGameStore()
 
 <template>
   <div class="overlay">
-    <h2>選擇升級</h2>
+    <h2 class="title">選擇升級</h2>
     <div class="cards">
       <!-- 逐一渲染引擎提供的升級選項；點擊送出該升級 id 並恢復遊戲 -->
-      <button v-for="opt in store.upgradeOptions" :key="opt.id" class="card"
+      <button v-for="(opt, i) in store.upgradeOptions" :key="opt.id" class="card"
+        :style="{ animationDelay: 0.06 * i + 's' }"
         @click="store.pickUpgrade(opt.id)">
         {{ opt.label }}
       </button>
@@ -29,6 +30,16 @@ const store = useGameStore()
 .card { width: 160px; height: 120px; font-size: 1.2rem; cursor: pointer; padding: 0.4rem;
   border: 2px solid #4aa3ff; border-radius: 12px; background: #1c2030; color: #fff; }
 .card:hover { background: #283050; }
+.title { animation: rise 0.3s ease-out backwards; }
+.card { animation: rise 0.35s ease-out backwards; }
+.card:active { transform: scale(0.96); }
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .title, .card { animation: none; }
+}
 
 @media (max-width: 600px) {
   /* 手機版：選項改為垂直排列，卡片橫向拉寬、高度依內容。 */
