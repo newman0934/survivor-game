@@ -26,8 +26,8 @@ export function xpForLevel(level: number): number {
   return 5 + (level - 1) * 5
 }
 
-/** 武器持有上限（本階段共 4 種，故必定能全數收齊）。 */
-const WEAPON_CAP = 4
+/** 武器持有上限（共 7 種武器，可全數收齊）。 */
+const WEAPON_CAP = 7
 
 /** 保底卡：合法候選不足時補滿用。 */
 const HEAL: UpgradeOption = { id: 'heal', label: '補血 +20', apply: (c) => c.heal(20) }
