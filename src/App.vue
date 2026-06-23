@@ -69,12 +69,21 @@ onBeforeUnmount(() => game?.stop())
     <BossBar v-if="store.phase === 'playing' || store.phase === 'upgrading'" />
     <MuteButton v-if="store.phase !== 'menu'" />
     <!-- 以下三個 overlay 依 phase 互斥顯示 -->
-    <MainMenu v-if="store.phase === 'menu'" @start="startGame" />
-    <UpgradeModal v-if="store.phase === 'upgrading'" />
-    <GameOver v-if="store.phase === 'over'" @restart="restart" />
+    <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" @start="startGame" /></Transition>
+    <Transition name="fade"><UpgradeModal v-if="store.phase === 'upgrading'" /></Transition>
+    <Transition name="fade"><GameOver v-if="store.phase === 'over'" @restart="restart" /></Transition>
   </div>
 </template>
 
 <style scoped>
 .root, .canvas-host { position: absolute; inset: 0; }
+</style>
+
+<style>
+/* phase overlay 淡入淡出（轉場類別套在子元件根節點，需非 scoped）。 */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .fade-enter-active, .fade-leave-active { transition: none; }
+}
 </style>
