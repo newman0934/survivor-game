@@ -11,7 +11,7 @@ import type { Vec2 } from './core/vector'
 export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit'
 
 /** 敵人子種類；僅 kind==='enemy' 的 entity 使用，決定數值/顏色/行為。 */
-export type EnemyKind = 'basic' | 'swarm' | 'tank' | 'charger'
+export type EnemyKind = 'basic' | 'swarm' | 'tank' | 'charger' | 'boss'
 
 /**
  * ECS 中的單一 entity（純資料）。
