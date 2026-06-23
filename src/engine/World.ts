@@ -130,7 +130,7 @@ export class World {
    * @param seed      本場的亂數種子，決定生怪位置等隨機序列（可重現）。
    * @param character 起始角色（預設戰士）；決定起始武器/數值/血/被動/顏色。
    */
-  constructor(seed: number, character: CharacterKind = 'warrior', map: MapKind = 'plains') {
+  constructor(seed: number, character: CharacterKind = 'macrophage', map: MapKind = 'plains') {
     this.rng = createRng(seed)
     this.player = createPlayer({ x: 0, y: 0 })
     const def = CHARACTER_DEFS[character]

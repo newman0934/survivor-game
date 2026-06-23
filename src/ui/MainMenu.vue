@@ -9,7 +9,7 @@ import { MAP_ORDER, MAP_DEFS } from '../engine/systems/mapDefs'
 import type { CharacterKind, MapKind } from '../engine/types'
 
 const emit = defineEmits<{ start: [opts: { character: CharacterKind; map: MapKind }] }>()
-const character = ref<CharacterKind>('warrior')
+const character = ref<CharacterKind>('macrophage')
 const map = ref<MapKind>('plains')
 
 /** 把顏色數字轉成 CSS hex 字串。 */

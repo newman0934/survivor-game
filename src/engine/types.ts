@@ -175,7 +175,7 @@ export interface PassiveDef {
 }
 
 /** 可選的起始角色種類。 */
-export type CharacterKind = 'warrior' | 'ranger' | 'mage' | 'harvester'
+export type CharacterKind = 'macrophage' | 'neutrophil' | 'nkcell' | 'dendritic'
 
 /**
  * 一個可選角色的定義（純資料）：決定起始武器、起始數值、起始被動與顏色。

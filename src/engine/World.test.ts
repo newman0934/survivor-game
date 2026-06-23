@@ -75,7 +75,7 @@ describe('World', () => {
   })
 
   it('熔岩地圖：敵人 hp ×1.25、視覺欄位正確', () => {
-    const w = new World(1, 'warrior', 'lava')
+    const w = new World(1, 'macrophage', 'lava')
     const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBeCloseTo(10 * 1.25, 5) // basic 基礎 hp 10
     expect(e.maxHp).toBeCloseTo(10 * 1.25, 5)
@@ -84,25 +84,25 @@ describe('World', () => {
   })
 
   it('冰原地圖：敵人 hp ×0.9', () => {
-    const w = new World(1, 'warrior', 'tundra')
+    const w = new World(1, 'macrophage', 'tundra')
     const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBeCloseTo(10 * 0.9, 5)
   })
 
   it('熔岩 Boss hp 疊乘地圖倍率', () => {
-    const w = new World(1, 'warrior', 'lava')
+    const w = new World(1, 'macrophage', 'lava')
     const b = w.spawnBossAt({ x: 100, y: 0 })
     expect(b.maxHp).toBeCloseTo(220 * 1 * 1.25, 5) // 第一隻 boss：220×1×1.25
   })
 
   it('省略地圖預設平原（倍率皆 1、視覺同現況）', () => {
-    const w = new World(1, 'warrior')
+    const w = new World(1, 'macrophage')
     const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBe(10)
     expect(w.mapBgColor).toBe(0x0c0c12)
   })
 
-  it('預設角色為戰士（warrior）起始狀態', () => {
+  it('預設角色為巨噬細胞（macrophage）起始狀態', () => {
     const w = new World(1)
     expect(w.weapons[0].kind).toBe('antibody')
     expect(w.player.maxHp).toBe(140)
@@ -110,22 +110,22 @@ describe('World', () => {
     expect(w.stats.armor).toBeGreaterThan(0)
   })
 
-  it('遊俠起始：飛刀、高移速、薄血、顏色', () => {
-    const w = new World(1, 'ranger')
+  it('嗜中性球起始：飛刀、高移速、薄血、顏色', () => {
+    const w = new World(1, 'neutrophil')
     expect(w.weapons[0].kind).toBe('perforin')
     expect(w.stats.moveSpeed).toBe(240)
     expect(w.player.maxHp).toBe(80)
     expect(w.playerColor).toBe(0x6bff8c)
   })
 
-  it('法師起始：聖經、高傷害乘區', () => {
-    const w = new World(1, 'mage')
+  it('NK 細胞起始：聖經、高傷害乘區', () => {
+    const w = new World(1, 'nkcell')
     expect(w.weapons[0].kind).toBe('complement')
     expect(w.stats.damageMult).toBeCloseTo(1.25, 5)
   })
 
-  it('豐收者起始：大蒜 + 皇冠被動（xpGain>1）', () => {
-    const w = new World(1, 'harvester')
+  it('樹突細胞起始：大蒜 + 記憶細胞被動（xpGain>1）', () => {
+    const w = new World(1, 'dendritic')
     expect(w.weapons[0].kind).toBe('inflammation')
     expect(w.passives.some((p) => p.kind === 'crown')).toBe(true)
     expect(w.stats.xpGain).toBeGreaterThan(1)
