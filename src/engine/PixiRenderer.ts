@@ -13,6 +13,7 @@ export class PixiRenderer {
   readonly app: Application
   private world: Container
   private sprites = new Map<Entity, Graphics>()
+  private destroyed = false
 
   private constructor(app: Application) {
     this.app = app
@@ -69,6 +70,8 @@ export class PixiRenderer {
   }
 
   destroy(): void {
+    if (this.destroyed) return
+    this.destroyed = true
     this.app.destroy(true, { children: true })
     this.sprites.clear()
   }

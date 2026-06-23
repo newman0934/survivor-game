@@ -16,6 +16,7 @@ export class Game {
   private lastTime = 0
   private accumulator = 0
   private paused = false
+  private stopped = false
   private upgradeRng = createRng(99)
 
   private constructor(world: World, renderer: PixiRenderer) {
@@ -80,6 +81,8 @@ export class Game {
   }
 
   stop(): void {
+    if (this.stopped) return
+    this.stopped = true
     cancelAnimationFrame(this.rafId)
     this.input.detach()
     this.renderer.destroy()
