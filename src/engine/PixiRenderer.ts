@@ -15,6 +15,7 @@ const COLORS: Record<Entity['kind'], number> = {
   enemy: 0xff5252,
   projectile: 0xffe27a,
   gem: 0x6bff6b,
+  orbit: 0xffd700,
 }
 
 export class PixiRenderer {
@@ -24,6 +25,8 @@ export class PixiRenderer {
   private world: Container
   /** entity → 對應 Graphics 的對照表（重用同一物件以避免每格重建）。 */
   private sprites = new Map<Entity, Graphics>()
+  /** 大蒜場域的半透明圓（持有大蒜時顯示，置於最底層）。 */
+  private garlicAura: Graphics
   /** 是否已銷毀，用來讓 `destroy()` 冪等。 */
   private destroyed = false
 
@@ -32,6 +35,8 @@ export class PixiRenderer {
     this.app = app
     this.world = new Container()
     app.stage.addChild(this.world)
+    this.garlicAura = new Graphics()
+    this.world.addChildAt(this.garlicAura, 0) // 置於最底層，墊在所有 entity 之下
   }
 
   /**
@@ -72,6 +77,7 @@ export class PixiRenderer {
       ...world.gems(),
       ...world.activeEnemies(),
       ...world.projectiles.filter((p) => p.active),
+      ...world.orbits(),
       world.player,
     ]
     // 同步每個 entity 的 Graphics 位置，並記錄本格出現過哪些。
@@ -89,6 +95,13 @@ export class PixiRenderer {
         this.sprites.delete(e)
       }
     }
+    // 大蒜場域：持有時在玩家世界座標畫半透明圓（與其他 entity 同容器，隨鏡頭平移自然對齊）。
+    const gr = world.garlicRadius()
+    this.garlicAura.clear()
+    if (gr > 0) {
+      this.garlicAura.circle(world.player.pos.x, world.player.pos.y, gr).fill({ color: 0x9b59b6, alpha: 0.15 })
+    }
+
     // 鏡頭跟隨：平移容器，使玩家恆在畫面正中央。
     this.world.position.set(
       this.app.renderer.width / 2 - world.player.pos.x,
