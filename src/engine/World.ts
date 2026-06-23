@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, CharacterKind } from './types'
+import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -22,6 +22,7 @@ import { ENEMY_DEFS, ENEMY_ORDER } from './systems/enemyDefs'
 import { SpatialGrid } from './core/spatialGrid'
 import { CHARACTER_DEFS } from './systems/characterDefs'
 import { PASSIVE_DEFS } from './systems/passiveDefs'
+import { MAP_DEFS } from './systems/mapDefs'
 import { fireWand, fireKnife, orbitPositions, garlicTick } from './systems/weapons'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 import { circlesOverlap } from './systems/collision'
@@ -69,6 +70,16 @@ export class World {
   passives: Passive[] = []
   /** 玩家圓顏色（取自所選角色）；供 renderer 取用。 */
   playerColor = 0x4aa3ff
+  /** 背景底色（取自所選地圖）；供 renderer 取用。 */
+  mapBgColor = 0x0c0c12
+  /** 背景網格線顏色（取自所選地圖）。 */
+  mapGridColor = 0xffffff
+  /** 背景網格線透明度（取自所選地圖）。 */
+  mapGridAlpha = 0.04
+  /** 生怪間隔倍率（取自所選地圖）。 */
+  private mapSpawnIntervalMult = 1
+  /** 敵人 hp 倍率（取自所選地圖）。 */
+  private mapEnemyHpMult = 1
   /** 玩家最後一次非零移動方向（飛刀發射方向用）；預設朝右。 */
   lastMoveDir: Vec2 = { x: 1, y: 0 }
   /** 聖經環繞基準角（每格隨角速度累加）。 */
@@ -106,7 +117,7 @@ export class World {
    * @param seed      本場的亂數種子，決定生怪位置等隨機序列（可重現）。
    * @param character 起始角色（預設戰士）；決定起始武器/數值/血/被動/顏色。
    */
-  constructor(seed: number, character: CharacterKind = 'warrior') {
+  constructor(seed: number, character: CharacterKind = 'warrior', map: MapKind = 'plains') {
     this.rng = createRng(seed)
     this.player = createPlayer({ x: 0, y: 0 })
     const def = CHARACTER_DEFS[character]
@@ -119,6 +130,12 @@ export class World {
       this.passives.push({ kind: pk, level: 1 })
       PASSIVE_DEFS[pk].apply(this.upgradeContext())
     }
+    const m = MAP_DEFS[map]
+    this.mapBgColor = m.bgColor
+    this.mapGridColor = m.gridColor
+    this.mapGridAlpha = m.gridAlpha
+    this.mapSpawnIntervalMult = m.spawnIntervalMult
+    this.mapEnemyHpMult = m.enemyHpMult
   }
 
   /** @returns 目前存活的敵人（過濾掉 `active === false`）。 */
@@ -137,8 +154,15 @@ export class World {
    */
   spawnEnemyAt(pos: Vec2, kind: EnemyKind = 'basic'): Entity {
     const e = createEnemy(pos, kind)
+    this.scaleEnemyHp(e)
     this.enemies.push(e)
     return e
+  }
+
+  /** 依地圖倍率縮放單一敵人的 hp/maxHp。 */
+  private scaleEnemyHp(e: Entity): void {
+    e.hp *= this.mapEnemyHpMult
+    e.maxHp = e.hp
   }
 
   /**
@@ -149,7 +173,9 @@ export class World {
     const offsets = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]
     const r = 24
     for (const a of offsets) {
-      this.enemies.push(createEnemy({ x: pos.x + Math.cos(a) * r, y: pos.y + Math.sin(a) * r }, 'swarm'))
+      const e = createEnemy({ x: pos.x + Math.cos(a) * r, y: pos.y + Math.sin(a) * r }, 'swarm')
+      this.scaleEnemyHp(e)
+      this.enemies.push(e)
     }
   }
 
@@ -163,6 +189,7 @@ export class World {
     const scale = 1 + 0.5 * this.bossCount
     b.hp = ENEMY_DEFS.boss.hp * scale
     b.maxHp = b.hp
+    this.scaleEnemyHp(b)
     this.bossCount += 1
     this.enemies.push(b)
     return b
@@ -260,7 +287,7 @@ export class World {
     // 2) 生怪：計時器歸零時，依目前時間決定下次間隔（難度曲線），並在玩家周圍隨機生一隻。
     this.spawnTimer -= dt
     if (this.spawnTimer <= 0) {
-      this.spawnTimer = spawnInterval(this.elapsed)
+      this.spawnTimer = spawnInterval(this.elapsed) * this.mapSpawnIntervalMult
       const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
       const kind = pickEnemyKind(this.elapsed, this.rng)
       if (kind === 'swarm') this.spawnSwarmAt(pos)

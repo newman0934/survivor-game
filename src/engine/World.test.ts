@@ -9,6 +9,34 @@ describe('World', () => {
     expect(w.activeEnemies().length).toBe(0)
   })
 
+  it('熔岩地圖：敵人 hp ×1.25、視覺欄位正確', () => {
+    const w = new World(1, 'warrior', 'lava')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')
+    expect(e.hp).toBeCloseTo(10 * 1.25, 5) // basic 基礎 hp 10
+    expect(e.maxHp).toBeCloseTo(10 * 1.25, 5)
+    expect(w.mapBgColor).toBe(0x1a0a0a)
+    expect(w.mapGridColor).toBe(0xff7043)
+  })
+
+  it('冰原地圖：敵人 hp ×0.9', () => {
+    const w = new World(1, 'warrior', 'tundra')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')
+    expect(e.hp).toBeCloseTo(10 * 0.9, 5)
+  })
+
+  it('熔岩 Boss hp 疊乘地圖倍率', () => {
+    const w = new World(1, 'warrior', 'lava')
+    const b = w.spawnBossAt({ x: 100, y: 0 })
+    expect(b.maxHp).toBeCloseTo(220 * 1 * 1.25, 5) // 第一隻 boss：220×1×1.25
+  })
+
+  it('省略地圖預設平原（倍率皆 1、視覺同現況）', () => {
+    const w = new World(1, 'warrior')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')
+    expect(e.hp).toBe(10)
+    expect(w.mapBgColor).toBe(0x0c0c12)
+  })
+
   it('預設角色為戰士（warrior）起始狀態', () => {
     const w = new World(1)
     expect(w.weapons[0].kind).toBe('wand')
