@@ -46,4 +46,11 @@ describe('pickEnemyKind', () => {
     const seqB = Array.from({ length: 10 }, () => pickEnemyKind(120, b))
     expect(seqA).toEqual(seqB)
   })
+
+  it('一般生怪永不選到 boss（即使時間極大）', () => {
+    const rng = createRng(3)
+    for (let i = 0; i < 500; i++) {
+      expect(pickEnemyKind(100000, rng)).not.toBe('boss')
+    }
+  })
 })

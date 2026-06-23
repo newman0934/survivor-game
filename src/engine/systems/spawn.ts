@@ -54,7 +54,7 @@ export function spawnPositionAround(center: Vec2, radius: number, t: number): Ve
  * @returns 抽中的敵人種類。
  */
 export function pickEnemyKind(elapsed: number, rng: Rng): EnemyKind {
-  const unlocked = ENEMY_ORDER.filter((k) => elapsed >= ENEMY_DEFS[k].unlockTime)
+  const unlocked = ENEMY_ORDER.filter((k) => ENEMY_DEFS[k].spawnWeight > 0 && elapsed >= ENEMY_DEFS[k].unlockTime)
   const total = unlocked.reduce((s, k) => s + ENEMY_DEFS[k].spawnWeight, 0)
   let r = rng.next() * total
   for (const k of unlocked) {
