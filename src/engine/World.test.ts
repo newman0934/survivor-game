@@ -364,4 +364,17 @@ describe('World', () => {
     expect(a.hp).toBeLessThan(hp0)
     expect(w.consumeFxEvents().some((f) => f.kind === 'chain')).toBe(true)
   })
+
+  it('抗原脈衝冷卻期間不重複觸發', () => {
+    const w = new World(1)
+    w.weapons = [{ kind: 'nova', level: 1, cooldownTimer: 0 }]
+    const e = w.spawnEnemyAt({ x: 60, y: 0 })
+    e.hp = 100; e.maxHp = 100 // 提高血量，確保第一擊後仍存活（隔離冷卻為唯一變因）
+    w.step(1 / 60) // Lv1 冷卻 1.6s，本步觸發一次
+    w.consumeFxEvents()
+    const hpAfterFire = e.hp
+    w.step(1 / 60) // 仍在冷卻內
+    expect(e.hp).toBe(hpAfterFire) // 未再扣血
+    expect(w.consumeFxEvents().some((f) => f.kind === 'nova')).toBe(false)
+  })
 })

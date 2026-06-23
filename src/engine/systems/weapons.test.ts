@@ -82,4 +82,10 @@ describe('weapons', () => {
     expect(inside.hp).toBe(8) // 20 - 12
     expect(outside.hp).toBe(20)
   })
+
+  it('三武器函式無敵人時皆回空陣列、不崩潰', () => {
+    expect(phagocyteSweep({ x: 0, y: 0 }, { x: 1, y: 0 }, [], 70, PHAGOCYTE_HALF_ANGLE, 8)).toEqual([])
+    expect(chainTargets({ x: 0, y: 0 }, [], 3, 160)).toEqual([])
+    expect(novaBurst({ x: 0, y: 0 }, [], 120, 12)).toEqual([])
+  })
 })
