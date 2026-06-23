@@ -83,17 +83,17 @@ export class EffectsLayer {
 
   /** 收集：亮綠光圈 + 白星閃光。 */
   spawnPickup(x: number, y: number): void {
-    this.addExpand(x, y, 0x8bff8b, 3, 18, 2, 0.25)
+    this.addExpand(x, y, 0xffd54a, 3, 18, 2, 0.25)
     this.addExpand(x, y, 0xffffff, 1, 8, 2, 0.2)
   }
 
   /** 升級：金色大光環 + 上升金光點。 */
   spawnLevelUp(x: number, y: number): void {
-    this.addExpand(x, y, 0xffd54f, 20, 70, 4, 0.6)
+    this.addExpand(x, y, 0x4dd0c0, 20, 70, 4, 0.6)
     for (let i = 0; i < 6; i++) {
       if (this.particles.length >= MAX_PARTICLES) break
       const g = new Graphics()
-      g.circle(0, 0, 2).fill(0xffe082)
+      g.circle(0, 0, 2).fill(0xb2f0e6)
       g.position.set(x + (Math.random() - 0.5) * 30, y)
       this.worldFx.addChild(g)
       this.particles.push({
