@@ -15,6 +15,7 @@
 import { World } from './World'
 import { PixiRenderer } from './PixiRenderer'
 import { KeyboardInput } from './core/input'
+import { TouchInput } from './core/touchInput'
 import { rollUpgrades } from './systems/leveling'
 import { createRng } from './core/rng'
 import { useGameStore } from '../stores/game'
@@ -27,6 +28,7 @@ export class Game {
   private world: World
   private renderer: PixiRenderer
   private input = new KeyboardInput()
+  private touch = new TouchInput()
   private store = useGameStore()
   /** requestAnimationFrame 的 handle，用於 `stop()` 時取消。 */
   private rafId = 0
@@ -61,6 +63,7 @@ export class Game {
     const renderer = await PixiRenderer.create(canvasParent)
     const game = new Game(world, renderer, seed)
     game.input.attach()
+    game.touch.attach(canvasParent)
     game.store.onUpgradePicked = (id: string) => {
       world.applyUpgrade(id)
       game.paused = false
@@ -90,7 +93,8 @@ export class Game {
     this.lastTime = time
 
     if (!this.paused) {
-      this.world.moveInput = this.input.direction()
+      const tdir = this.touch.direction()
+      this.world.moveInput = (tdir.x !== 0 || tdir.y !== 0) ? tdir : this.input.direction()
       // 固定步長累積器：把真實時間存進累積器，再以整數倍的 STEP 消化，確保每步皆為 1/60 秒。
       this.accumulator += frameTime
       while (this.accumulator >= STEP) {
@@ -121,6 +125,7 @@ export class Game {
     }
 
     this.renderer.render(this.world)
+    this.renderer.drawJoystick(this.touch.joystick)
   }
 
   /** 停止遊戲並釋放資源（取消 rAF、卸載輸入、銷毀 renderer）。冪等：重複呼叫安全。 */
@@ -129,6 +134,7 @@ export class Game {
     this.stopped = true
     cancelAnimationFrame(this.rafId)
     this.input.detach()
+    this.touch.detach()
     this.renderer.destroy()
   }
 }

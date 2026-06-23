@@ -27,6 +27,10 @@ export class PixiRenderer {
   private grid: Graphics
   /** 大蒜場域光環。 */
   private garlicAura: Graphics
+  /** 螢幕固定 UI 層（觸控搖桿）。 */
+  private ui: Container
+  /** 觸控搖桿繪製。 */
+  private joystickGfx: Graphics
   /** entity → 顯示物件對照表。 */
   private sprites = new Map<Entity, Sprite>()
   /** 上一幀各 entity 的 hp，用來偵測命中以觸發閃白。 */
@@ -45,6 +49,11 @@ export class PixiRenderer {
     this.world.addChild(this.grid)
     this.garlicAura = new Graphics()
     this.world.addChild(this.garlicAura)
+    // UI 層：固定於螢幕（加在 stage、不在會平移的 world 容器），畫觸控搖桿。
+    this.ui = new Container()
+    app.stage.addChild(this.ui)
+    this.joystickGfx = new Graphics()
+    this.ui.addChild(this.joystickGfx)
   }
 
   static async create(canvasParent: HTMLElement): Promise<PixiRenderer> {
@@ -150,6 +159,25 @@ export class PixiRenderer {
         else if (e.enemyKind === 'charger') s.root.rotation = Math.atan2(e.vel.y, e.vel.x)
         break
     }
+  }
+
+  /**
+   * 畫觸控搖桿（螢幕座標）。active 時於原點畫底座圈 + 旋鈕（夾在半徑內）；否則清空。
+   * @param js 觸控搖桿狀態（元素內座標）。
+   */
+  drawJoystick(js: { active: boolean; ox: number; oy: number; cx: number; cy: number }): void {
+    this.joystickGfx.clear()
+    if (!js.active) return
+    const max = 48
+    const dx = js.cx - js.ox
+    const dy = js.cy - js.oy
+    const len = Math.hypot(dx, dy) || 1
+    const k = Math.min(1, max / len)
+    const kx = js.ox + dx * k
+    const ky = js.oy + dy * k
+    this.joystickGfx.circle(js.ox, js.oy, max).fill({ color: 0xffffff, alpha: 0.12 })
+    this.joystickGfx.circle(js.ox, js.oy, max).stroke({ width: 2, color: 0xffffff, alpha: 0.25 })
+    this.joystickGfx.circle(kx, ky, 22).fill({ color: 0xffffff, alpha: 0.3 })
   }
 
   /** 偵測 hp 下降觸發白色覆蓋層，並每幀衰減回透明。 */
