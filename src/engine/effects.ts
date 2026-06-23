@@ -123,13 +123,13 @@ export class EffectsLayer {
     g.moveTo(0, 0)
     g.arc(0, 0, radius, angle - halfAngle, angle + halfAngle)
     g.closePath()
-    g.fill({ color: 0xff7043, alpha: 0.22 })
+    g.fill({ color: 0x8bc34a, alpha: 0.24 })
     // 內層亮白前緣弧（沿外緣描邊，刀光鋒面）
     const sx = Math.cos(angle - halfAngle) * radius * 0.96
     const sy = Math.sin(angle - halfAngle) * radius * 0.96
     g.moveTo(sx, sy)
     g.arc(0, 0, radius * 0.96, angle - halfAngle, angle + halfAngle)
-    g.stroke({ width: 3, color: 0xffd2b0, alpha: 0.85 })
+    g.stroke({ width: 3, color: 0xeaffc0, alpha: 0.9 })
     g.position.set(x, y)
     this.worldFx.addChild(g)
     this.flashes.push({ g, life: 0.22, maxLife: 0.22 })
@@ -140,7 +140,7 @@ export class EffectsLayer {
       const spd = 80 + Math.random() * 120
       const pr = 1.2 + Math.random() * 1.5
       const p = new Graphics()
-      p.circle(0, 0, pr).fill(0xff8a50)
+      p.circle(0, 0, pr).fill(0xaed581)
       p.position.set(x + Math.cos(a) * radius * 0.7, y + Math.sin(a) * radius * 0.7)
       this.worldFx.addChild(p)
       this.particles.push({ g: p, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, gravity: 120, life: 0.3, maxLife: 0.3 })
