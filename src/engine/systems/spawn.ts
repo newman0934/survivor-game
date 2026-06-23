@@ -8,6 +8,9 @@
  * 並用 spawnPositionAround 算出在畫面外環形上的生成點，讓敵人從玩家視野邊緣湧入。
  */
 import type { Vec2 } from '../core/vector'
+import type { Rng } from '../core/rng'
+import type { EnemyKind } from '../types'
+import { ENEMY_DEFS, ENEMY_ORDER } from './enemyDefs'
 
 /**
  * 生怪曲線：回傳目前每隔幾秒生一隻敵人。
@@ -38,4 +41,25 @@ export function spawnInterval(elapsedSeconds: number): number {
 export function spawnPositionAround(center: Vec2, radius: number, t: number): Vec2 {
   const angle = t * Math.PI * 2 // 將 [0,1) 映射為一圈完整角度
   return { x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius }
+}
+
+/**
+ * 依目前遊戲時間，在「已解鎖」（elapsed >= unlockTime）的敵種間依 spawnWeight 加權抽一種。
+ *
+ * 設計意圖：前期只有早解鎖的弱怪，較強敵種隨時間混入，難度有層次。
+ * 為維持確定性，亂數一律走傳入的 seeded rng，不可使用 Math.random。
+ *
+ * @param elapsed 自開局以來的遊戲時間（秒）。
+ * @param rng     seeded 亂數產生器。
+ * @returns 抽中的敵人種類。
+ */
+export function pickEnemyKind(elapsed: number, rng: Rng): EnemyKind {
+  const unlocked = ENEMY_ORDER.filter((k) => elapsed >= ENEMY_DEFS[k].unlockTime)
+  const total = unlocked.reduce((s, k) => s + ENEMY_DEFS[k].spawnWeight, 0)
+  let r = rng.next() * total
+  for (const k of unlocked) {
+    r -= ENEMY_DEFS[k].spawnWeight
+    if (r < 0) return k
+  }
+  return unlocked[unlocked.length - 1] // 浮點保險：理論上不會走到
 }
