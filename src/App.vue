@@ -12,6 +12,7 @@
 import { ref, watch, onBeforeUnmount } from 'vue'
 import { useGameStore } from './stores/game'
 import { Game } from './engine/Game'
+import type { CharacterKind } from './engine/types'
 import MainMenu from './ui/MainMenu.vue'
 import Hud from './ui/Hud.vue'
 import UpgradeModal from './ui/UpgradeModal.vue'
@@ -25,19 +26,22 @@ const canvasParent = ref<HTMLDivElement | null>(null)
 let game: Game | null = null
 // 每場遊戲遞增的亂數種子，確保不同場次有不同（但可重現）的隨機序列。
 let seed = 1
+// 記住目前選定角色（供「再玩一次」沿用）；預設戰士。
+let selectedCharacter: CharacterKind = 'warrior'
 
 // 開始一場新遊戲：先把 store 重置為 playing，再非同步啟動引擎並掛上畫布。
-async function startGame() {
+async function startGame(character: CharacterKind = selectedCharacter) {
+  selectedCharacter = character
   store.start()
   if (!canvasParent.value) return
-  game = await Game.start(canvasParent.value, seed++)
+  game = await Game.start(canvasParent.value, seed++, character)
 }
 
-// 重新開始：先停掉舊引擎（Game.stop 為冪等）並清空參照，再開新的一場。
+// 重新開始：先停掉舊引擎（Game.stop 為冪等）並清空參照，再以同角色開新的一場。
 function restart() {
   game?.stop()
   game = null
-  startGame()
+  startGame(selectedCharacter)
 }
 
 // 監聽 phase：升級彈窗出現時暫停引擎迴圈，回到遊戲時恢復——即升級暫停握手的 UI 端。
