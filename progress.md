@@ -1,72 +1,72 @@
-# Progress
+# 進度
 
-Survivor Game — build progress and roadmap.
+Survivor Game — 開發進度與路線圖。
 
-_Last updated: 2026-06-23_
+_最後更新：2026-06-23_
 
-## Status: Phase 0 + 1 complete ✅
+## 狀態：階段 0 + 1 完成 ✅
 
-Engine foundation + a complete, playable core loop. Verified in-browser end to end
-(menu → play → auto-fire → kills → gems → level-up modal → upgrade → resume → game-over → restart)
-with **46 unit tests passing, clean type check, clean production build, zero console errors**.
+引擎地基 + 完整可玩的核心循環。已在瀏覽器端到端實測
+（選單 → 遊玩 → 自動攻擊 → 擊殺 → 撿寶石 → 升級彈窗 → 強化 → 恢復 → 死亡結算 → 重新開始），
+並且 **46 個單元測試全過、型別檢查乾淨、production build 乾淨、0 console error**。
 
-## Done
+## 已完成
 
-### Phase 0 — Foundation
-- [x] Vue 3 + TypeScript + Vite + Pinia + PixiJS project scaffold
-- [x] Pure-TS engine boundary (no Vue/Pinia runtime in `engine/`)
-- [x] Fixed-timestep game loop (1/60 s accumulator) — framerate-independent
-- [x] ECS-style `World` (plain-data entities + stateless system functions)
-- [x] PixiJS renderer with player-follow camera
-- [x] Pinia bridge store (summary state + upgrade handshake)
-- [x] Core utilities: seeded RNG, 2D vector math, object pool, spatial grid, keyboard input
-  - _object pool & spatial grid are built + tested but not yet wired into `World` — staged for phase 2_
+### 階段 0 — 地基
+- [x] Vue 3 + TypeScript + Vite + Pinia + PixiJS 專案 scaffold
+- [x] 純 TS 引擎邊界（`engine/` 內無 Vue/Pinia 執行期依賴）
+- [x] 固定步長遊戲迴圈（1/60 秒 accumulator）— 與 FPS 解耦
+- [x] ECS 風格 `World`（純資料 entity + 無狀態 system 函式）
+- [x] PixiJS 渲染器 + 跟隨玩家的鏡頭
+- [x] Pinia 橋接 store（summary 狀態 + 升級握手）
+- [x] 核心工具：seeded RNG、2D 向量數學、物件池、空間網格、鍵盤輸入
+  - _物件池與空間網格已建好並測過，但尚未接進 `World`——為階段 2 預備_
 
-### Phase 1 — Core loop
-- [x] Player movement (WASD / arrows) + camera follow
-- [x] One auto-firing weapon (targets nearest enemy)
-- [x] One enemy type — spawns from screen edges, chases the player
-- [x] Difficulty curve (spawn rate ramps over time)
-- [x] XP gems drop on kill, auto-attract + collect
-- [x] Level-up → pause → 3-choice upgrade card → apply → resume
-- [x] Contact damage → game over → results (survival time / kills / level) → restart
-- [x] Main menu, HUD (level / timer / kills / HP & XP bars), upgrade modal, game-over screen
+### 階段 1 — 核心循環
+- [x] 玩家移動（WASD / 方向鍵）+ 鏡頭跟隨
+- [x] 一種自動開火武器（鎖定最近的敵人）
+- [x] 一種敵人——從畫面邊緣生成、追擊玩家
+- [x] 難度曲線（生怪速度隨時間加快）
+- [x] 擊殺掉落經驗寶石、自動吸取 + 收集
+- [x] 升級 → 暫停 → 3 選 1 升級卡 → 套用 → 恢復
+- [x] 接觸扣血 → 死亡結算（存活時間 / 擊殺 / 等級）→ 重新開始
+- [x] 主選單、HUD（等級 / 計時 / 擊殺 / 血量與經驗條）、升級彈窗、死亡結算畫面
 
-### Hardening / fixes
-- [x] Fixed flaky projectile-kill test (gem was being collected mid-loop)
-- [x] Fixed double-destroy crash on restart (`Game.stop` / `PixiRenderer.destroy` now idempotent)
-- [x] Level-up flag is a counter (multiple level-ups in one xp grant no longer dropped)
-- [x] Upgrade RNG seeded per run (each game offers a varied upgrade sequence)
+### 加固 / 修正
+- [x] 修掉會 flaky 的「投射物擊殺」測試（寶石在迴圈中途就被收集了）
+- [x] 修掉重新開始時的 double-destroy crash（`Game.stop` / `PixiRenderer.destroy` 改為冪等）
+- [x] 升級旗標改為計數器（同一次經驗結算的多次升級不再被丟掉）
+- [x] 升級用的 RNG 依每局 seed 產生（每局升級選項序列都不同）
 - [x] README + CLAUDE.md
 
-## Roadmap (not started)
+## 路線圖（尚未開始）
 
-### Phase 2 — Content
-- [ ] Multiple weapons (and weapon-specific upgrades)
-- [ ] Multiple enemy types
-- [ ] Boss enemy
-- [ ] Passive items / more upgrade branches
-- [ ] Wire `objectPool` + `spatialGrid` into `World` for higher entity counts
+### 階段 2 — 內容
+- [ ] 多種武器（以及武器專屬的升級）
+- [ ] 多種敵人
+- [ ] Boss 敵人
+- [ ] 被動道具 / 更多升級分支
+- [ ] 把 `objectPool` + `spatialGrid` 接進 `World` 以支撐更高物件數
 
-### Phase 3 — Variety
-- [ ] Multiple playable characters
-- [ ] Multiple maps
-- [ ] Chests / random rewards
+### 階段 3 — 多樣化
+- [ ] 多個可玩角色
+- [ ] 多張地圖
+- [ ] 寶箱 / 隨機獎勵
 
-### Phase 4 — Meta
-- [ ] Progress save (localStorage)
-- [ ] Unlocks
-- [ ] Score / leaderboard
-- [ ] Audio (SFX + music)
-- [ ] Replace placeholder shapes with sprite art
+### 階段 4 — 後設系統
+- [ ] 進度存檔（localStorage）
+- [ ] 解鎖
+- [ ] 計分 / 排行榜
+- [ ] 音效（SFX + 音樂）
+- [ ] 把佔位用的幾何圖形換成 sprite 美術
 
-Each phase gets its own spec → plan → implementation cycle.
+每個階段都各自走一輪 spec → plan → 實作。
 
-## Verification snapshot
+## 驗證快照
 
-| Check | Result |
-|-------|--------|
-| Unit tests (Vitest) | 46 passing |
-| Type check (vue-tsc) | clean |
-| Production build | clean |
-| In-browser smoke test | all phase-1 acceptance criteria pass, 0 console errors |
+| 檢查項目 | 結果 |
+|---------|------|
+| 單元測試（Vitest） | 46 通過 |
+| 型別檢查（vue-tsc） | 乾淨 |
+| Production build | 乾淨 |
+| 瀏覽器煙霧測試 | 階段 1 所有驗收標準通過，0 console error |
