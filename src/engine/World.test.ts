@@ -119,6 +119,40 @@ describe('World', () => {
     expect(ctx.player).toBe(w.player)
   })
 
+  it('接觸傷害只對與玩家重疊的敵人生效（網格候選正確）', () => {
+    const w = new World(1)
+    const near = w.spawnEnemyAt({ x: w.player.pos.x, y: w.player.pos.y }) // 與玩家重疊
+    const far = w.spawnEnemyAt({ x: w.player.pos.x + 800, y: w.player.pos.y })
+    const farHp0 = far.hp
+    const playerHp0 = w.player.hp
+    w.step(1 / 60)
+    expect(w.player.hp).toBeLessThan(playerHp0) // 受重疊敵人傷害
+    expect(far.hp).toBe(farHp0) // 遠方敵人不被牽涉
+    expect(near).toBeDefined()
+  })
+
+  it('大蒜只傷害半徑內敵人（網格候選正確）', () => {
+    const w = new World(1)
+    w.applyUpgrade('unlock:garlic')
+    const inside = w.spawnEnemyAt({ x: 20, y: 0 })
+    const outside = w.spawnEnemyAt({ x: 800, y: 0 })
+    const insideHp0 = inside.hp
+    const outsideHp0 = outside.hp
+    w.step(1 / 60)
+    expect(inside.hp).toBeLessThan(insideHp0)
+    expect(outside.hp).toBe(outsideHp0)
+  })
+
+  it('網格不改變確定性：相同 seed 相同結果', () => {
+    const run = () => {
+      const w = new World(42)
+      for (let i = 0; i < 600; i++) w.step(1 / 60)
+      const s = w.summary()
+      return { kills: s.kills, hp: s.hp }
+    }
+    expect(run()).toEqual(run())
+  })
+
   it('applyUpgrade 解鎖被動道具並套用其效果', () => {
     const w = new World(1)
     const before = w.stats.damageMult

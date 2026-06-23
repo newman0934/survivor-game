@@ -290,7 +290,10 @@ export class World {
       } else if (weapon.kind === 'garlic') {
         // 大蒜：每格對範圍內敵人連續扣血（dmg*dt），命中後結算死亡。
         const radius = (lvl.radius ?? 70) * this.stats.areaMult
-        garlicTick(this.player.pos, this.enemies, radius, damage, dt)
+        const cands = this.enemyGrid.queryRadius(
+          this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
+        )
+        garlicTick(this.player.pos, cands, radius, damage, dt)
         this.checkKills()
       }
       // bible 的位置與命中於下方步驟 4b 統一處理
@@ -309,7 +312,8 @@ export class World {
         p.active = false
         continue
       }
-      for (const e of this.enemies) {
+      const cands = this.enemyGrid.queryRadius(p.pos.x, p.pos.y, p.radius + MAX_ENEMY_RADIUS)
+      for (const e of cands) {
         if (!e.active) continue
         if (circlesOverlap(p, e)) {
           e.hp -= p.damage
@@ -337,7 +341,10 @@ export class World {
     }
 
     // 7) 敵人接觸傷害：與玩家重疊時持續扣血（乘 dt*10 換算成每秒傷害）；armor 固定減傷。
-    for (const e of this.enemies) {
+    const contactCands = this.enemyGrid.queryRadius(
+      this.player.pos.x, this.player.pos.y, this.player.radius + MAX_ENEMY_RADIUS,
+    )
+    for (const e of contactCands) {
       if (!e.active) continue
       if (circlesOverlap(e, this.player)) {
         this.player.hp -= Math.max(0, e.damage - this.stats.armor) * dt * 10
@@ -391,7 +398,8 @@ export class World {
     }
     // 環繞物對重疊敵人扣血（冷卻外才扣）。
     for (const orb of this.orbitEntities) {
-      for (const e of this.enemies) {
+      const cands = this.enemyGrid.queryRadius(orb.pos.x, orb.pos.y, orb.radius + MAX_ENEMY_RADIUS)
+      for (const e of cands) {
         if (!e.active) continue
         if (this.bibleHitTimers.has(e)) continue
         const dx = orb.pos.x - e.pos.x
