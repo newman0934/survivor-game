@@ -2,10 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Survivor Game</title>
     <style>
-      html, body, #app { margin: 0; height: 100%; overflow: hidden; background: #111; }
+      html, body, #app {
+        margin: 0; height: 100%; overflow: hidden; background: #111;
+        touch-action: none; overscroll-behavior: none;
+        user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+      }
     </style>
   </head>
   <body>

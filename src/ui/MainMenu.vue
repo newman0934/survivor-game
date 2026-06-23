@@ -79,4 +79,14 @@ h1 { font-size: 3rem; margin: 0 0 0.5rem; letter-spacing: 0.1em; }
   border-radius: 8px; background: #4aa3ff; color: #fff;
 }
 .hint { opacity: 0.7; }
+
+@media (max-width: 600px) {
+  .overlay { gap: 0.4rem; padding: 0.5rem; }
+  h1 { font-size: 2rem; margin-bottom: 0.2rem; }
+  .row { gap: 0.5rem; }
+  .card { width: 6.8rem; padding: 0.5rem; }
+  .name { font-size: 0.95rem; }
+  .desc { font-size: 0.72rem; }
+  .start { font-size: 1.2rem; padding: 0.5rem 1.6rem; }
+}
 </style>
