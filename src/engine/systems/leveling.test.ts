@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import { xpForLevel, rollUpgrades, buildCandidates, applyUpgradeById } from './leveling'
 import { createRng } from '../core/rng'
-import type { PlayerStats, UpgradeContext, Weapon } from '../types'
+import { createPlayer } from '../entities/factory'
+import type { PlayerStats, UpgradeContext, Weapon, Passive } from '../types'
 
 function makeStats(): PlayerStats {
-  return { moveSpeed: 200, pickupRadius: 120, damageMult: 1, cooldownMult: 1, projectileSpeedMult: 1, areaMult: 1 }
+  return {
+    moveSpeed: 200, pickupRadius: 120, damageMult: 1, cooldownMult: 1,
+    projectileSpeedMult: 1, areaMult: 1, regen: 0, armor: 0, xpGain: 1,
+  }
 }
-function makeCtx(weapons: Weapon[]): UpgradeContext {
-  return { stats: makeStats(), weapons, heal: () => {} }
+function makeCtx(weapons: Weapon[], passives: Passive[] = []): UpgradeContext {
+  return { stats: makeStats(), weapons, passives, player: createPlayer({ x: 0, y: 0 }), heal: () => {} }
 }
 
 describe('leveling', () => {
@@ -22,7 +26,7 @@ describe('leveling', () => {
     expect(ids).toContain('unlock:bible')
     expect(ids).toContain('unlock:garlic')
     expect(ids).toContain('levelup:wand')
-    expect(ids).toContain('damage')
+    expect(ids).toContain('passunlock:spinach')
   })
 
   it('武器滿級後不再出現該武器的升級候選', () => {
@@ -68,12 +72,6 @@ describe('leveling', () => {
     expect(ctx.weapons.find((w) => w.kind === 'wand')?.level).toBe(2)
   })
 
-  it('applyUpgradeById: 被動套用乘區', () => {
-    const ctx = makeCtx([{ kind: 'wand', level: 1, cooldownTimer: 0 }])
-    applyUpgradeById('damage', ctx)
-    expect(ctx.stats.damageMult).toBeCloseTo(1.15, 5)
-  })
-
   it('applyUpgradeById: 未知 id 安靜略過', () => {
     const ctx = makeCtx([{ kind: 'wand', level: 1, cooldownTimer: 0 }])
     expect(() => applyUpgradeById('nope', ctx)).not.toThrow()
@@ -84,5 +82,48 @@ describe('leveling', () => {
     const a = rollUpgrades(createRng(7), 3, makeCtx([{ kind: 'wand', level: 1, cooldownTimer: 0 }]))
     const b = rollUpgrades(createRng(7), 3, makeCtx([{ kind: 'wand', level: 1, cooldownTimer: 0 }]))
     expect(a.map((o) => o.id)).toEqual(b.map((o) => o.id))
+  })
+
+  // ---------- 被動道具 ----------
+  it('未持有被動時候選含解鎖被動', () => {
+    const ids = buildCandidates(makeCtx([{ kind: 'wand', level: 1, cooldownTimer: 0 }])).map((o) => o.id)
+    expect(ids).toContain('passunlock:spinach')
+    expect(ids).toContain('passunlock:armor')
+  })
+
+  it('候選不再含舊的無限乘區卡', () => {
+    const ids = buildCandidates(makeCtx([{ kind: 'wand', level: 1, cooldownTimer: 0 }])).map((o) => o.id)
+    for (const old of ['damage', 'firerate', 'projspeed', 'movespeed', 'pickup']) {
+      expect(ids).not.toContain(old)
+    }
+  })
+
+  it('被動達上限 6 後不再出解鎖被動候選', () => {
+    const passives: Passive[] = ['spinach', 'tome', 'bracer', 'wings', 'magnet', 'candle']
+      .map((k) => ({ kind: k as Passive['kind'], level: 1 }))
+    const ids = buildCandidates(makeCtx([{ kind: 'wand', level: 1, cooldownTimer: 0 }], passives)).map((o) => o.id)
+    expect(ids.some((id) => id.startsWith('passunlock:'))).toBe(false)
+    expect(ids).toContain('passlvl:spinach') // 仍可升級既有
+  })
+
+  it('被動滿級後不再出該被動升級候選', () => {
+    const passives: Passive[] = [{ kind: 'spinach', level: 5 }]
+    const ids = buildCandidates(makeCtx([{ kind: 'wand', level: 1, cooldownTimer: 0 }], passives)).map((o) => o.id)
+    expect(ids).not.toContain('passlvl:spinach')
+  })
+
+  it('applyUpgradeById: passunlock 新增被動 Lv1 並套用一次', () => {
+    const ctx = makeCtx([], [])
+    applyUpgradeById('passunlock:spinach', ctx)
+    expect(ctx.passives.find((p) => p.kind === 'spinach')?.level).toBe(1)
+    expect(ctx.stats.damageMult).toBeCloseTo(1.1, 5)
+  })
+
+  it('applyUpgradeById: passlvl 升級既有被動並再套用一次', () => {
+    const ctx = makeCtx([], [{ kind: 'spinach', level: 1 }])
+    ctx.stats.damageMult = 1.1 // 模擬 Lv1 已套
+    applyUpgradeById('passlvl:spinach', ctx)
+    expect(ctx.passives.find((p) => p.kind === 'spinach')?.level).toBe(2)
+    expect(ctx.stats.damageMult).toBeCloseTo(1.21, 5)
   })
 })

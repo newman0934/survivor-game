@@ -8,9 +8,10 @@
  * rollUpgrades 抽出候選卡推給 store 供 UI 顯示；玩家選定後由 World.applyUpgrade 呼叫對應
  * UpgradeOption 的 apply() 修改 stats，再恢復遊戲。
  */
-import type { UpgradeOption, UpgradeContext, WeaponKind } from '../types'
+import type { UpgradeOption, UpgradeContext, WeaponKind, PassiveKind } from '../types'
 import type { Rng } from '../core/rng'
 import { WEAPON_DEFS, WEAPON_ORDER } from './weaponDefs'
+import { PASSIVE_DEFS, PASSIVE_ORDER, PASSIVE_CAP } from './passiveDefs'
 
 /**
  * 經驗曲線：回傳從 (level-1) 升到 level 所需的經驗值總量。
@@ -27,19 +28,6 @@ export function xpForLevel(level: number): number {
 
 /** 武器持有上限（本階段共 4 種，故必定能全數收齊）。 */
 const WEAPON_CAP = 4
-
-/**
- * 全域被動升級（改為乘區，同時影響所有武器的生效數值）。
- *
- * 每筆為一個 UpgradeOption：id、label、apply（就地修改 UpgradeContext.stats 的乘區）。
- */
-export const PASSIVE_UPGRADES: UpgradeOption[] = [
-  { id: 'damage', label: '傷害 +15%', apply: (c) => { c.stats.damageMult *= 1.15 } },
-  { id: 'firerate', label: '攻速 +15%', apply: (c) => { c.stats.cooldownMult *= 0.85 } }, // 冷卻變短 = 攻速變快
-  { id: 'projspeed', label: '彈速 +20%', apply: (c) => { c.stats.projectileSpeedMult *= 1.2 } },
-  { id: 'movespeed', label: '移速 +12%', apply: (c) => { c.stats.moveSpeed *= 1.12 } },
-  { id: 'pickup', label: '吸取範圍 +25%', apply: (c) => { c.stats.pickupRadius *= 1.25 } },
-]
 
 /** 保底卡：合法候選不足時補滿用。 */
 const HEAL: UpgradeOption = { id: 'heal', label: '補血 +20', apply: (c) => c.heal(20) }
@@ -70,25 +58,64 @@ function levelUpOption(kind: WeaponKind, curLevel: number): UpgradeOption {
   }
 }
 
+/** 產生「解鎖某被動」選項（選到時新增 Lv1 並套用一次增量）。 */
+function unlockPassiveOption(kind: PassiveKind): UpgradeOption {
+  const def = PASSIVE_DEFS[kind]
+  return {
+    id: `passunlock:${kind}`,
+    label: `新道具：${def.label}`,
+    apply: (c) => {
+      if (!c.passives.some((p) => p.kind === kind) && c.passives.length < PASSIVE_CAP) {
+        c.passives.push({ kind, level: 1 })
+        def.apply(c)
+      }
+    },
+  }
+}
+
+/** 產生「升級某被動」選項（選到時 level+1 並再套用一次增量；label 顯示當前→下一級）。 */
+function levelUpPassiveOption(kind: PassiveKind, curLevel: number): UpgradeOption {
+  const def = PASSIVE_DEFS[kind]
+  return {
+    id: `passlvl:${kind}`,
+    label: `${def.label} Lv${curLevel}→Lv${curLevel + 1}`,
+    apply: (c) => {
+      const p = c.passives.find((x) => x.kind === kind)
+      if (p && p.level < def.maxLevel) {
+        p.level += 1
+        def.apply(c)
+      }
+    },
+  }
+}
+
 /**
  * 依當前 World 狀態動態組出所有合法升級候選：
- * 解鎖未持有武器（未達上限）＋升級未滿級武器＋全域被動。
+ * 解鎖/升級武器（未達上限/未滿級）＋解鎖/升級被動道具（未達上限/未滿級）。
  *
- * @param ctx 當前升級上下文（讀取 weapons 與持有狀態）。
+ * @param ctx 當前升級上下文（讀取 weapons / passives 與持有狀態）。
  * @returns 當下所有可被抽選的合法選項。
  */
 export function buildCandidates(ctx: UpgradeContext): UpgradeOption[] {
   const out: UpgradeOption[] = []
-  const owned = new Set(ctx.weapons.map((w) => w.kind))
+  const ownedW = new Set(ctx.weapons.map((w) => w.kind))
   if (ctx.weapons.length < WEAPON_CAP) {
     for (const kind of WEAPON_ORDER) {
-      if (!owned.has(kind)) out.push(unlockOption(kind))
+      if (!ownedW.has(kind)) out.push(unlockOption(kind))
     }
   }
   for (const w of ctx.weapons) {
     if (w.level < WEAPON_DEFS[w.kind].maxLevel) out.push(levelUpOption(w.kind, w.level))
   }
-  out.push(...PASSIVE_UPGRADES)
+  const ownedP = new Set(ctx.passives.map((p) => p.kind))
+  if (ctx.passives.length < PASSIVE_CAP) {
+    for (const kind of PASSIVE_ORDER) {
+      if (!ownedP.has(kind)) out.push(unlockPassiveOption(kind))
+    }
+  }
+  for (const p of ctx.passives) {
+    if (p.level < PASSIVE_DEFS[p.kind].maxLevel) out.push(levelUpPassiveOption(p.kind, p.level))
+  }
   return out
 }
 
@@ -125,13 +152,17 @@ export function rollUpgrades(rng: Rng, count: number, ctx: UpgradeContext): Upgr
  */
 export function applyUpgradeById(id: string, ctx: UpgradeContext): void {
   if (id === 'heal') return HEAL.apply(ctx)
-  const passive = PASSIVE_UPGRADES.find((p) => p.id === id)
-  if (passive) return passive.apply(ctx)
   if (id.startsWith('unlock:')) return unlockOption(id.slice(7) as WeaponKind).apply(ctx)
   if (id.startsWith('levelup:')) {
     const kind = id.slice(8) as WeaponKind
     const w = ctx.weapons.find((x) => x.kind === kind)
     return levelUpOption(kind, w ? w.level : 1).apply(ctx)
+  }
+  if (id.startsWith('passunlock:')) return unlockPassiveOption(id.slice(11) as PassiveKind).apply(ctx)
+  if (id.startsWith('passlvl:')) {
+    const kind = id.slice(8) as PassiveKind
+    const p = ctx.passives.find((x) => x.kind === kind)
+    return levelUpPassiveOption(kind, p ? p.level : 1).apply(ctx)
   }
   // 未知 id：安靜略過
 }
