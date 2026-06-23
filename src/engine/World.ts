@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind, SoundEvent } from './types'
+import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind, SoundEvent, FxEvent } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -23,7 +23,8 @@ import { SpatialGrid } from './core/spatialGrid'
 import { CHARACTER_DEFS } from './systems/characterDefs'
 import { PASSIVE_DEFS } from './systems/passiveDefs'
 import { MAP_DEFS } from './systems/mapDefs'
-import { fireWand, fireKnife, orbitPositions, garlicTick } from './systems/weapons'
+import { fireWand, fireKnife, orbitPositions, garlicTick,
+  phagocyteSweep, chainTargets, novaBurst, PHAGOCYTE_HALF_ANGLE, CASCADE_FALLOFF } from './systems/weapons'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 import { circlesOverlap } from './systems/collision'
 import { attractGem } from './systems/pickup'
@@ -100,6 +101,8 @@ export class World {
 
   /** 本格累積的語意音效事件；由上層每幀 consumeSoundEvents 排空。 */
   private soundEventQueue: SoundEvent[] = []
+  /** 本格累積的武器視覺事件；由上層每幀 consumeFxEvents 排空。 */
+  private fxEventQueue: FxEvent[] = []
 
   /** 確定性亂數來源（seeded）；模擬內所有隨機都走這裡。 */
   private rng: Rng
@@ -172,6 +175,13 @@ export class World {
   consumeSoundEvents(): SoundEvent[] {
     const out = this.soundEventQueue
     this.soundEventQueue = []
+    return out
+  }
+
+  /** 取走並清空本格累積的武器視覺事件（供上層交給特效層繪製）。 */
+  consumeFxEvents(): FxEvent[] {
+    const out = this.fxEventQueue
+    this.fxEventQueue = []
     return out
   }
 
@@ -368,6 +378,56 @@ export class World {
         )
         garlicTick(this.player.pos, cands, radius, damage, dt)
         this.checkKills()
+      } else if (weapon.kind === 'phagocyte') {
+        weapon.cooldownTimer -= dt
+        if (weapon.cooldownTimer <= 0) {
+          weapon.cooldownTimer = (lvl.cooldown ?? 0.7) * this.stats.cooldownMult
+          const radius = (lvl.radius ?? 70) * this.stats.areaMult
+          const cands = this.enemyGrid.queryRadius(
+            this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
+          )
+          const hits = phagocyteSweep(this.player.pos, this.lastMoveDir, cands, radius, PHAGOCYTE_HALF_ANGLE, damage)
+          if (hits.length > 0) {
+            this.checkKills()
+            this.soundEventQueue.push('hit')
+            this.fxEventQueue.push({
+              kind: 'sweep', x: this.player.pos.x, y: this.player.pos.y,
+              angle: Math.atan2(this.lastMoveDir.y, this.lastMoveDir.x), radius, halfAngle: PHAGOCYTE_HALF_ANGLE,
+            })
+          }
+        }
+      } else if (weapon.kind === 'cascade') {
+        weapon.cooldownTimer -= dt
+        if (weapon.cooldownTimer <= 0) {
+          weapon.cooldownTimer = (lvl.cooldown ?? 1.0) * this.stats.cooldownMult
+          const jumps = lvl.count ?? 3
+          const range = (lvl.radius ?? 160) * this.stats.areaMult
+          const targets = chainTargets(this.player.pos, this.enemies, jumps, range)
+          if (targets.length > 0) {
+            for (let k = 0; k < targets.length; k++) targets[k].hp -= damage * Math.pow(CASCADE_FALLOFF, k)
+            this.checkKills()
+            this.soundEventQueue.push('hit')
+            this.fxEventQueue.push({
+              kind: 'chain',
+              points: [{ x: this.player.pos.x, y: this.player.pos.y }, ...targets.map((t) => ({ x: t.pos.x, y: t.pos.y }))],
+            })
+          }
+        }
+      } else if (weapon.kind === 'nova') {
+        weapon.cooldownTimer -= dt
+        if (weapon.cooldownTimer <= 0) {
+          weapon.cooldownTimer = (lvl.cooldown ?? 1.6) * this.stats.cooldownMult
+          const radius = (lvl.radius ?? 120) * this.stats.areaMult
+          const cands = this.enemyGrid.queryRadius(
+            this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
+          )
+          const hits = novaBurst(this.player.pos, cands, radius, damage)
+          if (hits.length > 0) {
+            this.checkKills()
+            this.soundEventQueue.push('hit')
+            this.fxEventQueue.push({ kind: 'nova', x: this.player.pos.x, y: this.player.pos.y, radius })
+          }
+        }
       }
       // bible 的位置與命中於下方步驟 4b 統一處理
     }
