@@ -27,6 +27,19 @@ function lighten(color: number, f: number): number {
   return (lr << 16) | (lg << 8) | lb
 }
 
+/**
+ * 確定性座標雜湊：整數格座標 → [0,1) 偽隨機值（純函式、無副作用）。
+ * 供背景地貌決定每格是否有特徵與其外觀；同格永遠相同 → 無限捲動穩定重現。
+ * 不使用 Math.random() 或模擬 rng（背景純呈現、與模擬解耦）。
+ */
+export function bgHash(gx: number, gy: number): number {
+  let h = (Math.trunc(gx) * 374761393 + Math.trunc(gy) * 668265263) | 0
+  h = (h ^ (h >>> 13)) | 0
+  h = Math.imul(h, 1274126177) | 0
+  h = (h ^ (h >>> 16)) >>> 0
+  return (h % 100000) / 100000
+}
+
 /** 落地陰影：壓扁的半透明深色橢圓，墊在造型最底，讓單位「站」在地上。 */
 function groundShadow(g: Graphics, rad: number): void {
   g.ellipse(0, rad * 0.85, rad * 0.9, rad * 0.4).fill({ color: 0x000000, alpha: 0.25 })
