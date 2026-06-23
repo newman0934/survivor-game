@@ -67,6 +67,12 @@ export interface PlayerStats {
   projectileSpeedMult: number
   /** 全域範圍乘區（預設 1，影響 bible/garlic 半徑）。 */
   areaMult: number
+  /** 每秒回血量（hp/秒）；初值 0。 */
+  regen: number
+  /** 接觸傷害的固定減傷值；初值 0。 */
+  armor: number
+  /** 經驗獲得乘區；初值 1。 */
+  xpGain: number
 }
 
 /** 武器種類。 */
@@ -128,8 +134,41 @@ export interface UpgradeContext {
   stats: PlayerStats
   /** 玩家持有的武器陣列；可新增或調整等級。 */
   weapons: Weapon[]
+  /** 玩家持有的被動道具；可新增或升級。 */
+  passives: Passive[]
+  /** 玩家 entity（供 heart 道具直接調整 maxHp/hp）。 */
+  player: Entity
   /** 補血保底卡用；就地調整玩家 hp（夾上限）。 */
   heal: (amount: number) => void
+}
+
+/** 被動道具種類。 */
+export type PassiveKind =
+  | 'spinach' | 'tome' | 'bracer' | 'wings' | 'magnet'
+  | 'candle' | 'heart' | 'tomato' | 'armor' | 'crown'
+
+/** 一個被動道具的執行期狀態（純資料，存於 `World.passives`）。 */
+export interface Passive {
+  /** 道具種類。 */
+  kind: PassiveKind
+  /** 目前等級（1..maxLevel）。 */
+  level: number
+}
+
+/**
+ * 一種被動道具的定義。`apply(ctx)` 為每升一級執行一次的固定增量。
+ * 與武器不同：被動不在每格開火，而是在升級握手「選到即套用」一次增量。
+ * 在 `systems/passiveDefs.ts` 定義；調整數值從那裡下手。
+ */
+export interface PassiveDef {
+  /** 道具種類。 */
+  kind: PassiveKind
+  /** 顯示名稱（繁中）。 */
+  label: string
+  /** 等級上限。 */
+  maxLevel: number
+  /** 每升一級執行一次的固定增量套用函式。 */
+  apply: (ctx: UpgradeContext) => void
 }
 
 /**
