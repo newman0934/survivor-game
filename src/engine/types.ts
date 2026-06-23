@@ -171,6 +171,29 @@ export interface PassiveDef {
   apply: (ctx: UpgradeContext) => void
 }
 
+/** 可選的起始角色種類。 */
+export type CharacterKind = 'warrior' | 'ranger' | 'mage' | 'harvester'
+
+/**
+ * 一個可選角色的定義（純資料）：決定起始武器、起始數值、起始被動與顏色。
+ * 在 `systems/characterDefs.ts` 定義；World 建構時套用。
+ */
+export interface CharacterDef {
+  kind: CharacterKind
+  name: string
+  description: string
+  /** 玩家圓的顏色。 */
+  color: number
+  /** 起始最大血（覆寫 player.maxHp/hp）。 */
+  maxHp: number
+  /** 起始武器。 */
+  startWeapon: WeaponKind
+  /** 併入起始 PlayerStats 的部分欄位。 */
+  statMods: Partial<PlayerStats>
+  /** 起始就持有的被動道具（建立時各套用一次效果）。 */
+  startPassives: PassiveKind[]
+}
+
 /**
  * 一個升級選項。
  *
