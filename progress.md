@@ -84,6 +84,10 @@ _最後更新：2026-06-23_
   - **造型精緻化（B 批）**：寶箱→補給囊泡（金膜 + 發光核）、抗原碎片→結晶切面、補體環繞物→補體複合體（亞基瓣）、
     發炎場→湍流熱區（多層徑向暈染 + 抖動邊界 + ROS 熱點，只用 renderer clock、無 Math.random）。
     只動 sprites.ts 四繪製函式、簽章不變，數值/平衡/確定性不動，122 測試全綠。SDD 五件套見 docs/superpowers/specs/sprite-polish-b/
+  - **HUD/UI 動畫（C 批）**：HUD 血條/經驗條平滑填充 + 升級 Lv 彈跳 + 受傷紅閃、升級彈窗錯落進場 + 卡片按壓反饋、
+    Boss 血條進場/退場轉場 + 低血脈動、死亡結算內容浮現、phase overlay 淡入淡出（Vue `<Transition>`）；
+    全部尊重 `prefers-reduced-motion`。只動 `src/ui/*.vue` + `App.vue`，不碰引擎/store，122 測試全綠。
+    SDD 五件套見 docs/superpowers/specs/ui-animation-c/
 
 ### 平台支援（非路線圖既有項）
 - [x] 手機支援（觸控 + RWD）— 浮動虛擬搖桿（與鍵盤並存）、螢幕搖桿視覺、視口防捲動縮放、
