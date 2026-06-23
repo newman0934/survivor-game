@@ -53,19 +53,23 @@ function shaded(g: Graphics, cx: number, cy: number, rad: number, color: number)
   g.circle(cx - rad * 0.32, cy - rad * 0.34, rad * 0.42).fill({ color: lighten(color, 0.5), alpha: 0.6 })
 }
 
-/** 玩家：機尾雙鰭 + 立體圓身 + 駕駛艙 + 朝 +x 槍口（顏色為角色色；由 renderer 依 lastMoveDir 旋轉）。 */
+/** 玩家：免疫細胞（吞噬細胞/T細胞造型；由 renderer 依 lastMoveDir 旋轉，朝 +x）。 */
 export function drawPlayer(g: Graphics, e: Entity, color: number): void {
   const r = e.radius
+  // 落地陰影
   groundShadow(g, r)
-  // 機尾雙鰭（後方 -x）
-  g.poly([-r * 0.6, -r * 0.7, -r * 1.15, 0, -r * 0.6, r * 0.7]).fill(dim(color, 0.5))
-  // 立體圓身
-  shaded(g, 0, 0, r, color)
-  // 駕駛艙（前偏）
-  g.circle(r * 0.15, 0, r * 0.4).fill(dim(color, 0.4))
-  g.circle(r * 0.05, -r * 0.12, r * 0.18).fill({ color: lighten(color, 0.6), alpha: 0.85 })
-  // 前方槍口
-  g.poly([r - 1, -5, r + 8, 0, r - 1, 5]).fill(0xffffff)
+  // 偽足：前方 +x 兩個小突起（顯示朝向）
+  g.circle(r * 0.9, -r * 0.3, r * 0.25).fill({ color: lighten(color, 0.15), alpha: 0.9 })
+  g.circle(r * 0.9, r * 0.3, r * 0.25).fill({ color: lighten(color, 0.15), alpha: 0.9 })
+  // 半透明細胞膜身
+  g.circle(0, 0, r).fill({ color, alpha: 0.85 })
+  g.circle(0, 0, r).stroke({ width: 2, color: dim(color, 0.5) })
+  // 細胞質高光（左上）
+  g.circle(-r * 0.28, -r * 0.28, r * 0.38).fill({ color: lighten(color, 0.5), alpha: 0.32 })
+  // 細胞核
+  g.circle(r * 0.1, 0, r * 0.42).fill(dim(color, 0.4))
+  // 核仁亮點
+  g.circle(r * 0.05, -r * 0.1, r * 0.14).fill({ color: lighten(color, 0.55), alpha: 0.7 })
 }
 
 /** 敵人：依 enemyKind 畫多部件立體造型，顏色取自 ENEMY_DEFS。 */
@@ -188,27 +192,31 @@ export function drawEnemy(g: Graphics, e: Entity): void {
   }
 }
 
-/** 經驗寶石：旋轉菱形 + 亮心（旋轉由 PixiRenderer 套用）。 */
+/** 抗原碎片：偏黃菱形 + 亮心（旋轉由 PixiRenderer 套用）。 */
 export function drawGem(g: Graphics, e: Entity): void {
   const r = e.radius
-  g.poly([0, -r, r, 0, 0, r, -r, 0]).fill(0x6bff6b)
-  g.poly([0, -r, r, 0, 0, r, -r, 0]).stroke({ width: 1.5, color: 0xd6ffd6 })
+  g.poly([0, -r, r, 0, 0, r, -r, 0]).fill(0xffd54a)
+  g.poly([0, -r, r, 0, 0, r, -r, 0]).stroke({ width: 1.5, color: 0xfff3c4 })
   g.circle(0, 0, r * 0.35).fill(0xffffff)
 }
 
-/** 投射物：亮核 + 柔光暈（拉長方向由 PixiRenderer 依 vel 旋轉）。 */
+/** 抗體/穿孔素中和粒子：柔光暈 + 亮核（方向由 PixiRenderer 依 vel 旋轉）。 */
 export function drawProjectile(g: Graphics, e: Entity): void {
   const r = e.radius
-  g.circle(0, 0, r * 2.2).fill({ color: 0xffe27a, alpha: 0.25 })
-  g.ellipse(0, 0, r * 1.8, r * 0.8).fill(0xfff3b0)
+  // 柔光暈（冰藍）
+  g.circle(0, 0, r * 2.2).fill({ color: 0xbfefff, alpha: 0.25 })
+  // 亮核
+  g.circle(0, 0, r).fill(0xeaffff)
 }
 
-/** 聖經環繞物：書本造型（旋轉由 PixiRenderer 套用）。 */
+/** 補體蛋白球：發光蛋白球體（旋轉由 PixiRenderer 套用）。 */
 export function drawOrbit(g: Graphics, e: Entity): void {
   const r = e.radius
-  g.roundRect(-r, -r * 0.8, r * 2, r * 1.6, 2).fill(0x8d6e63)
-  g.rect(-r * 0.85, -r * 0.65, r * 1.7, r * 1.3).fill(0xfff8e1)
-  g.moveTo(0, -r * 0.65).lineTo(0, r * 0.65).stroke({ width: 1.5, color: 0x8d6e63 })
+  // 蛋白球主體
+  g.circle(0, 0, r).fill(0xbfeaff)
+  g.circle(0, 0, r).stroke({ width: 1.5, color: dim(0xbfeaff, 0.55) })
+  // 亮心點（發光感）
+  g.circle(0, 0, r * 0.38).fill(0xffffff)
 }
 
 /** 寶箱：金棕箱身 + 蓋線金條 + 中央鎖扣。 */
@@ -378,10 +386,10 @@ export function drawMapBackground(
   drawAmbient(g, kind, cx, cy, viewW, viewH, clock)
 }
 
-/** 大蒜光環：環形（描邊 + 極淡填充），半徑/alpha 隨時鐘 t 呼吸。 */
+/** 發炎場/ROS 光環：環形（描邊 + 極淡填充），半徑/alpha 隨時鐘 t 呼吸。 */
 export function drawGarlicAura(g: Graphics, cx: number, cy: number, radius: number, t: number): void {
   const pr = radius * (1 + 0.04 * Math.sin(t * 3))
   const a = 0.12 + 0.05 * Math.sin(t * 3)
-  g.circle(cx, cy, pr).fill({ color: 0x9b59b6, alpha: a })
-  g.circle(cx, cy, pr).stroke({ width: 2, color: 0x9b59b6, alpha: 0.4 })
+  g.circle(cx, cy, pr).fill({ color: 0xff6e40, alpha: a })
+  g.circle(cx, cy, pr).stroke({ width: 2, color: 0xff6e40, alpha: 0.4 })
 }
