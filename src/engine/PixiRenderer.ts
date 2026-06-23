@@ -12,6 +12,8 @@ import {
   drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit, drawChest,
   drawMapBackground, drawGarlicAura,
 } from './sprites'
+import { EffectsLayer } from './effects'
+import { ENEMY_DEFS } from './systems/enemyDefs'
 
 /** 每個 entity 的顯示物件：body（造型）+ flash（命中閃白用的白色覆蓋圓）。 */
 interface Sprite {
@@ -37,6 +39,13 @@ export class PixiRenderer {
   private lastHp = new Map<Entity, number>()
   /** 動畫時鐘（每幀累加約 1/60；純視覺）。 */
   private clock = 0
+  /** 視覺特效層（擊殺/收集/升級/傷害數字/受傷紅暈/鏡頭震動）。 */
+  private effects!: EffectsLayer
+  /** 上一幀玩家等級，用來偵測升級上升沿。 */
+  private lastLevel = 1
+  /** 上一幀畫面尺寸，用來偵測 resize 重畫紅暈。 */
+  private lastW = 0
+  private lastH = 0
   /** 是否已銷毀，用來讓 destroy() 冪等。 */
   private destroyed = false
 
@@ -54,6 +63,9 @@ export class PixiRenderer {
     app.stage.addChild(this.ui)
     this.joystickGfx = new Graphics()
     this.ui.addChild(this.joystickGfx)
+    this.effects = new EffectsLayer(this.world, app.stage, app.renderer.width, app.renderer.height)
+    this.lastW = app.renderer.width
+    this.lastH = app.renderer.height
   }
 
   static async create(canvasParent: HTMLElement): Promise<PixiRenderer> {
@@ -93,6 +105,12 @@ export class PixiRenderer {
   render(world: World): void {
     this.clock += 1 / 60
 
+    // 升級上升沿：玩家身上爆發光環。
+    if (world.currentLevel > this.lastLevel) {
+      this.effects.spawnLevelUp(world.player.pos.x, world.player.pos.y)
+    }
+    this.lastLevel = world.currentLevel
+
     // 背景網格：依玩家可視範圍重畫（世界座標，隨容器平移捲動）。
     this.app.renderer.background.color = world.mapBgColor
     this.grid.clear()
@@ -126,16 +144,30 @@ export class PixiRenderer {
     // 回收：本格未出現者銷毀並移出對照表，避免洩漏。
     for (const [e, s] of this.sprites) {
       if (!seen.has(e)) {
+        if (e.kind === 'enemy') {
+          const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
+          this.effects.spawnKill(e.pos.x, e.pos.y, color)
+        } else if (e.kind === 'gem') {
+          this.effects.spawnPickup(e.pos.x, e.pos.y)
+        }
         s.root.destroy({ children: true })
         this.sprites.delete(e)
         this.lastHp.delete(e)
       }
     }
 
-    // 鏡頭跟隨：玩家恆在畫面中央。
+    // resize 偵測：重畫螢幕固定的紅暈。
+    if (this.app.renderer.width !== this.lastW || this.app.renderer.height !== this.lastH) {
+      this.lastW = this.app.renderer.width
+      this.lastH = this.app.renderer.height
+      this.effects.resize(this.lastW, this.lastH)
+    }
+    // 推進特效並取得鏡頭震動偏移。
+    const shake = this.effects.update()
+    // 鏡頭跟隨：玩家恆在畫面中央（加上震動偏移）。
     this.world.position.set(
-      this.app.renderer.width / 2 - world.player.pos.x,
-      this.app.renderer.height / 2 - world.player.pos.y,
+      this.app.renderer.width / 2 - world.player.pos.x + shake.shakeX,
+      this.app.renderer.height / 2 - world.player.pos.y + shake.shakeY,
     )
   }
 
@@ -184,14 +216,20 @@ export class PixiRenderer {
   /** 偵測 hp 下降觸發白色覆蓋層，並每幀衰減回透明。 */
   private applyHitFlash(e: Entity, s: Sprite): void {
     const prev = this.lastHp.get(e)
-    if (prev !== undefined && e.hp < prev) s.flash.alpha = 0.8
-    else s.flash.alpha = Math.max(0, s.flash.alpha - 0.16)
+    if (prev !== undefined && e.hp < prev) {
+      s.flash.alpha = 0.8
+      if (e.kind === 'enemy') this.effects.spawnDamage(e.pos.x, e.pos.y, prev - e.hp)
+      else if (e.kind === 'player') this.effects.hurt(Math.min(1, (prev - e.hp) / 15))
+    } else {
+      s.flash.alpha = Math.max(0, s.flash.alpha - 0.16)
+    }
     this.lastHp.set(e, e.hp)
   }
 
   destroy(): void {
     if (this.destroyed) return
     this.destroyed = true
+    this.effects.destroy()
     this.app.destroy(true, { children: true })
     this.sprites.clear()
     this.lastHp.clear()

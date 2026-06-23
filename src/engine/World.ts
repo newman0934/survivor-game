@@ -113,6 +113,12 @@ export class World {
   private enemyGrid = new SpatialGrid<Entity>(CELL_SIZE)
   /** 目前等級。 */
   private level = 1
+
+  /** 目前玩家等級（唯讀，供 renderer 偵測升級上升沿）。 */
+  get currentLevel(): number {
+    return this.level
+  }
+
   /** 目前等級內已累積的經驗值。 */
   private xp = 0
   /** 累計擊殺數。 */
