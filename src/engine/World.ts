@@ -67,7 +67,7 @@ export class World {
   }
 
   /** 玩家持有的武器（起始只有魔杖）；各自獨立計時與升級、共存開火。 */
-  weapons: Weapon[] = [{ kind: 'wand', level: 1, cooldownTimer: 0 }]
+  weapons: Weapon[] = [{ kind: 'antibody', level: 1, cooldownTimer: 0 }]
   /** 玩家持有的被動道具（起始為空）。 */
   passives: Passive[] = []
   /** 玩家圓顏色（取自所選角色）；供 renderer 取用。 */
@@ -251,9 +251,9 @@ export class World {
    * @returns 目前大蒜場域半徑（已套乘區）；未持有大蒜則回 0。供 renderer 畫場域圓。
    */
   garlicRadius(): number {
-    const g = this.weapons.find((w) => w.kind === 'garlic')
+    const g = this.weapons.find((w) => w.kind === 'inflammation')
     if (!g) return 0
-    const lvl = WEAPON_DEFS.garlic.levels[g.level - 1]
+    const lvl = WEAPON_DEFS.inflammation.levels[g.level - 1]
     return (lvl.radius ?? 0) * this.stats.areaMult
   }
 
@@ -344,20 +344,20 @@ export class World {
       const lvl = WEAPON_DEFS[weapon.kind].levels[weapon.level - 1]
       const damage = lvl.damage * this.stats.damageMult
 
-      if (weapon.kind === 'wand' || weapon.kind === 'knife') {
+      if (weapon.kind === 'antibody' || weapon.kind === 'perforin') {
         weapon.cooldownTimer -= dt
         if (weapon.cooldownTimer <= 0) {
           weapon.cooldownTimer = (lvl.cooldown ?? 0.5) * this.stats.cooldownMult
           const speed = (lvl.projectileSpeed ?? 400) * this.stats.projectileSpeedMult
           const count = lvl.count ?? 1
           const projs =
-            weapon.kind === 'wand'
+            weapon.kind === 'antibody'
               ? fireWand(this.player.pos, this.enemies, count, damage, speed)
               : fireKnife(this.player.pos, this.lastMoveDir, count, damage, speed)
           this.projectiles.push(...projs)
           if (projs.length > 0) this.soundEventQueue.push('shoot')
         }
-      } else if (weapon.kind === 'garlic') {
+      } else if (weapon.kind === 'inflammation') {
         // 大蒜：每格對範圍內敵人連續扣血（dmg*dt），命中後結算死亡。
         const radius = (lvl.radius ?? 70) * this.stats.areaMult
         const cands = this.enemyGrid.queryRadius(
@@ -449,12 +449,12 @@ export class World {
    * @param dt 固定步長秒數。
    */
   private updateBible(dt: number): void {
-    const bible = this.weapons.find((w) => w.kind === 'bible')
+    const bible = this.weapons.find((w) => w.kind === 'complement')
     if (!bible) {
       this.orbitEntities = []
       return
     }
-    const lvl = WEAPON_DEFS.bible.levels[bible.level - 1]
+    const lvl = WEAPON_DEFS.complement.levels[bible.level - 1]
     const count = lvl.count ?? 1
     const radius = (lvl.radius ?? 90) * this.stats.areaMult
     const damage = lvl.damage * this.stats.damageMult

@@ -104,7 +104,7 @@ describe('World', () => {
 
   it('預設角色為戰士（warrior）起始狀態', () => {
     const w = new World(1)
-    expect(w.weapons[0].kind).toBe('wand')
+    expect(w.weapons[0].kind).toBe('antibody')
     expect(w.player.maxHp).toBe(140)
     expect(w.player.hp).toBe(140)
     expect(w.stats.armor).toBeGreaterThan(0)
@@ -112,7 +112,7 @@ describe('World', () => {
 
   it('遊俠起始：飛刀、高移速、薄血、顏色', () => {
     const w = new World(1, 'ranger')
-    expect(w.weapons[0].kind).toBe('knife')
+    expect(w.weapons[0].kind).toBe('perforin')
     expect(w.stats.moveSpeed).toBe(240)
     expect(w.player.maxHp).toBe(80)
     expect(w.playerColor).toBe(0x6bff8c)
@@ -120,13 +120,13 @@ describe('World', () => {
 
   it('法師起始：聖經、高傷害乘區', () => {
     const w = new World(1, 'mage')
-    expect(w.weapons[0].kind).toBe('bible')
+    expect(w.weapons[0].kind).toBe('complement')
     expect(w.stats.damageMult).toBeCloseTo(1.25, 5)
   })
 
   it('豐收者起始：大蒜 + 皇冠被動（xpGain>1）', () => {
     const w = new World(1, 'harvester')
-    expect(w.weapons[0].kind).toBe('garlic')
+    expect(w.weapons[0].kind).toBe('inflammation')
     expect(w.passives.some((p) => p.kind === 'crown')).toBe(true)
     expect(w.stats.xpGain).toBeGreaterThan(1)
   })
@@ -255,7 +255,7 @@ describe('World', () => {
 
   it('大蒜只傷害半徑內敵人（網格候選正確）', () => {
     const w = new World(1)
-    w.applyUpgrade('unlock:garlic')
+    w.applyUpgrade('unlock:inflammation')
     const inside = w.spawnEnemyAt({ x: 20, y: 0 })
     const outside = w.spawnEnemyAt({ x: 800, y: 0 })
     const insideHp0 = inside.hp
@@ -285,13 +285,13 @@ describe('World', () => {
 
   it('起始只持有魔杖', () => {
     const w = new World(1)
-    expect(w.weapons.map((x) => x.kind)).toEqual(['wand'])
+    expect(w.weapons.map((x) => x.kind)).toEqual(['antibody'])
   })
 
   it('套用 unlock 後新增武器並共存', () => {
     const w = new World(1)
-    w.applyUpgrade('unlock:knife')
-    expect(w.weapons.map((x) => x.kind).sort()).toEqual(['knife', 'wand'])
+    w.applyUpgrade('unlock:perforin')
+    expect(w.weapons.map((x) => x.kind).sort()).toEqual(['antibody', 'perforin'])
   })
 
   it('魔杖在有敵人時會產生投射物', () => {
@@ -304,7 +304,7 @@ describe('World', () => {
 
   it('大蒜對靠近的敵人造成傷害', () => {
     const w = new World(1)
-    w.applyUpgrade('unlock:garlic')
+    w.applyUpgrade('unlock:inflammation')
     const e = w.spawnEnemyAt({ x: 20, y: 0 }) // 在大蒜半徑內
     const hp0 = e.hp
     w.step(1 / 60)
@@ -313,7 +313,7 @@ describe('World', () => {
 
   it('持有聖經時 orbits 數量等於聖經等級的 count', () => {
     const w = new World(1)
-    w.applyUpgrade('unlock:bible') // Lv1 → count 1
+    w.applyUpgrade('unlock:complement') // Lv1 → count 1
     w.step(1 / 60)
     expect(w.orbits().length).toBe(1)
   })

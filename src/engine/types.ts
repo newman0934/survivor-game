@@ -79,7 +79,7 @@ export interface PlayerStats {
 }
 
 /** 武器種類。 */
-export type WeaponKind = 'wand' | 'knife' | 'bible' | 'garlic'
+export type WeaponKind = 'antibody' | 'perforin' | 'complement' | 'inflammation'
 
 /**
  * 一把武器的執行期狀態（純資料，存於 `World.weapons`）。
