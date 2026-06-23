@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind } from './types'
+import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -51,10 +51,15 @@ export class World {
     cooldownMult: 1,
     projectileSpeedMult: 1,
     areaMult: 1,
+    regen: 0,
+    armor: 0,
+    xpGain: 1,
   }
 
   /** 玩家持有的武器（起始只有魔杖）；各自獨立計時與升級、共存開火。 */
   weapons: Weapon[] = [{ kind: 'wand', level: 1, cooldownTimer: 0 }]
+  /** 玩家持有的被動道具（起始為空）。 */
+  passives: Passive[] = []
   /** 玩家最後一次非零移動方向（飛刀發射方向用）；預設朝右。 */
   lastMoveDir: Vec2 = { x: 1, y: 0 }
   /** 聖經環繞基準角（每格隨角速度累加）。 */
@@ -159,6 +164,8 @@ export class World {
     return {
       stats: this.stats,
       weapons: this.weapons,
+      passives: this.passives,
+      player: this.player,
       heal: (amount: number) => {
         this.player.hp = Math.min(this.player.maxHp, this.player.hp + amount)
       },
@@ -315,16 +322,21 @@ export class World {
       applyVelocity(g, dt)
       if (distance(g.pos, this.player.pos) <= this.player.radius) {
         g.active = false
-        this.grantXp(g.xp)
+        this.grantXp(g.xp * this.stats.xpGain)
       }
     }
 
-    // 7) 敵人接觸傷害：與玩家重疊時持續扣血（乘 dt*10 換算成每秒傷害）。
+    // 7) 敵人接觸傷害：與玩家重疊時持續扣血（乘 dt*10 換算成每秒傷害）；armor 固定減傷。
     for (const e of this.enemies) {
       if (!e.active) continue
       if (circlesOverlap(e, this.player)) {
-        this.player.hp -= e.damage * dt * 10
+        this.player.hp -= Math.max(0, e.damage - this.stats.armor) * dt * 10
       }
+    }
+
+    // 7b) 回復：每格依 regen 回血（僅存活時，夾 maxHp）。
+    if (this.player.hp > 0 && this.stats.regen > 0) {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.stats.regen * dt)
     }
 
     // 8) 清理：本格結束後一次篩除所有死亡／失效的 entity。

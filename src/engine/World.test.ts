@@ -91,10 +91,39 @@ describe('World', () => {
     expect(w.consumeLevelUp()).toBe(false)
   })
 
-  it('applyUpgrade mutates player stats', () => {
+  it('regen 每格回血但不超過 maxHp', () => {
+    const w = new World(1)
+    w.stats.regen = 60 // 大量回血以便觀察
+    w.player.hp = 50
+    w.step(1 / 60)
+    expect(w.player.hp).toBeGreaterThan(50)
+    w.player.hp = w.player.maxHp
+    w.step(1 / 60)
+    expect(w.player.hp).toBe(w.player.maxHp) // 不溢出
+  })
+
+  it('armor 降低接觸傷害', () => {
+    const w = new World(1)
+    w.stats.armor = 100 // 遠大於敵人傷害 → 接觸傷害歸零
+    const e = w.spawnEnemyAt({ x: w.player.pos.x, y: w.player.pos.y })
+    const hp0 = w.player.hp
+    w.step(1 / 60)
+    expect(w.player.hp).toBe(hp0)
+    expect(e).toBeDefined()
+  })
+
+  it('upgradeContext 提供 passives 與 player', () => {
+    const w = new World(1)
+    const ctx = w.upgradeContext()
+    expect(Array.isArray(ctx.passives)).toBe(true)
+    expect(ctx.player).toBe(w.player)
+  })
+
+  it('applyUpgrade 解鎖被動道具並套用其效果', () => {
     const w = new World(1)
     const before = w.stats.damageMult
-    w.applyUpgrade('damage')
+    w.applyUpgrade('passunlock:spinach')
+    expect(w.passives.find((p) => p.kind === 'spinach')?.level).toBe(1)
     expect(w.stats.damageMult).toBeGreaterThan(before)
   })
 
