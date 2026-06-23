@@ -16,13 +16,13 @@ function dim(color: number, f: number): number {
   return (Math.round(r * f) << 16) | (Math.round(g * f) << 8) | Math.round(b * f)
 }
 
-/** 玩家：柔光圈 + 圓身 + 描邊 + 朝 +x 的槍口三角（由 PixiRenderer 依 lastMoveDir 旋轉整體）。 */
-export function drawPlayer(g: Graphics, e: Entity): void {
+/** 玩家：柔光圈 + 圓身 + 描邊 + 朝 +x 的槍口三角（顏色為所選角色色）。 */
+export function drawPlayer(g: Graphics, e: Entity, color: number): void {
   const r = e.radius
-  g.circle(0, 0, r * 1.8).fill({ color: 0x4aa3ff, alpha: 0.15 })
-  g.circle(0, 0, r).fill(0x4aa3ff)
-  g.circle(0, 0, r).stroke({ width: 2, color: 0xcfe8ff })
-  g.poly([r - 1, -5, r + 7, 0, r - 1, 5]).fill(0xcfe8ff)
+  g.circle(0, 0, r * 1.8).fill({ color, alpha: 0.15 })
+  g.circle(0, 0, r).fill(color)
+  g.circle(0, 0, r).stroke({ width: 2, color: 0xffffff })
+  g.poly([r - 1, -5, r + 7, 0, r - 1, 5]).fill(0xffffff)
 }
 
 /** 敵人：依 enemyKind 畫不同造型，顏色取自 ENEMY_DEFS。 */
