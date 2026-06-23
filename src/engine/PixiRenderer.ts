@@ -8,6 +8,7 @@
 import { Application, Container, Graphics } from 'pixi.js'
 import type { World } from './World'
 import type { Entity } from './types'
+import { ENEMY_DEFS } from './systems/enemyDefs'
 
 /** 各 entity 種類對應的填色。新增種類時記得在此補上顏色。 */
 const COLORS: Record<Entity['kind'], number> = {
@@ -60,7 +61,9 @@ export class PixiRenderer {
     let g = this.sprites.get(e)
     if (!g) {
       g = new Graphics()
-      g.circle(0, 0, e.radius).fill(COLORS[e.kind])
+      // 敵人依 enemyKind 取色（各敵種顏色不同）；其餘 entity 走 COLORS。
+      const color = e.kind === 'enemy' && e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : COLORS[e.kind]
+      g.circle(0, 0, e.radius).fill(color)
       this.world.addChild(g)
       this.sprites.set(e, g)
     }
