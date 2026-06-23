@@ -241,12 +241,20 @@ export function drawEnemy(g: Graphics, e: Entity): void {
   }
 }
 
-/** 抗原碎片：偏黃菱形 + 亮心（旋轉由 PixiRenderer 套用）。 */
+/** 抗原碎片：結晶菱形（四切面明暗）+ 外發光暈 + 亮核。 */
 export function drawGem(g: Graphics, e: Entity): void {
   const r = e.radius
-  g.poly([0, -r, r, 0, 0, r, -r, 0]).fill(0xffd54a)
-  g.poly([0, -r, r, 0, 0, r, -r, 0]).stroke({ width: 1.5, color: 0xfff3c4 })
-  g.circle(0, 0, r * 0.35).fill(0xffffff)
+  const base = 0xffd54a
+  // 外發光暈
+  g.circle(0, 0, r * 1.5).fill({ color: base, alpha: 0.18 })
+  // 四切面分明暗（上亮下暗）
+  g.poly([0, -r, r, 0, 0, 0]).fill(lighten(base, 0.4))   // 右上 亮
+  g.poly([0, -r, -r, 0, 0, 0]).fill(lighten(base, 0.15)) // 左上
+  g.poly([0, r, r, 0, 0, 0]).fill(dim(base, 0.75))       // 右下 暗
+  g.poly([0, r, -r, 0, 0, 0]).fill(dim(base, 0.55))      // 左下
+  // 描邊 + 亮核
+  g.poly([0, -r, r, 0, 0, r, -r, 0]).stroke({ width: 1.2, color: 0xfff3c4 })
+  g.circle(0, 0, r * 0.22).fill(0xffffff)
 }
 
 /** 中和彈：依 projShape 區分抗體（Y 形）與穿孔素（尖刺）；方向由 PixiRenderer 依 vel 旋轉（指向 +x）。 */
@@ -270,23 +278,38 @@ export function drawProjectile(g: Graphics, e: Entity): void {
   }
 }
 
-/** 補體蛋白球：發光蛋白球體（旋轉由 PixiRenderer 套用）。 */
+/** 補體複合體：外柔光暈 + 主球 + 數個小亞基瓣 + 亮核（旋轉由 PixiRenderer 套用）。 */
 export function drawOrbit(g: Graphics, e: Entity): void {
   const r = e.radius
-  // 蛋白球主體
-  g.circle(0, 0, r).fill(0xbfeaff)
-  g.circle(0, 0, r).stroke({ width: 1.5, color: dim(0xbfeaff, 0.55) })
-  // 亮心點（發光感）
-  g.circle(0, 0, r * 0.38).fill(0xffffff)
+  const base = 0xbfeaff
+  // 外柔光暈
+  g.circle(0, 0, r * 1.6).fill({ color: base, alpha: 0.2 })
+  // 5 個小亞基瓣（環繞主球）
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2
+    g.circle(Math.cos(a) * r * 0.72, Math.sin(a) * r * 0.72, r * 0.4).fill({ color: base, alpha: 0.85 })
+  }
+  // 主球 + 描邊
+  g.circle(0, 0, r * 0.85).fill(lighten(base, 0.15))
+  g.circle(0, 0, r * 0.85).stroke({ width: 1.5, color: dim(base, 0.55) })
+  // 亮核
+  g.circle(0, 0, r * 0.34).fill(0xffffff)
 }
 
-/** 寶箱：金棕箱身 + 蓋線金條 + 中央鎖扣。 */
+/** 寶箱 → 補給囊泡：半透明金膜 + 內部金色發光核 + 高光點。 */
 export function drawChest(g: Graphics, e: Entity): void {
   const r = e.radius
-  g.roundRect(-r, -r * 0.75, r * 2, r * 1.5, 3).fill(0x8d6e63)
-  g.roundRect(-r, -r * 0.75, r * 2, r * 1.5, 3).stroke({ width: 2, color: 0x5d4037 })
-  g.rect(-r, -r * 0.2, r * 2, r * 0.14).fill(0xffd54a) // 蓋線金條
-  g.rect(-r * 0.22, -r * 0.18, r * 0.44, r * 0.5).fill(0xffd54a) // 中央鎖扣
+  groundShadow(g, r)
+  // 金色外暈（獎勵感）
+  g.circle(0, 0, r * 1.25).fill({ color: 0xffd54a, alpha: 0.18 })
+  // 半透明金膜囊泡
+  g.circle(0, 0, r).fill({ color: 0xffe9a8, alpha: 0.55 })
+  g.circle(0, 0, r).stroke({ width: 2, color: dim(0xffd54a, 0.7) })
+  // 內部金色發光核
+  g.circle(0, 0, r * 0.5).fill(0xffd54a)
+  g.circle(0, 0, r * 0.28).fill({ color: 0xfff3c4, alpha: 0.95 })
+  // 膜面高光點
+  g.circle(-r * 0.35, -r * 0.4, r * 0.18).fill({ color: 0xffffff, alpha: 0.5 })
 }
 
 /** 背景網格：在世界座標、玩家可視範圍內畫間距 64 的細線（無限捲動）；顏色/透明度由地圖決定。 */
@@ -442,10 +465,31 @@ export function drawMapBackground(
   drawAmbient(g, kind, cx, cy, viewW, viewH, clock)
 }
 
-/** 發炎場/ROS 光環：環形（描邊 + 極淡填充），半徑/alpha 隨時鐘 t 呼吸。 */
+/** 發炎場（ROS）：多層徑向暈染 + 有機抖動邊界 + 漂動 ROS 熱點；呼吸脈動隨 t，無 Math.random。 */
 export function drawGarlicAura(g: Graphics, cx: number, cy: number, radius: number, t: number): void {
-  const pr = radius * (1 + 0.04 * Math.sin(t * 3))
-  const a = 0.12 + 0.05 * Math.sin(t * 3)
-  g.circle(cx, cy, pr).fill({ color: 0xff6e40, alpha: a })
-  g.circle(cx, cy, pr).stroke({ width: 2, color: 0xff6e40, alpha: 0.4 })
+  const R = radius * (1 + 0.04 * Math.sin(t * 3))
+  // 多層徑向暈染（由外而內 alpha 漸增的熱核感；外橙紅、內琥珀）
+  const layers = 5
+  for (let i = 0; i < layers; i++) {
+    const lr = R * (1 - i / (layers + 1))
+    const a = (0.05 + 0.03 * i) * (0.85 + 0.15 * Math.sin(t * 3))
+    g.circle(cx, cy, lr).fill({ color: i < 2 ? 0xff6e40 : 0xffa040, alpha: a })
+  }
+  // 有機抖動邊界（半徑以 t 驅動的正弦擾動）
+  const seg = 28
+  for (let i = 0; i <= seg; i++) {
+    const a = (i / seg) * Math.PI * 2
+    const wob = 1 + 0.06 * Math.sin(a * 4 + t * 2) + 0.04 * Math.sin(a * 7 - t * 1.3)
+    const px = cx + Math.cos(a) * R * wob
+    const py = cy + Math.sin(a) * R * wob
+    if (i === 0) g.moveTo(px, py)
+    else g.lineTo(px, py)
+  }
+  g.stroke({ width: 2, color: 0xff7a3c, alpha: 0.5 })
+  // 漂動 ROS 熱點（角度 + t 決定位置，確定性）
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + t * 0.6
+    const rr = R * (0.55 + 0.3 * Math.sin(t * 2 + i))
+    g.circle(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 2 + Math.sin(t * 4 + i)).fill({ color: 0xffd180, alpha: 0.5 })
+  }
 }
