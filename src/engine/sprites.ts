@@ -55,54 +55,73 @@ export function drawPlayer(g: Graphics, e: Entity, color: number): void {
   g.poly([r - 1, -5, r + 8, 0, r - 1, 5]).fill(0xffffff)
 }
 
-/** 敵人：依 enemyKind 畫不同造型，顏色取自 ENEMY_DEFS。 */
+/** 敵人：依 enemyKind 畫多部件立體造型，顏色取自 ENEMY_DEFS。 */
 export function drawEnemy(g: Graphics, e: Entity): void {
   const r = e.radius
   const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
-  const dark = dim(color, 0.6)
+  const dark = dim(color, 0.5)
+  groundShadow(g, r)
   switch (e.enemyKind) {
     case 'swarm': {
-      g.circle(0, 0, r).fill(color)
-      for (let i = 0; i < 4; i++) {
-        const a = (i * Math.PI) / 2
-        g.poly([
-          Math.cos(a) * r, Math.sin(a) * r,
-          Math.cos(a) * (r + 5), Math.sin(a) * (r + 5),
-          Math.cos(a + 0.4) * r, Math.sin(a + 0.4) * r,
-        ]).fill(dark)
+      // 蜘蛛：6 條腿 + 立體小身 + 兩眼
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2
+        g.moveTo(0, 0).lineTo(Math.cos(a) * (r + 6), Math.sin(a) * (r + 6))
       }
+      g.stroke({ width: 2, color: dark })
+      shaded(g, 0, 0, r, color)
+      g.circle(-r * 0.3, -r * 0.1, r * 0.18).fill(0xffffff)
+      g.circle(r * 0.3, -r * 0.1, r * 0.18).fill(0xffffff)
       break
     }
     case 'tank': {
-      g.circle(0, 0, r).fill(dark)
-      g.circle(0, 0, r).stroke({ width: 4, color })
-      g.circle(0, 0, r * 0.4).fill(color)
+      // 重甲：立體身 + 厚裝甲環 + 4 鉚釘 + 深核心
+      shaded(g, 0, 0, r, color)
+      g.circle(0, 0, r).stroke({ width: 5, color: dim(color, 0.4) })
+      for (let i = 0; i < 4; i++) {
+        const a = i * (Math.PI / 2) + Math.PI / 4
+        g.circle(Math.cos(a) * r * 0.82, Math.sin(a) * r * 0.82, r * 0.1).fill(lighten(color, 0.3))
+      }
+      g.circle(0, 0, r * 0.42).fill(dim(color, 0.3))
+      g.circle(0, 0, r * 0.42).stroke({ width: 2, color: lighten(color, 0.2) })
       break
     }
     case 'charger': {
-      g.poly([r, 0, 0, r * 0.8, -r * 0.7, 0, 0, -r * 0.8]).fill(color)
-      g.poly([r, 0, 0, r * 0.8, -r * 0.7, 0, 0, -r * 0.8]).stroke({ width: 2, color: dark })
+      // 尖角衝刺：水滴身（前尖 +x）+ 雙角 + 單眼（renderer 依 vel 旋轉）
+      g.poly([r * 1.1, 0, 0, r * 0.8, -r * 0.8, 0, 0, -r * 0.8]).fill(dim(color, 0.55))
+      g.poly([r * 1.0, 0, 0, r * 0.7, -r * 0.7, 0, 0, -r * 0.7]).fill(color)
+      g.poly([r * 1.1, 0, 0, r * 0.8, -r * 0.8, 0, 0, -r * 0.8]).stroke({ width: 2, color: dim(color, 0.4) })
+      g.circle(-r * 0.1, -r * 0.2, r * 0.3).fill({ color: lighten(color, 0.5), alpha: 0.4 })
+      g.poly([r * 0.5, -r * 0.45, r * 1.1, -r * 0.7, r * 0.7, -r * 0.15]).fill(dim(color, 0.4))
+      g.poly([r * 0.5, r * 0.45, r * 1.1, r * 0.7, r * 0.7, r * 0.15]).fill(dim(color, 0.4))
+      g.circle(r * 0.25, 0, r * 0.16).fill(0xffffff)
+      g.circle(r * 0.32, 0, r * 0.08).fill(0x222222)
       break
     }
     case 'boss': {
-      g.circle(0, 0, r).fill(color)
+      // 巨獸：鋸齒尖冠 + 立體身 + 內核 + 兩發光眼
       for (let i = 0; i < 10; i++) {
         const a = (i * Math.PI) / 5
         g.poly([
           Math.cos(a) * r, Math.sin(a) * r,
-          Math.cos(a + 0.15) * (r + 10), Math.sin(a + 0.15) * (r + 10),
+          Math.cos(a + 0.15) * (r + 12), Math.sin(a + 0.15) * (r + 12),
           Math.cos(a + 0.3) * r, Math.sin(a + 0.3) * r,
-        ]).fill(dark)
+        ]).fill(dim(color, 0.5))
       }
-      g.circle(0, 0, r * 0.5).fill(dark)
+      shaded(g, 0, 0, r, color)
+      g.circle(0, 0, r * 0.5).fill(dim(color, 0.35))
+      g.circle(-r * 0.3, -r * 0.1, r * 0.16).fill(0xfff176)
+      g.circle(r * 0.3, -r * 0.1, r * 0.16).fill(0xfff176)
       break
     }
     default: {
-      // basic
-      g.circle(0, 0, r).fill(color)
-      g.circle(0, 0, r).stroke({ width: 2, color: dark })
-      g.circle(-r * 0.3, -r * 0.2, r * 0.18).fill(0xffffff)
-      g.circle(r * 0.3, -r * 0.2, r * 0.18).fill(0xffffff)
+      // basic（黏液）：立體身 + 兩眼（含瞳）+ 嘴/獠牙
+      shaded(g, 0, 0, r, color)
+      g.circle(-r * 0.3, -r * 0.15, r * 0.2).fill(0xffffff)
+      g.circle(-r * 0.26, -r * 0.1, r * 0.1).fill(0x222222)
+      g.circle(r * 0.3, -r * 0.15, r * 0.2).fill(0xffffff)
+      g.circle(r * 0.34, -r * 0.1, r * 0.1).fill(0x222222)
+      g.poly([-r * 0.22, r * 0.32, 0, r * 0.55, r * 0.22, r * 0.32]).fill(dim(color, 0.4))
     }
   }
 }
