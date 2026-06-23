@@ -18,7 +18,7 @@ import { KeyboardInput } from './core/input'
 import { rollUpgrades } from './systems/leveling'
 import { createRng } from './core/rng'
 import { useGameStore } from '../stores/game'
-import type { CharacterKind } from './types'
+import type { CharacterKind, MapKind } from './types'
 
 /** 固定步長：每格模擬代表 1/60 秒。 */
 const STEP = 1 / 60
@@ -56,8 +56,8 @@ export class Game {
    * @param seed 本場亂數種子。
    * @returns 已啟動的 `Game` 實例。
    */
-  static async start(canvasParent: HTMLElement, seed: number, character: CharacterKind): Promise<Game> {
-    const world = new World(seed, character)
+  static async start(canvasParent: HTMLElement, seed: number, character: CharacterKind, map: MapKind): Promise<Game> {
+    const world = new World(seed, character, map)
     const renderer = await PixiRenderer.create(canvasParent)
     const game = new Game(world, renderer, seed)
     game.input.attach()
