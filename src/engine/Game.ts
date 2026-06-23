@@ -128,6 +128,8 @@ export class Game {
       this.store.updateSummary(this.world.summary())
       // 排空本幀累積的語意音效事件交由音訊層播放。
       for (const ev of this.world.consumeSoundEvents()) soundManager.play(ev)
+      // 排空本幀武器視覺事件交特效層繪製。
+      this.renderer.applyFxEvents(this.world.consumeFxEvents())
     }
 
     this.renderer.render(this.world)

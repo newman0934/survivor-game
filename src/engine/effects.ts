@@ -45,6 +45,7 @@ export class EffectsLayer {
   private particles: Particle[] = []
   private expands: Expand[] = []
   private texts: FloatText[] = []
+  private flashes: { g: Graphics; life: number; maxLife: number }[] = []
   private vignetteAlpha = 0
   private shakeIntensity = 0
   private screenW: number
@@ -115,6 +116,34 @@ export class EffectsLayer {
     this.texts.push({ t, vy: -42, life: 0.5, maxLife: 0.5 })
   }
 
+  /** 吞噬偽足：前方扇形閃光（短壽命淡出）。 */
+  spawnSweep(x: number, y: number, angle: number, radius: number, halfAngle: number): void {
+    const g = new Graphics()
+    g.moveTo(0, 0)
+    g.arc(0, 0, radius, angle - halfAngle, angle + halfAngle)
+    g.closePath()
+    g.fill({ color: 0xff7043, alpha: 0.32 })
+    g.position.set(x, y)
+    this.worldFx.addChild(g)
+    this.flashes.push({ g, life: 0.22, maxLife: 0.22 })
+  }
+
+  /** 補體級聯：相鄰命中點間的連鎖閃電（世界座標、短壽命淡出）。 */
+  spawnChain(points: { x: number; y: number }[]): void {
+    if (points.length < 2) return
+    const g = new Graphics()
+    g.moveTo(points[0].x, points[0].y)
+    for (let i = 1; i < points.length; i++) g.lineTo(points[i].x, points[i].y)
+    g.stroke({ width: 3, color: 0x8be9ff, alpha: 0.9 })
+    this.worldFx.addChild(g)
+    this.flashes.push({ g, life: 0.2, maxLife: 0.2 })
+  }
+
+  /** 抗原脈衝：擴張衝擊環（沿用 addExpand）。 */
+  spawnNova(x: number, y: number, radius: number): void {
+    this.addExpand(x, y, 0x4dd0c0, 4, radius, 4, 0.4)
+  }
+
   /** 受傷：拉高紅暈與震動強度（intensity 越大越強，boss 撞擊較大）。 */
   hurt(intensity: number): void {
     this.vignetteAlpha = Math.min(0.55, this.vignetteAlpha + 0.3 + intensity * 0.3)
@@ -162,6 +191,12 @@ export class EffectsLayer {
       ft.t.y += ft.vy * DT
       ft.t.alpha = ft.life / ft.maxLife
     }
+    for (let i = this.flashes.length - 1; i >= 0; i--) {
+      const f = this.flashes[i]
+      f.life -= DT
+      if (f.life <= 0) { f.g.destroy(); this.flashes.splice(i, 1); continue }
+      f.g.alpha = f.life / f.maxLife
+    }
     this.vignetteAlpha = Math.max(0, this.vignetteAlpha - DT * 1.5)
     this.vignette.alpha = this.vignetteAlpha
     this.shakeIntensity = Math.max(0, this.shakeIntensity - DT * 60)
@@ -182,9 +217,11 @@ export class EffectsLayer {
     for (const p of this.particles) p.g.destroy()
     for (const e of this.expands) e.g.destroy()
     for (const ft of this.texts) ft.t.destroy()
+    for (const f of this.flashes) f.g.destroy()
     this.particles = []
     this.expands = []
     this.texts = []
+    this.flashes = []
   }
 
   /** 內部：新增一個擴張環特效。 */
