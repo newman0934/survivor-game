@@ -6,7 +6,8 @@
  * 調整基礎手感／數值多半從這裡下手。
  */
 import type { Vec2 } from '../core/vector'
-import type { Entity } from '../types'
+import type { Entity, EnemyKind } from '../types'
+import { ENEMY_DEFS } from '../systems/enemyDefs'
 
 /** 共用的 entity 基底；各工廠以此為底再覆寫專屬欄位（避免漏填欄位）。 */
 const base = (): Entity => ({
@@ -34,11 +35,25 @@ export function createPlayer(pos: Vec2): Entity {
 
 /**
  * 建立敵人 entity。
- * @param pos 生成位置（會被複製）。
- * @returns 新的 enemy entity，帶接觸傷害與掉落的經驗值。
+ * @param pos  生成位置（會被複製）。
+ * @param kind 敵人種類（預設 'basic'）；數值取自 `ENEMY_DEFS`。
+ * @returns 新的 enemy entity，帶接觸傷害、掉落經驗值與行為相位時鐘。
  */
-export function createEnemy(pos: Vec2): Entity {
-  return { ...base(), kind: 'enemy', pos: { ...pos }, radius: 12, hp: 10, maxHp: 10, speed: 60, damage: 5, xp: 1 }
+export function createEnemy(pos: Vec2, kind: EnemyKind = 'basic'): Entity {
+  const def = ENEMY_DEFS[kind]
+  return {
+    ...base(),
+    kind: 'enemy',
+    enemyKind: kind,
+    pos: { ...pos },
+    radius: def.radius,
+    hp: def.hp,
+    maxHp: def.hp,
+    speed: def.speed,
+    damage: def.damage,
+    xp: def.xp,
+    behaviorTimer: 0,
+  }
 }
 
 /**
