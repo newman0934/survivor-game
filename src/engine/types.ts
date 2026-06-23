@@ -194,6 +194,29 @@ export interface CharacterDef {
   startPassives: PassiveKind[]
 }
 
+/** 可選的地圖種類。 */
+export type MapKind = 'plains' | 'lava' | 'tundra'
+
+/**
+ * 一張地圖的定義（純資料）：背景視覺與難度修正。
+ * 在 `systems/mapDefs.ts` 定義；World 建構時套用。
+ */
+export interface MapDef {
+  kind: MapKind
+  name: string
+  description: string
+  /** 畫布底色。 */
+  bgColor: number
+  /** 背景網格線顏色。 */
+  gridColor: number
+  /** 背景網格線透明度。 */
+  gridAlpha: number
+  /** 生怪間隔倍率（<1 = 生更快 = 更難）。 */
+  spawnIntervalMult: number
+  /** 敵人 hp 倍率（>1 = 更硬）。 */
+  enemyHpMult: number
+}
+
 /**
  * 一個升級選項。
  *
