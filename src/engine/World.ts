@@ -18,7 +18,8 @@ import { createPlayer, createEnemy, createGem, createOrbit } from './entities/fa
 import { applyVelocity } from './systems/movement'
 import { spawnInterval, spawnPositionAround, pickEnemyKind } from './systems/spawn'
 import { steerEnemy } from './systems/enemyAI'
-import { ENEMY_DEFS } from './systems/enemyDefs'
+import { ENEMY_DEFS, ENEMY_ORDER } from './systems/enemyDefs'
+import { SpatialGrid } from './core/spatialGrid'
 import { fireWand, fireKnife, orbitPositions, garlicTick } from './systems/weapons'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 import { circlesOverlap } from './systems/collision'
@@ -32,6 +33,10 @@ const SPAWN_RADIUS = 700
 const GEM_PULL_SPEED = 350
 /** Boss 生成週期（秒）。 */
 const BOSS_INTERVAL = 60
+/** 敵人空間網格的方格邊長（碰撞鄰近查詢用）。 */
+const CELL_SIZE = 100
+/** 最大敵人半徑（由 ENEMY_DEFS 推得）；查詢半徑須加上它以免漏接重疊敵人。 */
+const MAX_ENEMY_RADIUS = Math.max(...ENEMY_ORDER.map((k) => ENEMY_DEFS[k].radius))
 
 export class World {
   /** 玩家 entity（永遠存在，不會被篩除）。 */
@@ -82,6 +87,8 @@ export class World {
   private bossTimer = BOSS_INTERVAL
   /** 已生成的 Boss 數量；用來讓每隻 Boss 比前一隻硬。 */
   private bossCount = 0
+  /** 敵人空間網格；每格在敵人移動後重建，供碰撞鄰近查詢。 */
+  private enemyGrid = new SpatialGrid<Entity>(CELL_SIZE)
   /** 目前等級。 */
   private level = 1
   /** 目前等級內已累積的經驗值。 */
@@ -260,6 +267,9 @@ export class World {
       applyVelocity(e, dt)
     }
 
+    // 3b) 重建敵人空間網格（敵人移動後、碰撞查詢前），供本格鄰近查詢使用。
+    this.rebuildEnemyGrid()
+
     // 4) 武器：遍歷每把武器，各自倒數冷卻並結算行為（生效值 = 等級值 × 全域乘區）。
     for (const weapon of this.weapons) {
       const lvl = WEAPON_DEFS[weapon.kind].levels[weapon.level - 1]
@@ -393,6 +403,14 @@ export class World {
       }
     }
     this.checkKills()
+  }
+
+  /** 重建敵人空間網格：清空後插入所有存活敵人（每格在敵人移動後呼叫）。 */
+  private rebuildEnemyGrid(): void {
+    this.enemyGrid.clear()
+    for (const e of this.enemies) {
+      if (e.active) this.enemyGrid.insert(e, e.pos.x, e.pos.y)
+    }
   }
 
   /** 掃描敵人，凡 hp<=0 者記擊殺、掉寶並失效（供場域/環繞型武器命中後結算）。 */
