@@ -9,7 +9,7 @@ import { Application, Container, Graphics } from 'pixi.js'
 import type { World } from './World'
 import type { Entity } from './types'
 import {
-  drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit,
+  drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit, drawChest,
   drawBackgroundGrid, drawGarlicAura,
 } from './sprites'
 
@@ -75,6 +75,7 @@ export class PixiRenderer {
         case 'gem': drawGem(body, e); break
         case 'projectile': drawProjectile(body, e); break
         case 'orbit': drawOrbit(body, e); break
+        case 'chest': drawChest(body, e); break
       }
       // 命中閃白用的白色覆蓋圓（平時透明）
       const flash = new Graphics()
@@ -111,6 +112,7 @@ export class PixiRenderer {
       ...world.activeEnemies(),
       ...world.projectiles.filter((p) => p.active),
       ...world.orbits(),
+      ...world.chests(),
       world.player,
     ]
     const seen = new Set<Entity>()
