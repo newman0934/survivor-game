@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * MainMenu.vue — 主選單 overlay（phase === 'menu' 時顯示）。
+ * 純呈現元件，不讀 store；按下開始時向上層（App.vue）發出 start 事件，由其負責啟動遊戲。
+ */
+// 開始遊戲事件，無 payload；由 App.vue 監聽並呼叫 startGame。
 const emit = defineEmits<{ start: [] }>()
 </script>
 

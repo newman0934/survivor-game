@@ -1,8 +1,14 @@
 <script setup lang="ts">
+/**
+ * GameOver.vue — 結束畫面 overlay（phase === 'over' 時顯示）。
+ * 讀 store 顯示最終存活時間 / 擊殺 / 等級；按下「再玩一次」向 App.vue 發出 restart 事件。
+ */
 import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 const store = useGameStore()
+// 重新開始事件，無 payload；由 App.vue 監聽以重啟引擎。
 const emit = defineEmits<{ restart: [] }>()
+// 把存活秒數格式化為 m:ss（與 Hud 一致）。
 const mmss = computed(() => {
   const m = Math.floor(store.time / 60)
   const s = store.time % 60

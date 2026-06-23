@@ -1,7 +1,20 @@
+/**
+ * Pinia 橋接 store — Vue(DOM UI) 與引擎(純 TS) 之間唯一的溝通管道。
+ *
+ * 設計原則：這裡只存「純資料」——一小包 summary（hp/time/level/kills/xp…）與
+ * 升級選項的 {id, label} 描述。**絕不**存放引擎的 entity 物件或任何會被 Vue 響應式系統
+ * 包裹的重物件（那會在每幀更新數百個物件時拖垮效能）。
+ *
+ * 資料流：
+ *  - 引擎 → store：引擎在需要時呼叫 updateSummary / offerUpgrades / gameOver 推資料進來。
+ *  - store → 引擎：UI 透過 pickUpgrade 觸發引擎事先註冊的 onUpgradePicked callback。
+ */
 import { defineStore } from 'pinia'
 
+/** 遊戲整體狀態階段；App.vue 依此切換要顯示的 UI overlay。 */
 export type Phase = 'menu' | 'playing' | 'upgrading' | 'over'
 
+/** 引擎每隔一段時間推給 UI 的精簡狀態快照（HUD 渲染所需的全部數值）。 */
 export interface Summary {
   hp: number
   maxHp: number
@@ -12,18 +25,26 @@ export interface Summary {
   xpNeeded: number
 }
 
+/** 一張升級卡的 UI 描述；不含任何引擎邏輯，apply 行為留在引擎端。 */
 export interface UpgradeDescriptor {
   id: string
   label: string
 }
 
+/** store 完整狀態：summary 數值 + UI 階段 + 升級握手所需的暫存資料。 */
 interface State extends Summary {
+  /** 目前的遊戲階段。 */
   phase: Phase
+  /** 升級時要呈現給玩家的三選一卡片；非升級階段為空陣列。 */
   upgradeOptions: UpgradeDescriptor[]
-  // set by the engine; called by UI when the player picks an upgrade
+  /**
+   * 由引擎在 offerUpgrades 前設定的 callback；玩家選定後由 pickUpgrade 呼叫，
+   * 進而觸發引擎的 world.applyUpgrade。這是「store → 引擎」唯一的回呼通道。
+   */
   onUpgradePicked: ((id: string) => void) | null
 }
 
+/** 取得遊戲橋接 store 的 composable（Pinia 自動生成）。 */
 export const useGameStore = defineStore('game', {
   state: (): State => ({
     phase: 'menu',
@@ -38,6 +59,7 @@ export const useGameStore = defineStore('game', {
     onUpgradePicked: null,
   }),
   actions: {
+    /** 開始新的一場：切到 playing 並把所有 summary/升級狀態歸零。由 App.vue 在啟動引擎前呼叫。 */
     start() {
       this.phase = 'playing'
       this.hp = 0
@@ -50,6 +72,7 @@ export const useGameStore = defineStore('game', {
       this.upgradeOptions = []
       this.onUpgradePicked = null
     },
+    /** 引擎 → store：把最新一份 summary 推進來供 HUD 渲染。不更動 phase。 */
     updateSummary(s: Summary) {
       this.hp = s.hp
       this.maxHp = s.maxHp
@@ -59,18 +82,29 @@ export const useGameStore = defineStore('game', {
       this.xp = s.xp
       this.xpNeeded = s.xpNeeded
     },
+    /**
+     * 升級握手（步驟 1）：引擎升級時呼叫此 action 提供三選一選項並切到 upgrading 階段。
+     * 引擎應在呼叫前先設好 onUpgradePicked。phase 變為 upgrading 後，App.vue 會暫停引擎迴圈。
+     */
     offerUpgrades(options: UpgradeDescriptor[]) {
       this.upgradeOptions = options
       this.phase = 'upgrading'
     },
+    /**
+     * 升級握手（步驟 2）：UpgradeModal 中玩家點選卡片時呼叫。
+     * 觸發引擎註冊的 onUpgradePicked（→ world.applyUpgrade）、清空選項並切回 playing
+     * （App.vue 偵測到 phase 回到 playing 後恢復引擎迴圈）。
+     */
     pickUpgrade(id: string) {
       this.onUpgradePicked?.(id)
       this.upgradeOptions = []
       this.phase = 'playing'
     },
+    /** 引擎 → store：玩家死亡，切到結束畫面。 */
     gameOver() {
       this.phase = 'over'
     },
+    /** 回到主選單。 */
     toMenu() {
       this.phase = 'menu'
     },

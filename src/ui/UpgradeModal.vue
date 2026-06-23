@@ -1,4 +1,9 @@
 <script setup lang="ts">
+/**
+ * UpgradeModal.vue — 升級三選一彈窗（phase === 'upgrading' 時顯示）。
+ * 讀 store.upgradeOptions 渲染卡片；點選時呼叫 store.pickUpgrade(id)，
+ * 即升級握手的第二步——觸發引擎 callback 並讓遊戲恢復進行。
+ */
 import { useGameStore } from '../stores/game'
 const store = useGameStore()
 </script>
@@ -7,6 +12,7 @@ const store = useGameStore()
   <div class="overlay">
     <h2>選擇升級</h2>
     <div class="cards">
+      <!-- 逐一渲染引擎提供的升級選項；點擊送出該升級 id 並恢復遊戲 -->
       <button v-for="opt in store.upgradeOptions" :key="opt.id" class="card"
         @click="store.pickUpgrade(opt.id)">
         {{ opt.label }}

@@ -1,10 +1,17 @@
 <script setup lang="ts">
+/**
+ * Hud.vue — 遊戲中抬頭顯示（等級 / 時間 / 擊殺數 + 血條 / 經驗條）。
+ * 純讀取元件：只從 store 讀 summary 數值並衍生顯示值，不送出任何事件、不碰引擎。
+ */
 import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 
 const store = useGameStore()
+// 血量百分比；maxHp 為 0（尚未初始化）時回傳 0 以避免除以零。
 const hpPct = computed(() => (store.maxHp ? (store.hp / store.maxHp) * 100 : 0))
+// 經驗百分比；同樣對 xpNeeded 為 0 做保護。
 const xpPct = computed(() => (store.xpNeeded ? (store.xp / store.xpNeeded) * 100 : 0))
+// 把存活秒數格式化為 m:ss。
 const mmss = computed(() => {
   const m = Math.floor(store.time / 60)
   const s = store.time % 60
