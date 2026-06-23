@@ -16,6 +16,7 @@ import MainMenu from './ui/MainMenu.vue'
 import Hud from './ui/Hud.vue'
 import UpgradeModal from './ui/UpgradeModal.vue'
 import GameOver from './ui/GameOver.vue'
+import BossBar from './ui/BossBar.vue'
 
 const store = useGameStore()
 // PixiJS 畫布要掛載的 DOM 容器（由 template 中的 ref 綁定）。
@@ -59,6 +60,8 @@ onBeforeUnmount(() => game?.stop())
     <div ref="canvasParent" class="canvas-host" />
     <!-- 只要不在主選單就顯示 HUD（playing / upgrading / over 皆顯示） -->
     <Hud v-if="store.phase !== 'menu'" />
+    <!-- Boss 血條：遊玩/升級暫停時，若場上有 Boss 則顯示 -->
+    <BossBar v-if="store.phase === 'playing' || store.phase === 'upgrading'" />
     <!-- 以下三個 overlay 依 phase 互斥顯示 -->
     <MainMenu v-if="store.phase === 'menu'" @start="startGame" />
     <UpgradeModal v-if="store.phase === 'upgrading'" />
