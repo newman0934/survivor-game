@@ -297,3 +297,32 @@ Progress 更新規範
 下一步建議
 
 progress.md 必須永遠反映專案最新狀態。
+
+# 語言規範
+
+預設語言為繁體中文（zh-TW）。
+
+除以下項目外，一律使用繁體中文：
+
+- 程式碼
+- API 路徑
+- 資料庫欄位名稱
+- 型別名稱
+- 測試函式名稱
+- Commit 格式
+- 第三方套件名稱
+
+包含：
+
+- Spec
+- Acceptance
+- BDD
+- Plan
+- Tasks
+- Review
+- Debug
+- Progress
+- 驗證結果
+- 執行狀態說明
+
+皆使用繁體中文。
