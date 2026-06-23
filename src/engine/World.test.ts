@@ -9,6 +9,43 @@ describe('World', () => {
     expect(w.activeEnemies().length).toBe(0)
   })
 
+  it('擊殺 Boss 掉落寶箱', () => {
+    const w = new World(1)
+    w.stats.pickupRadius = 0 // 避免寶箱/寶石被吸走，便於觀察
+    const b = w.spawnBossAt({ x: w.player.pos.x + 50, y: w.player.pos.y })
+    b.hp = 1
+    w.forceFire()
+    for (let i = 0; i < 40; i++) w.step(1 / 60)
+    expect(b.active).toBe(false)
+    expect(w.chests().length).toBeGreaterThan(0)
+  })
+
+  it('一般敵人死亡不掉寶箱', () => {
+    const w = new World(1)
+    w.stats.pickupRadius = 0
+    const e = w.spawnEnemyAt({ x: w.player.pos.x + 50, y: w.player.pos.y }, 'basic')
+    e.hp = 1
+    w.forceFire()
+    for (let i = 0; i < 40; i++) w.step(1 / 60)
+    expect(e.active).toBe(false)
+    expect(w.chests().length).toBe(0)
+    expect(w.gems().length).toBeGreaterThan(0)
+  })
+
+  it('撿取寶箱觸發一次待處理升級', () => {
+    const w = new World(1)
+    w.stats.pickupRadius = 0
+    const b = w.spawnBossAt({ x: w.player.pos.x + 50, y: w.player.pos.y })
+    b.hp = 1
+    w.forceFire()
+    for (let i = 0; i < 40; i++) w.step(1 / 60)
+    const c = w.chests()[0]
+    expect(c).toBeDefined()
+    c.pos = { x: w.player.pos.x, y: w.player.pos.y } // 把寶箱搬到玩家身上
+    w.step(1 / 60) // 拾取
+    expect(w.consumeLevelUp()).toBe(true)
+  })
+
   it('熔岩地圖：敵人 hp ×1.25、視覺欄位正確', () => {
     const w = new World(1, 'warrior', 'lava')
     const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'basic')

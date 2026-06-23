@@ -14,7 +14,7 @@ import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, C
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
-import { createPlayer, createEnemy, createGem, createOrbit } from './entities/factory'
+import { createPlayer, createEnemy, createGem, createOrbit, createChest } from './entities/factory'
 import { applyVelocity } from './systems/movement'
 import { spawnInterval, spawnPositionAround, pickEnemyKind } from './systems/spawn'
 import { steerEnemy } from './systems/enemyAI'
@@ -50,6 +50,8 @@ export class World {
   projectiles: Entity[] = []
   /** 場上所有經驗寶石。 */
   gemEntities: Entity[] = []
+  /** 場上所有寶箱（Boss 掉落）。 */
+  chestEntities: Entity[] = []
 
   /** 玩家數值（全域乘區），會被升級就地修改。 */
   stats: PlayerStats = {
@@ -145,6 +147,10 @@ export class World {
   /** @returns 所有寶石 entity。 */
   gems(): Entity[] {
     return this.gemEntities
+  }
+  /** @returns 所有寶箱 entity（供 renderer 顯示）。 */
+  chests(): Entity[] {
+    return this.chestEntities
   }
 
   /**
@@ -360,12 +366,7 @@ export class World {
         if (circlesOverlap(p, e)) {
           e.hp -= p.damage
           p.active = false // 子彈單體命中即消耗
-          if (e.hp <= 0) {
-            e.active = false
-            this.kills += 1
-            const gem = createGem(e.pos, e.xp)
-            this.gemEntities.push(gem)
-          }
+          if (e.hp <= 0) this.killEnemy(e)
           break // 一發子彈只命中一隻敵人
         }
       }
@@ -379,6 +380,17 @@ export class World {
       if (distance(g.pos, this.player.pos) <= this.player.radius) {
         g.active = false
         this.grantXp(g.xp * this.stats.xpGain)
+      }
+    }
+
+    // 6b) 寶箱：吸取並位移；碰到玩家本體即收取並觸發一次免費升級（pendingLevelUps）。
+    for (const c of this.chestEntities) {
+      if (!c.active) continue
+      attractGem(c, this.player.pos, this.stats.pickupRadius, GEM_PULL_SPEED)
+      applyVelocity(c, dt)
+      if (distance(c.pos, this.player.pos) <= this.player.radius) {
+        c.active = false
+        this.pendingLevelUps += 1
       }
     }
 
@@ -402,6 +414,7 @@ export class World {
     this.enemies = this.enemies.filter((e) => e.active)
     this.projectiles = this.projectiles.filter((p) => p.active)
     this.gemEntities = this.gemEntities.filter((g) => g.active)
+    this.chestEntities = this.chestEntities.filter((c) => c.active)
   }
 
   /**
@@ -466,12 +479,19 @@ export class World {
   /** 掃描敵人，凡 hp<=0 者記擊殺、掉寶並失效（供場域/環繞型武器命中後結算）。 */
   private checkKills(): void {
     for (const e of this.enemies) {
-      if (e.active && e.hp <= 0) {
-        e.active = false
-        this.kills += 1
-        this.gemEntities.push(createGem(e.pos, e.xp))
-      }
+      if (e.active && e.hp <= 0) this.killEnemy(e)
     }
+  }
+
+  /**
+   * 統一處理敵人死亡：失效、記擊殺、掉經驗寶石；Boss 額外掉寶箱。
+   * @param e 已判定 hp<=0 的敵人。
+   */
+  private killEnemy(e: Entity): void {
+    e.active = false
+    this.kills += 1
+    this.gemEntities.push(createGem(e.pos, e.xp))
+    if (e.enemyKind === 'boss') this.chestEntities.push(createChest(e.pos))
   }
 
   /** @returns 玩家是否已死亡（hp <= 0）。 */
