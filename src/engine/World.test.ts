@@ -25,6 +25,37 @@ describe('World', () => {
     expect(w.enemies.slice(-4).every((e) => e.enemyKind === 'swarm')).toBe(true)
   })
 
+  it('spawnBossAt 生成一隻 boss', () => {
+    const w = new World(1)
+    const b = w.spawnBossAt({ x: 100, y: 0 })
+    expect(b.enemyKind).toBe('boss')
+    expect(w.enemies.includes(b)).toBe(true)
+  })
+
+  it('第二隻 Boss 的 maxHp 大於第一隻（隨 bossCount 成長）', () => {
+    const w = new World(1)
+    const b1 = w.spawnBossAt({ x: 100, y: 0 })
+    const b2 = w.spawnBossAt({ x: 100, y: 0 })
+    expect(b2.maxHp).toBeGreaterThan(b1.maxHp)
+  })
+
+  it('Boss 於 60s 里程碑出現', () => {
+    const w = new World(1)
+    for (let i = 0; i < 61 * 60; i++) w.step(1 / 60)
+    expect(w.enemies.some((e) => e.enemyKind === 'boss')).toBe(true)
+  })
+
+  it('summary 在有 Boss 時回報血條資料、無 Boss 時歸零', () => {
+    const w = new World(1)
+    expect(w.summary().bossActive).toBe(false)
+    expect(w.summary().bossHp).toBe(0)
+    const b = w.spawnBossAt({ x: 100, y: 0 })
+    const s = w.summary()
+    expect(s.bossActive).toBe(true)
+    expect(s.bossHp).toBe(Math.round(b.hp))
+    expect(s.bossMaxHp).toBe(b.maxHp)
+  })
+
   it('spawns enemies over time', () => {
     const w = new World(1)
     for (let i = 0; i < 180; i++) w.step(1 / 60)

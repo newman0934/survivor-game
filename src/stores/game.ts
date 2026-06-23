@@ -23,6 +23,12 @@ export interface Summary {
   kills: number
   xp: number
   xpNeeded: number
+  /** 場上是否有存活 Boss（決定血條顯示）。 */
+  bossActive: boolean
+  /** Boss 目前 hp（取整）；無 Boss 時為 0。 */
+  bossHp: number
+  /** Boss 最大 hp；無 Boss 時為 0。 */
+  bossMaxHp: number
 }
 
 /** 一張升級卡的 UI 描述；不含任何引擎邏輯，apply 行為留在引擎端。 */
@@ -55,6 +61,9 @@ export const useGameStore = defineStore('game', {
     kills: 0,
     xp: 0,
     xpNeeded: 0,
+    bossActive: false,
+    bossHp: 0,
+    bossMaxHp: 0,
     upgradeOptions: [],
     onUpgradePicked: null,
   }),
@@ -69,6 +78,9 @@ export const useGameStore = defineStore('game', {
       this.kills = 0
       this.xp = 0
       this.xpNeeded = 0
+      this.bossActive = false
+      this.bossHp = 0
+      this.bossMaxHp = 0
       this.upgradeOptions = []
       this.onUpgradePicked = null
     },
@@ -81,6 +93,9 @@ export const useGameStore = defineStore('game', {
       this.kills = s.kills
       this.xp = s.xp
       this.xpNeeded = s.xpNeeded
+      this.bossActive = s.bossActive
+      this.bossHp = s.bossHp
+      this.bossMaxHp = s.bossMaxHp
     },
     /**
      * 升級握手（步驟 1）：引擎升級時呼叫此 action 提供三選一選項並切到 upgrading 階段。

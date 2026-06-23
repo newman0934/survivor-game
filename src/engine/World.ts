@@ -18,6 +18,7 @@ import { createPlayer, createEnemy, createGem, createOrbit } from './entities/fa
 import { applyVelocity } from './systems/movement'
 import { spawnInterval, spawnPositionAround, pickEnemyKind } from './systems/spawn'
 import { steerEnemy } from './systems/enemyAI'
+import { ENEMY_DEFS } from './systems/enemyDefs'
 import { fireWand, fireKnife, orbitPositions, garlicTick } from './systems/weapons'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 import { circlesOverlap } from './systems/collision'
@@ -29,6 +30,8 @@ import type { Summary } from '../stores/game'
 const SPAWN_RADIUS = 700
 /** 寶石進入感應範圍後，朝玩家飛行的吸取速度。 */
 const GEM_PULL_SPEED = 350
+/** Boss 生成週期（秒）。 */
+const BOSS_INTERVAL = 60
 
 export class World {
   /** 玩家 entity（永遠存在，不會被篩除）。 */
@@ -70,6 +73,10 @@ export class World {
   private elapsed = 0
   /** 生怪倒數計時器（秒）；歸零即生怪並重置。 */
   private spawnTimer = 0
+  /** Boss 生成倒數計時器（秒）。 */
+  private bossTimer = BOSS_INTERVAL
+  /** 已生成的 Boss 數量；用來讓每隻 Boss 比前一隻硬。 */
+  private bossCount = 0
   /** 目前等級。 */
   private level = 1
   /** 目前等級內已累積的經驗值。 */
@@ -117,6 +124,21 @@ export class World {
     for (const a of offsets) {
       this.enemies.push(createEnemy({ x: pos.x + Math.cos(a) * r, y: pos.y + Math.sin(a) * r }, 'swarm'))
     }
+  }
+
+  /**
+   * 在指定位置生成一隻 Boss，hp 依目前 bossCount 縮放（每隻比前一隻硬），並遞增 bossCount。
+   * @param pos 生成位置。
+   * @returns 新建立的 Boss entity。
+   */
+  spawnBossAt(pos: Vec2): Entity {
+    const b = createEnemy(pos, 'boss')
+    const scale = 1 + 0.5 * this.bossCount
+    b.hp = ENEMY_DEFS.boss.hp * scale
+    b.maxHp = b.hp
+    this.bossCount += 1
+    this.enemies.push(b)
+    return b
   }
 
   /** 強制下一格立即開火（重置所有武器的開火計時器）。 */
@@ -214,6 +236,14 @@ export class World {
       const kind = pickEnemyKind(this.elapsed, this.rng)
       if (kind === 'swarm') this.spawnSwarmAt(pos)
       else this.spawnEnemyAt(pos, kind)
+    }
+
+    // 2b) Boss：獨立計時器，到點在環上生成一隻（隨次數變強）。
+    this.bossTimer -= dt
+    if (this.bossTimer <= 0) {
+      this.bossTimer = BOSS_INTERVAL
+      const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
+      this.spawnBossAt(pos)
     }
 
     // 3) 敵人 AI：每隻朝玩家轉向後位移。
@@ -374,6 +404,7 @@ export class World {
    * @returns 經四捨五入／取整的 `Summary`，由上層轉交給 store。
    */
   summary(): Summary {
+    const boss = this.enemies.find((e) => e.active && e.enemyKind === 'boss')
     return {
       hp: Math.max(0, Math.round(this.player.hp)),
       maxHp: this.player.maxHp,
@@ -382,6 +413,9 @@ export class World {
       kills: this.kills,
       xp: this.xp,
       xpNeeded: xpForLevel(this.level),
+      bossActive: !!boss,
+      bossHp: boss ? Math.round(boss.hp) : 0,
+      bossMaxHp: boss ? boss.maxHp : 0,
     }
   }
 }
