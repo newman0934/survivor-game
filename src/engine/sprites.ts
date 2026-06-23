@@ -200,13 +200,23 @@ export function drawGem(g: Graphics, e: Entity): void {
   g.circle(0, 0, r * 0.35).fill(0xffffff)
 }
 
-/** 抗體/穿孔素中和粒子：柔光暈 + 亮核（方向由 PixiRenderer 依 vel 旋轉）。 */
+/** 中和彈：依 projShape 區分抗體（Y 形）與穿孔素（尖刺）；方向由 PixiRenderer 依 vel 旋轉（指向 +x）。 */
 export function drawProjectile(g: Graphics, e: Entity): void {
   const r = e.radius
-  // 柔光暈（冰藍）
-  g.circle(0, 0, r * 2.2).fill({ color: 0xbfefff, alpha: 0.25 })
-  // 亮核
-  g.circle(0, 0, r).fill(0xeaffff)
+  if (e.projShape === 'perforin') {
+    // 穿孔素飛鏢：細長尖刺微粒（前尖 +x）+ 暖白光暈
+    g.circle(0, 0, r * 1.8).fill({ color: 0xfff0d0, alpha: 0.22 })
+    g.poly([r * 1.9, 0, -r * 0.7, -r * 0.55, -r * 0.4, 0, -r * 0.7, r * 0.55]).fill(0xfff3c4)
+    g.poly([r * 1.9, 0, -r * 0.4, -r * 0.28, -r * 0.4, r * 0.28]).fill(0xffffff)
+  } else {
+    // 抗體：冰藍柔光暈 + Y 形輪廓（雙臂朝 +x 開口）+ 亮心
+    g.circle(0, 0, r * 2.2).fill({ color: 0xbfefff, alpha: 0.25 })
+    g.moveTo(-r * 1.1, 0).lineTo(0, 0)
+    g.moveTo(0, 0).lineTo(r * 1.1, -r * 0.9)
+    g.moveTo(0, 0).lineTo(r * 1.1, r * 0.9)
+    g.stroke({ width: 2.2, color: 0xeaffff })
+    g.circle(0, 0, r * 0.55).fill(0xffffff)
+  }
 }
 
 /** 補體蛋白球：發光蛋白球體（旋轉由 PixiRenderer 套用）。 */

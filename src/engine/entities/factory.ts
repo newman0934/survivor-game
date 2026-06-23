@@ -62,9 +62,12 @@ export function createEnemy(pos: Vec2, kind: EnemyKind = 'virus'): Entity {
  * @param dir 單位方向向量（呼叫端需先正規化）。
  * @param speed 飛行速度，與 `dir` 相乘成為 `vel`。
  * @param damage 命中造成的傷害。
+ * @param shape  造型來源（抗體／穿孔素）；純視覺，預設抗體。
  * @returns 新的 projectile entity，`life` 預設 1.5 秒後自動失效。
  */
-export function createProjectile(pos: Vec2, dir: Vec2, speed: number, damage: number): Entity {
+export function createProjectile(
+  pos: Vec2, dir: Vec2, speed: number, damage: number, shape: 'antibody' | 'perforin' = 'antibody',
+): Entity {
   return {
     ...base(),
     kind: 'projectile',
@@ -75,6 +78,7 @@ export function createProjectile(pos: Vec2, dir: Vec2, speed: number, damage: nu
     maxHp: 1,
     damage,
     life: 1.5,
+    projShape: shape,
   }
 }
 
