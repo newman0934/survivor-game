@@ -7,7 +7,7 @@
  */
 import { Application, Container, Graphics } from 'pixi.js'
 import type { World } from './World'
-import type { Entity } from './types'
+import type { Entity, CharacterKind } from './types'
 import {
   drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit, drawChest,
   drawMapBackground, drawGarlicAura,
@@ -76,13 +76,13 @@ export class PixiRenderer {
   }
 
   /** 取得（必要時建立）某 entity 的顯示物件；首次建立時依種類畫一次靜態造型。 */
-  private spriteFor(e: Entity, playerColor: number): Sprite {
+  private spriteFor(e: Entity, playerColor: number, playerCharacter: CharacterKind): Sprite {
     let s = this.sprites.get(e)
     if (!s) {
       const root = new Container()
       const body = new Graphics()
       switch (e.kind) {
-        case 'player': drawPlayer(body, e, playerColor); break
+        case 'player': drawPlayer(body, e, playerColor, playerCharacter); break
         case 'enemy': drawEnemy(body, e); break
         case 'gem': drawGem(body, e); break
         case 'projectile': drawProjectile(body, e); break
@@ -134,7 +134,7 @@ export class PixiRenderer {
     ]
     const seen = new Set<Entity>()
     for (const e of all) {
-      const s = this.spriteFor(e, world.playerColor)
+      const s = this.spriteFor(e, world.playerColor, world.playerCharacter)
       s.root.position.set(e.pos.x, e.pos.y)
       s.root.visible = true
       this.animate(e, s, world)

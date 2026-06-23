@@ -5,7 +5,7 @@
  * 閃白）由 PixiRenderer 以 transform 每幀套用。純繪製、不修改模擬狀態。
  */
 import { Graphics } from 'pixi.js'
-import type { Entity, MapKind } from './types'
+import type { Entity, MapKind, CharacterKind } from './types'
 import { ENEMY_DEFS } from './systems/enemyDefs'
 
 /** 把顏色各通道乘上係數 f（<1 變暗），用來產生描邊/陰影色。 */
@@ -53,23 +53,72 @@ function shaded(g: Graphics, cx: number, cy: number, rad: number, color: number)
   g.circle(cx - rad * 0.32, cy - rad * 0.34, rad * 0.42).fill({ color: lighten(color, 0.5), alpha: 0.6 })
 }
 
-/** 玩家：免疫細胞（吞噬細胞/T細胞造型；由 renderer 依 lastMoveDir 旋轉，朝 +x）。 */
-export function drawPlayer(g: Graphics, e: Entity, color: number): void {
+/**
+ * 玩家：四種免疫細胞各有獨特輪廓（依玩法定位 + 生物特徵），顏色為角色色。
+ * 由 renderer 依 lastMoveDir 旋轉朝 +x。
+ */
+export function drawPlayer(g: Graphics, e: Entity, color: number, character: CharacterKind): void {
   const r = e.radius
-  // 落地陰影
   groundShadow(g, r)
-  // 偽足：前方 +x 兩個小突起（顯示朝向）
-  g.circle(r * 0.9, -r * 0.3, r * 0.25).fill({ color: lighten(color, 0.15), alpha: 0.9 })
-  g.circle(r * 0.9, r * 0.3, r * 0.25).fill({ color: lighten(color, 0.15), alpha: 0.9 })
-  // 半透明細胞膜身
-  g.circle(0, 0, r).fill({ color, alpha: 0.85 })
-  g.circle(0, 0, r).stroke({ width: 2, color: dim(color, 0.5) })
-  // 細胞質高光（左上）
-  g.circle(-r * 0.28, -r * 0.28, r * 0.38).fill({ color: lighten(color, 0.5), alpha: 0.32 })
-  // 細胞核
-  g.circle(r * 0.1, 0, r * 0.42).fill(dim(color, 0.4))
-  // 核仁亮點
-  g.circle(r * 0.05, -r * 0.1, r * 0.14).fill({ color: lighten(color, 0.55), alpha: 0.7 })
+  const stroke = dim(color, 0.5)
+  switch (character) {
+    case 'neutrophil': {
+      // 嗜中性球（遊俠）：流線細胞 + 前導偽足（+x 衝刺方向）+ 多分葉核 + 顆粒
+      g.poly([r * 1.35, 0, r * 0.2, -r * 0.5, r * 0.2, r * 0.5]).fill({ color: lighten(color, 0.15), alpha: 0.9 })
+      g.ellipse(0, 0, r * 0.95, r * 0.82).fill({ color, alpha: 0.85 })
+      g.ellipse(0, 0, r * 0.95, r * 0.82).stroke({ width: 2, color: stroke })
+      g.circle(-r * 0.3, -r * 0.26, r * 0.32).fill({ color: lighten(color, 0.5), alpha: 0.3 })
+      // 多分葉核（3 葉相連，嗜中性球特徵）
+      for (const [lx, ly] of [[-r * 0.2, 0], [r * 0.1, -r * 0.18], [r * 0.1, r * 0.18]] as const) {
+        g.circle(lx, ly, r * 0.2).fill(dim(color, 0.4))
+      }
+      // 細胞顆粒
+      for (const [px, py] of [[-r * 0.42, r * 0.28], [r * 0.3, r * 0.34], [-r * 0.46, -r * 0.22]] as const) {
+        g.circle(px, py, r * 0.08).fill({ color: lighten(color, 0.6), alpha: 0.75 })
+      }
+      break
+    }
+    case 'nkcell': {
+      // NK 細胞（法師）：圓潤膜身 + 偏側大核 + 一叢明亮細胞毒顆粒（殺傷裝載感）
+      g.circle(0, 0, r).fill({ color, alpha: 0.85 })
+      g.circle(0, 0, r).stroke({ width: 2, color: stroke })
+      g.circle(-r * 0.28, -r * 0.28, r * 0.34).fill({ color: lighten(color, 0.5), alpha: 0.3 })
+      g.circle(-r * 0.25, r * 0.08, r * 0.4).fill(dim(color, 0.4))
+      for (const [px, py] of [[r * 0.3, -r * 0.15], [r * 0.48, r * 0.08], [r * 0.26, r * 0.26], [r * 0.5, -r * 0.28]] as const) {
+        g.circle(px, py, r * 0.12).fill({ color: lighten(color, 0.7), alpha: 0.85 })
+      }
+      break
+    }
+    case 'dendritic': {
+      // 樹突細胞（豐收者）：多條長樹突向外放射（採集/呈現抗原）+ 小膜身 + 核
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2
+        g.moveTo(Math.cos(a) * r * 0.6, Math.sin(a) * r * 0.6)
+          .lineTo(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.5)
+      }
+      g.stroke({ width: 2, color: dim(color, 0.35) })
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2
+        g.circle(Math.cos(a) * r * 1.5, Math.sin(a) * r * 1.5, r * 0.12).fill({ color: lighten(color, 0.3), alpha: 0.85 })
+      }
+      g.circle(0, 0, r * 0.72).fill({ color, alpha: 0.88 })
+      g.circle(0, 0, r * 0.72).stroke({ width: 2, color: stroke })
+      g.circle(0, 0, r * 0.32).fill(dim(color, 0.4))
+      break
+    }
+    default: {
+      // macrophage 巨噬細胞（戰士）：大型變形蟲，周身一圈短偽足（吞噬）+ 大核
+      for (let i = 0; i < 9; i++) {
+        const a = (i / 9) * Math.PI * 2
+        g.circle(Math.cos(a) * r * 1.0, Math.sin(a) * r * 1.0, r * 0.3).fill({ color, alpha: 0.85 })
+      }
+      g.circle(0, 0, r * 1.04).fill({ color, alpha: 0.85 })
+      g.circle(0, 0, r * 1.04).stroke({ width: 2, color: stroke })
+      g.circle(-r * 0.3, -r * 0.3, r * 0.4).fill({ color: lighten(color, 0.5), alpha: 0.3 })
+      g.circle(r * 0.08, 0, r * 0.46).fill(dim(color, 0.4))
+      g.circle(r * 0.03, -r * 0.1, r * 0.15).fill({ color: lighten(color, 0.55), alpha: 0.7 })
+    }
+  }
 }
 
 /** 敵人：依 enemyKind 畫多部件立體造型，顏色取自 ENEMY_DEFS。 */
