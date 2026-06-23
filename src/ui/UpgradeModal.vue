@@ -25,8 +25,13 @@ const store = useGameStore()
 .overlay { position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 1.5rem;
   background: rgba(16, 16, 24, 0.8); color: #fff; font-family: sans-serif; }
-.cards { display: flex; gap: 1rem; }
-.card { width: 160px; height: 120px; font-size: 1.2rem; cursor: pointer;
+.cards { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
+.card { width: 160px; height: 120px; font-size: 1.2rem; cursor: pointer; padding: 0.4rem;
   border: 2px solid #4aa3ff; border-radius: 12px; background: #1c2030; color: #fff; }
 .card:hover { background: #283050; }
+
+@media (max-width: 600px) {
+  .cards { gap: 0.6rem; }
+  .card { width: 28vw; height: 96px; font-size: 0.95rem; }
+}
 </style>
