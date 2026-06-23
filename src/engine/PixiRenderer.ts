@@ -84,8 +84,13 @@ export class PixiRenderer {
     this.clock += 1 / 60
 
     // 背景網格：依玩家可視範圍重畫（世界座標，隨容器平移捲動）。
+    this.app.renderer.background.color = world.mapBgColor
     this.grid.clear()
-    drawBackgroundGrid(this.grid, world.player.pos.x, world.player.pos.y, this.app.renderer.width, this.app.renderer.height)
+    drawBackgroundGrid(
+      this.grid, world.player.pos.x, world.player.pos.y,
+      this.app.renderer.width, this.app.renderer.height,
+      world.mapGridColor, world.mapGridAlpha,
+    )
 
     // 大蒜光環：持有時呼吸脈動。
     this.garlicAura.clear()

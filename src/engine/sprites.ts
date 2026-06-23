@@ -100,8 +100,10 @@ export function drawOrbit(g: Graphics, e: Entity): void {
   g.moveTo(0, -r * 0.65).lineTo(0, r * 0.65).stroke({ width: 1.5, color: 0x8d6e63 })
 }
 
-/** 背景網格：在世界座標、玩家可視範圍內畫間距 64 的細線（無限捲動）。 */
-export function drawBackgroundGrid(g: Graphics, cx: number, cy: number, viewW: number, viewH: number): void {
+/** 背景網格：在世界座標、玩家可視範圍內畫間距 64 的細線（無限捲動）；顏色/透明度由地圖決定。 */
+export function drawBackgroundGrid(
+  g: Graphics, cx: number, cy: number, viewW: number, viewH: number, color: number, alpha: number,
+): void {
   const step = 64
   const left = cx - viewW / 2 - step
   const right = cx + viewW / 2 + step
@@ -115,7 +117,7 @@ export function drawBackgroundGrid(g: Graphics, cx: number, cy: number, viewW: n
   for (let y = y0; y <= bottom; y += step) {
     g.moveTo(left, y).lineTo(right, y)
   }
-  g.stroke({ width: 1, color: 0xffffff, alpha: 0.04 })
+  g.stroke({ width: 1, color, alpha })
 }
 
 /** 大蒜光環：環形（描邊 + 極淡填充），半徑/alpha 隨時鐘 t 呼吸。 */
