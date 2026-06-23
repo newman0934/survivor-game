@@ -8,7 +8,7 @@
 import type { Vec2 } from './core/vector'
 
 /** entity 的種類標籤；renderer 依此決定顏色，system 依此決定行為。 */
-export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem'
+export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit'
 
 /**
  * ECS 中的單一 entity（純資料）。
@@ -45,25 +45,91 @@ export interface Entity {
  * 玩家可被升級強化的數值集合。
  *
  * 由 `World.stats` 持有；升級透過 `UpgradeOption.apply` 直接改寫此物件的欄位。
+ * 戰鬥相關數值改為「全域乘區」，與各武器的等級值相乘後得到生效值，因此能同時影響所有武器。
  */
 export interface PlayerStats {
   /** 玩家移動速度（單位／秒）。 */
   moveSpeed: number
-  /** 兩次開火之間的冷卻秒數。 */
-  fireCooldown: number // seconds between shots
-  /** 每發 projectile 的傷害。 */
-  projectileDamage: number
-  /** projectile 飛行速度。 */
-  projectileSpeed: number
   /** 經驗寶石被吸取的感應半徑。 */
   pickupRadius: number
+  /** 全域傷害乘區（預設 1）。 */
+  damageMult: number
+  /** 全域冷卻乘區（預設 1，越小攻速越快）。 */
+  cooldownMult: number
+  /** 全域彈速乘區（預設 1）。 */
+  projectileSpeedMult: number
+  /** 全域範圍乘區（預設 1，影響 bible/garlic 半徑）。 */
+  areaMult: number
+}
+
+/** 武器種類。 */
+export type WeaponKind = 'wand' | 'knife' | 'bible' | 'garlic'
+
+/**
+ * 一把武器的執行期狀態（純資料，存於 `World.weapons`）。
+ * 每把武器各自持有冷卻計時器與等級，於 `World.step()` 各自結算、互不覆蓋。
+ */
+export interface Weapon {
+  /** 武器種類，決定開火行為與等級表。 */
+  kind: WeaponKind
+  /** 目前等級（1..maxLevel）。 */
+  level: number
+  /** 各自的開火倒數計時器（秒）。 */
+  cooldownTimer: number
+}
+
+/**
+ * 某把武器某一等級的生效參數（離散、逐級固定）。
+ * 不同武器只用到其中部分欄位（見各欄位註解）。
+ */
+export interface WeaponLevelStats {
+  /** 開火冷卻（秒）；garlic/bible 省略。 */
+  cooldown?: number
+  /** 單次／單發傷害。 */
+  damage: number
+  /** 投射物或環繞物數量。 */
+  count?: number
+  /** projectile 飛行速度（wand/knife）。 */
+  projectileSpeed?: number
+  /** bible 環繞半徑 / garlic 場域半徑。 */
+  radius?: number
+  /** bible 角速度（弧度/秒）。 */
+  angularSpeed?: number
+}
+
+/**
+ * 一把武器的定義：等級上限與逐級數值表。
+ * `levels[level-1]` 為該等級的生效值。新增武器或調數值都從 `systems/weaponDefs.ts` 下手。
+ */
+export interface WeaponDef {
+  /** 武器種類。 */
+  kind: WeaponKind
+  /** 顯示名稱（繁中）。 */
+  label: string
+  /** 等級上限。 */
+  maxLevel: number
+  /** 逐級數值表，長度 = maxLevel。 */
+  levels: WeaponLevelStats[]
+}
+
+/**
+ * 升級套用時可讀寫的上下文（由 `World.upgradeContext()` 提供）。
+ * 讓升級選項能同時調整全域數值、增/升武器，或補血。
+ */
+export interface UpgradeContext {
+  /** 會被就地修改的玩家全域數值。 */
+  stats: PlayerStats
+  /** 玩家持有的武器陣列；可新增或調整等級。 */
+  weapons: Weapon[]
+  /** 補血保底卡用；就地調整玩家 hp（夾上限）。 */
+  heal: (amount: number) => void
 }
 
 /**
  * 一個升級選項。
  *
- * 在 `systems/leveling.ts` 的 `ALL_UPGRADES` 定義；UI 只會看到 `id` 與 `label`，
- * 實際效果由 `apply` 對 `PlayerStats` 就地修改。
+ * 在 `systems/leveling.ts` 動態產生；UI 只會看到 `id` 與 `label`，
+ * 實際效果由 `apply` 對 `UpgradeContext` 就地修改。
  */
 export interface UpgradeOption {
   /** 穩定識別碼，升級握手時用來指回此選項。 */
@@ -72,7 +138,7 @@ export interface UpgradeOption {
   label: string
   /**
    * 套用此升級效果。
-   * @param stats 會被就地修改的玩家數值。
+   * @param ctx 會被就地修改的升級上下文（stats / weapons / heal）。
    */
-  apply: (stats: PlayerStats) => void
+  apply: (ctx: UpgradeContext) => void
 }
