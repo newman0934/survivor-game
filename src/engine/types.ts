@@ -10,6 +10,9 @@ import type { Vec2 } from './core/vector'
 /** entity 的種類標籤；renderer 依此決定顏色，system 依此決定行為。 */
 export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit'
 
+/** 敵人子種類；僅 kind==='enemy' 的 entity 使用，決定數值/顏色/行為。 */
+export type EnemyKind = 'basic' | 'swarm' | 'tank' | 'charger'
+
 /**
  * ECS 中的單一 entity（純資料）。
  *
@@ -39,6 +42,10 @@ export interface Entity {
   life: number
   /** gem 的經驗值；其他種類忽略。 */
   xp: number
+  /** 敵人子種類（僅敵人使用）；決定數值/顏色/行為。 */
+  enemyKind?: EnemyKind
+  /** charger 行為相位時鐘（秒）；其他敵種忽略。 */
+  behaviorTimer?: number
 }
 
 /**
@@ -141,4 +148,37 @@ export interface UpgradeOption {
    * @param ctx 會被就地修改的升級上下文（stats / weapons / heal）。
    */
   apply: (ctx: UpgradeContext) => void
+}
+
+/**
+ * 一種敵人的定義（純資料）。
+ *
+ * 逐種數值、登場時間與生成權重；charger 另含走/衝參數。
+ * 在 `systems/enemyDefs.ts` 定義；調整敵人手感從那裡下手。
+ */
+export interface EnemyDef {
+  /** 敵人種類。 */
+  kind: EnemyKind
+  /** 生命值。 */
+  hp: number
+  /** 追擊速度（charger 為走路速）。 */
+  speed: number
+  /** 接觸傷害。 */
+  damage: number
+  /** 碰撞半徑。 */
+  radius: number
+  /** 擊殺掉落的經驗值。 */
+  xp: number
+  /** 渲染填色。 */
+  color: number
+  /** 自開局幾秒後才可能生成。 */
+  unlockTime: number
+  /** 加權隨機的權重。 */
+  spawnWeight: number
+  /** charger 衝刺速度。 */
+  dashSpeed?: number
+  /** charger 走路相時長（秒）。 */
+  walkTime?: number
+  /** charger 衝刺相時長（秒）。 */
+  dashTime?: number
 }
