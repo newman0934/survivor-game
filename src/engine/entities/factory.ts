@@ -72,3 +72,14 @@ export function createProjectile(pos: Vec2, dir: Vec2, speed: number, damage: nu
 export function createGem(pos: Vec2, xp: number): Entity {
   return { ...base(), kind: 'gem', pos: { ...pos }, radius: 6, xp }
 }
+
+/**
+ * 建立聖經環繞物 entity。
+ * 位置由 `weapons.orbitPositions` 每格重算後寫入，不走 movement system（vel 恆為 0）。
+ * @param pos    初始位置（會被複製）。
+ * @param damage 接觸敵人時造成的傷害。
+ * @returns 新的 orbit entity。
+ */
+export function createOrbit(pos: Vec2, damage: number): Entity {
+  return { ...base(), kind: 'orbit', pos: { ...pos }, radius: 12, damage }
+}
