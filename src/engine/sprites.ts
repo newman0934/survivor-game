@@ -250,9 +250,9 @@ export function drawBackgroundGrid(
 
 /** 每張地圖的地表色斑色系（兩色交替，疊在底色上製造起伏）。 */
 const PATCH_COLORS: Record<MapKind, readonly [number, number]> = {
-  vessel: [0x16361f, 0x0f2614],
-  stomach: [0x301009, 0x241410],
-  lung: [0x143049, 0x0e2034],
+  vessel:  [0x3a0d12, 0x2a0a0e],   // 暗紅血漿
+  stomach: [0x3a1c0a, 0x2c1408],   // 胃黏膜暖褐
+  lung:    [0x16303f, 0x102330],   // 藍灰肺泡
 }
 
 /** 地表色斑層：大格點疊柔和半透明大色斑（三層同心 falloff），取代網格提供地表質感。 */
@@ -296,53 +296,46 @@ function drawTerrain(
       const v = bgHash(gx + 7, gy + 13)
       if (kind === 'stomach') {
         if (v < 0.6) {
-          // 岩裂：深色陰影底 + 橙紅內光雙線
+          // 胃黏膜皺褶：暖褐曲線雙線（陰影底 + 亮線）
+          const ox = (bgHash(gx + 71, gy + 83) - 0.5) * 12
           const path = (): void => {
-            g.moveTo(px - 11, py + 1).lineTo(px - 3, py - 5).lineTo(px + 4, py + 3).lineTo(px + 12, py - 3)
+            g.moveTo(px - 13, py + ox)
+              .quadraticCurveTo(px, py + ox - 7, px + 13, py + ox + 4)
           }
-          path(); g.stroke({ width: 3, color: 0x1a0805, alpha: 0.6 })
-          path(); g.stroke({ width: 1.2, color: 0xff6a30, alpha: 0.45 })
+          path(); g.stroke({ width: 3.2, color: 0x1a0900, alpha: 0.55 })
+          path(); g.stroke({ width: 1.4, color: 0xc07838, alpha: 0.55 })
         } else {
-          // 餘燼：外發光暈 + 亮核（脈動）
+          // 酸泡：外發光暈（暖橙）+ 亮核（脈動，沿用 clock）
           const a = 0.4 + 0.35 * Math.sin(clock * 3 + v * 6.28)
-          g.circle(px, py, 6).fill({ color: 0xff5722, alpha: a * 0.22 })
-          g.circle(px, py, 3).fill({ color: 0xff7043, alpha: a })
-          g.circle(px, py, 1.4).fill({ color: 0xffe0b2, alpha: a })
+          g.circle(px, py, 6).fill({ color: 0xffb74d, alpha: a * 0.22 })
+          g.circle(px, py, 3).fill({ color: 0xffb74d, alpha: a })
+          g.circle(px, py, 1.4).fill({ color: 0xfff0c4, alpha: a })
         }
       } else if (kind === 'lung') {
-        if (v < 0.5) {
-          // 冰裂：暗藍底 + 亮藍高光雙線
-          const path = (): void => {
-            g.moveTo(px - 11, py - 3).lineTo(px, py).lineTo(px + 3, py - 6).lineTo(px + 11, py + 2)
-          }
-          path(); g.stroke({ width: 2.5, color: 0x4a7fa5, alpha: 0.4 })
-          path(); g.stroke({ width: 1, color: 0xcdeaff, alpha: 0.6 })
+        if (v < 0.6) {
+          // 肺泡氣囊：淡藍柔化圓 + 內陰影（兩層圓環製造立體感）
+          const rad = 9 + v * 7
+          g.circle(px, py, rad).fill({ color: 0x4a9fbf, alpha: 0.12 })
+          g.circle(px, py, rad).stroke({ width: 1.5, color: 0x8fcfe0, alpha: 0.35 })
+          g.circle(px + rad * 0.22, py + rad * 0.22, rad * 0.6).fill({ color: 0x0a1a28, alpha: 0.1 })
         } else {
-          // 雪堆：雙層柔化橢圓
-          g.ellipse(px, py, 10, 4.5).fill({ color: 0xffffff, alpha: 0.1 })
-          g.ellipse(px, py - 0.5, 6, 2.8).fill({ color: 0xffffff, alpha: 0.14 })
+          // 氣孔小點
+          g.circle(px, py, 2).fill({ color: 0x9fd4e8, alpha: 0.4 })
+          g.circle(px, py, 1).fill({ color: 0xcdeaff, alpha: 0.55 })
         }
       } else {
-        // plains
+        // vessel
         if (v < 0.68) {
-          // 草叢：暗綠底筆觸 + 亮綠覆蓋（5 筆、長度隨機）
-          for (let k = -2; k <= 2; k++) {
-            const lean = (bgHash(gx + k, gy + 5) - 0.5) * 10
-            const h = 7 + bgHash(gx + k, gy + 2) * 8
-            g.moveTo(px + k * 3, py + 5).lineTo(px + k * 3 + lean, py - h)
-          }
-          g.stroke({ width: 2.5, color: 0x24501a, alpha: 0.55 })
-          for (let k = -2; k <= 2; k++) {
-            const lean = (bgHash(gx + k, gy + 5) - 0.5) * 10
-            const h = 7 + bgHash(gx + k, gy + 2) * 8
-            g.moveTo(px + k * 3, py + 5).lineTo(px + k * 3 + lean * 0.9, py - h)
-          }
-          g.stroke({ width: 1, color: 0x6abf4a, alpha: 0.5 })
+          // 漂浮紅血球：雙色凹環橢圓（外紅環 + 暗中心凹）
+          const rw = 9 + v * 5
+          const rh = rw * 0.55
+          g.ellipse(px, py, rw, rh).fill({ color: 0xc62828, alpha: 0.55 })
+          g.ellipse(px, py, rw * 0.6, rh * 0.6).fill({ color: 0x7b1010, alpha: 0.6 })
+          g.ellipse(px, py, rw, rh).stroke({ width: 1, color: 0xe57373, alpha: 0.35 })
         } else {
-          // 碎石：落地影 + 立體高光
-          g.ellipse(px, py + 2, 5, 2.5).fill({ color: 0x000000, alpha: 0.2 })
-          g.circle(px, py, 4).fill({ color: 0x5a5a5a, alpha: 0.6 })
-          g.circle(px - 1.2, py - 1.2, 1.8).fill({ color: 0x8a8a8a, alpha: 0.6 })
+          // 血小板：不規則小點
+          g.circle(px, py, 2.5).fill({ color: 0xef9a9a, alpha: 0.5 })
+          g.circle(px - 1, py - 0.8, 1).fill({ color: 0xffcdd2, alpha: 0.5 })
         }
       }
     }
@@ -361,18 +354,20 @@ function drawAmbient(
     const fx = bgHash(i, 101)
     const fy = bgHash(i, 202)
     if (kind === 'lung') {
+      // 緩慢上飄淡藍氣流粒
       const sx = L + wrap(fx * viewW + Math.sin(clock * 0.8 + i) * 14, viewW)
-      const sy = T + wrap(fy * viewH + clock * (18 + fx * 22), viewH)
-      g.circle(sx, sy, 1.4 + fx * 1.6).fill({ color: 0xffffff, alpha: 0.55 })
+      const sy = T + wrap(fy * viewH - clock * (18 + fx * 22), viewH)
+      g.circle(sx, sy, 1.4 + fx * 1.6).fill({ color: 0xbfdcef, alpha: 0.55 })
     } else if (kind === 'stomach') {
+      // 上升酸泡粒（沿用上升模式，暖黃色）
       const sx = L + wrap(fx * viewW + Math.sin(clock + i) * 8, viewW)
-      const sy = T + wrap(fy * viewH - clock * (20 + fx * 25), viewH) // 火星上升
-      g.circle(sx, sy, 1 + fx * 1.4).fill({ color: 0xffab40, alpha: 0.5 })
+      const sy = T + wrap(fy * viewH - clock * (20 + fx * 25), viewH)
+      g.circle(sx, sy, 1 + fx * 1.4).fill({ color: 0xffd180, alpha: 0.5 })
     } else {
-      // plains 草屑/光點
+      // vessel：隨血流漂移的微紅粒（低 alpha）
       const sx = L + wrap(fx * viewW + Math.sin(clock * 0.5 + i) * 20, viewW)
       const sy = T + wrap(fy * viewH + clock * (6 + fx * 8), viewH)
-      g.circle(sx, sy, 1 + fx).fill({ color: 0xaed581, alpha: 0.35 })
+      g.circle(sx, sy, 1 + fx).fill({ color: 0xff8a80, alpha: 0.28 })
     }
   }
 }
