@@ -32,4 +32,27 @@ describe('game store', () => {
     expect(s.time).toBe(42)
     expect(s.kills).toBe(99)
   })
+  it('start() clears onUpgradePicked to null', () => {
+    const s = useGameStore()
+    s.onUpgradePicked = (_id) => {}
+    s.start()
+    expect(s.onUpgradePicked).toBeNull()
+  })
+  it('pickUpgrade() calls the wired callback, clears options, and resumes', () => {
+    const s = useGameStore()
+    s.start()
+    let picked: string | null = null
+    s.onUpgradePicked = (id) => { picked = id }
+    s.offerUpgrades([{ id: 'damage', label: '傷害 +3' }])
+    s.pickUpgrade('damage')
+    expect(picked).toBe('damage')
+    expect(s.upgradeOptions).toHaveLength(0)
+    expect(s.phase).toBe('playing')
+  })
+  it('toMenu() sets phase to menu', () => {
+    const s = useGameStore()
+    s.start()
+    s.toMenu()
+    expect(s.phase).toBe('menu')
+  })
 })

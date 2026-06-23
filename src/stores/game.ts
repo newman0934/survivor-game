@@ -48,6 +48,7 @@ export const useGameStore = defineStore('game', {
       this.xp = 0
       this.xpNeeded = 0
       this.upgradeOptions = []
+      this.onUpgradePicked = null
     },
     updateSummary(s: Summary) {
       this.hp = s.hp
