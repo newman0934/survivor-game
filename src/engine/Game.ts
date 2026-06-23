@@ -17,17 +17,20 @@ export class Game {
   private accumulator = 0
   private paused = false
   private stopped = false
-  private upgradeRng = createRng(99)
+  private upgradeRng: ReturnType<typeof createRng>
 
-  private constructor(world: World, renderer: PixiRenderer) {
+  private constructor(world: World, renderer: PixiRenderer, seed: number) {
     this.world = world
     this.renderer = renderer
+    // Derive the upgrade RNG from the run seed so each run offers a different
+    // upgrade sequence (rather than an identical one every game).
+    this.upgradeRng = createRng(seed ^ 0xdead)
   }
 
   static async start(canvasParent: HTMLElement, seed: number): Promise<Game> {
     const world = new World(seed)
     const renderer = await PixiRenderer.create(canvasParent)
-    const game = new Game(world, renderer)
+    const game = new Game(world, renderer, seed)
     game.input.attach()
     game.store.onUpgradePicked = (id: string) => {
       world.applyUpgrade(id)

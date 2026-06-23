@@ -37,7 +37,7 @@ export class World {
   private level = 1
   private xp = 0
   private kills = 0
-  private pendingLevelUp = false
+  private pendingLevelUps = 0
 
   constructor(seed: number) {
     this.rng = createRng(seed)
@@ -66,13 +66,13 @@ export class World {
     while (this.xp >= xpForLevel(this.level)) {
       this.xp -= xpForLevel(this.level)
       this.level += 1
-      this.pendingLevelUp = true
+      this.pendingLevelUps += 1
     }
   }
 
   consumeLevelUp(): boolean {
-    if (this.pendingLevelUp) {
-      this.pendingLevelUp = false
+    if (this.pendingLevelUps > 0) {
+      this.pendingLevelUps -= 1
       return true
     }
     return false

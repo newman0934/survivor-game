@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { World } from './World'
+import { xpForLevel } from './systems/leveling'
 
 describe('World', () => {
   it('starts with one player and no enemies', () => {
@@ -48,5 +49,21 @@ describe('World', () => {
     const before = w.stats.projectileDamage
     w.applyUpgrade('damage')
     expect(w.stats.projectileDamage).toBeGreaterThan(before)
+  })
+
+  it('isPlayerDead reflects player hp dropping to zero', () => {
+    const w = new World(1)
+    expect(w.isPlayerDead()).toBe(false)
+    w.player.hp = 0
+    expect(w.isPlayerDead()).toBe(true)
+  })
+
+  it('consumeLevelUp returns true once per level gained when several happen at once', () => {
+    const w = new World(1)
+    // Grant enough xp to cross two level thresholds in a single call.
+    w.grantXp(xpForLevel(1) + xpForLevel(2))
+    expect(w.consumeLevelUp()).toBe(true)
+    expect(w.consumeLevelUp()).toBe(true)
+    expect(w.consumeLevelUp()).toBe(false)
   })
 })
