@@ -9,10 +9,14 @@ describe('World', () => {
     expect(w.activeEnemies().length).toBe(0)
   })
 
-  it('擊殺敵人發出 kill、Boss 生成發出 boss 事件', () => {
+  it('Boss 生成發出 boss 事件', () => {
     const w = new World(1)
     w.spawnBossAt({ x: 50, y: 0 })
     expect(w.consumeSoundEvents()).toContain('boss')
+  })
+
+  it('擊殺敵人發出 kill 事件', () => {
+    const w = new World(1)
     const e = w.spawnEnemyAt({ x: 60, y: 0 }, 'basic')
     e.hp = 1
     w.forceFire()
