@@ -116,32 +116,80 @@ export class EffectsLayer {
     this.texts.push({ t, vy: -42, life: 0.5, maxLife: 0.5 })
   }
 
-  /** 吞噬偽足：前方扇形閃光（短壽命淡出）。 */
+  /** 吞噬偽足：分層新月刀光（柔光扇 + 亮白前緣弧）+ 沿弧噴濺碎屑。 */
   spawnSweep(x: number, y: number, angle: number, radius: number, halfAngle: number): void {
     const g = new Graphics()
+    // 外層柔光扇形
     g.moveTo(0, 0)
     g.arc(0, 0, radius, angle - halfAngle, angle + halfAngle)
     g.closePath()
-    g.fill({ color: 0xff7043, alpha: 0.32 })
+    g.fill({ color: 0xff7043, alpha: 0.22 })
+    // 內層亮白前緣弧（沿外緣描邊，刀光鋒面）
+    const sx = Math.cos(angle - halfAngle) * radius * 0.96
+    const sy = Math.sin(angle - halfAngle) * radius * 0.96
+    g.moveTo(sx, sy)
+    g.arc(0, 0, radius * 0.96, angle - halfAngle, angle + halfAngle)
+    g.stroke({ width: 3, color: 0xffd2b0, alpha: 0.85 })
     g.position.set(x, y)
     this.worldFx.addChild(g)
     this.flashes.push({ g, life: 0.22, maxLife: 0.22 })
+    // 沿弧噴濺碎屑
+    for (let i = 0; i < 5; i++) {
+      if (this.particles.length >= MAX_PARTICLES) break
+      const a = angle - halfAngle + Math.random() * halfAngle * 2
+      const spd = 80 + Math.random() * 120
+      const pr = 1.2 + Math.random() * 1.5
+      const p = new Graphics()
+      p.circle(0, 0, pr).fill(0xff8a50)
+      p.position.set(x + Math.cos(a) * radius * 0.7, y + Math.sin(a) * radius * 0.7)
+      this.worldFx.addChild(p)
+      this.particles.push({ g: p, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, gravity: 120, life: 0.3, maxLife: 0.3 })
+    }
   }
 
-  /** 補體級聯：相鄰命中點間的連鎖閃電（世界座標、短壽命淡出）。 */
+  /** 補體級聯：鋸齒閃電（雙層外暈+亮核 + 命中點亮球，世界座標、短壽命淡出）。 */
   spawnChain(points: { x: number; y: number }[]): void {
     if (points.length < 2) return
-    const g = new Graphics()
-    g.moveTo(points[0].x, points[0].y)
-    for (let i = 1; i < points.length; i++) g.lineTo(points[i].x, points[i].y)
-    g.stroke({ width: 3, color: 0x8be9ff, alpha: 0.9 })
-    this.worldFx.addChild(g)
-    this.flashes.push({ g, life: 0.2, maxLife: 0.2 })
+    // 每段插入垂直抖動中點，形成 lightning 折線
+    const path: { x: number; y: number }[] = [points[0]]
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i]
+      const dx = b.x - a.x, dy = b.y - a.y
+      const len = Math.hypot(dx, dy) || 1
+      const off = (Math.random() - 0.5) * Math.min(24, len * 0.35)
+      path.push({ x: (a.x + b.x) / 2 - (dy / len) * off, y: (a.y + b.y) / 2 + (dx / len) * off })
+      path.push(b)
+    }
+    const trace = (g: Graphics): void => {
+      g.moveTo(path[0].x, path[0].y)
+      for (let i = 1; i < path.length; i++) g.lineTo(path[i].x, path[i].y)
+    }
+    // 外暈（粗、淡）
+    const glow = new Graphics()
+    trace(glow)
+    glow.stroke({ width: 7, color: 0x4ad6ff, alpha: 0.3 })
+    this.worldFx.addChild(glow)
+    this.flashes.push({ g: glow, life: 0.2, maxLife: 0.2 })
+    // 亮核（細、亮）+ 命中點亮球節點
+    const core = new Graphics()
+    trace(core)
+    core.stroke({ width: 2, color: 0xeaffff, alpha: 0.95 })
+    for (let i = 1; i < points.length; i++) core.circle(points[i].x, points[i].y, 4).fill({ color: 0x8be9ff, alpha: 0.9 })
+    this.worldFx.addChild(core)
+    this.flashes.push({ g: core, life: 0.2, maxLife: 0.2 })
   }
 
-  /** 抗原脈衝：擴張衝擊環（沿用 addExpand）。 */
+  /** 抗原脈衝：雙環衝擊波 + 內層淡色填充碟快速淡出。 */
   spawnNova(x: number, y: number, radius: number): void {
-    this.addExpand(x, y, 0x4dd0c0, 4, radius, 4, 0.4)
+    // 內層淡色填充碟（衝擊感、快速淡出）
+    const disc = new Graphics()
+    disc.circle(0, 0, radius * 0.5).fill({ color: 0x4dd0c0, alpha: 0.18 })
+    disc.position.set(x, y)
+    this.worldFx.addChild(disc)
+    this.flashes.push({ g: disc, life: 0.25, maxLife: 0.25 })
+    // 亮白前緣環（主衝擊、快）+ 外擴薄環（稍慢、更遠）
+    this.addExpand(x, y, 0xeaffff, 6, radius, 5, 0.35)
+    this.addExpand(x, y, 0x4dd0c0, 2, radius * 1.15, 2, 0.5)
   }
 
   /** 受傷：拉高紅暈與震動強度（intensity 越大越強，boss 撞擊較大）。 */
