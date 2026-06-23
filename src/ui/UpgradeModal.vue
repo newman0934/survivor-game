@@ -31,7 +31,8 @@ const store = useGameStore()
 .card:hover { background: #283050; }
 
 @media (max-width: 600px) {
-  .cards { gap: 0.6rem; }
-  .card { width: 28vw; height: 96px; font-size: 0.95rem; }
+  /* 手機版：選項改為垂直排列，卡片橫向拉寬、高度依內容。 */
+  .cards { flex-direction: column; gap: 0.6rem; width: 80vw; }
+  .card { width: 100%; height: auto; min-height: 56px; padding: 0.8rem; font-size: 1rem; }
 }
 </style>
