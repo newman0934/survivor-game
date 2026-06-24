@@ -7,6 +7,10 @@
  */
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import '@fontsource/chakra-petch/latin-400.css'
+import '@fontsource/chakra-petch/latin-500.css'
+import '@fontsource/chakra-petch/latin-700.css'
+import './styles/ui.css'
 import App from './App.vue'
 
 createApp(App).use(createPinia()).mount('#app')
