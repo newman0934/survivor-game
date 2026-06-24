@@ -58,6 +58,10 @@ export interface Entity {
   behaviorTimer?: number
   /** projectile 造型來源（抗體＝Y 形；穿孔素＝尖刺；噴吐病原毒液＝綠毒球）；其他種類忽略。 */
   projShape?: 'antibody' | 'perforin' | 'toxin'
+  /** 投射物剩餘穿透敵數（進化穿孔素用）；命中後 >0 則續飛、否則失效。其他忽略。 */
+  pierce?: number
+  /** 是否為進化武器產生的投射物（純視覺：drawProjectile 進化上色）。 */
+  evolved?: boolean
 }
 
 /**
@@ -102,6 +106,8 @@ export interface Weapon {
   level: number
   /** 各自的開火倒數計時器（秒）。 */
   cooldownTimer: number
+  /** 是否已進化（局內狀態，不入存檔）；進化後 World 改用 evolution 數值與招牌行為。 */
+  evolved?: boolean
 }
 
 /**
@@ -124,6 +130,26 @@ export interface WeaponLevelStats {
 }
 
 /**
+ * 武器進化定義（純資料）。進化層數值 + 招牌行為旗標；沿用既有分派，由 World 依 `Weapon.evolved` 取用。
+ */
+export interface WeaponEvolution {
+  /** 進化所需被動（持有 level≥1 即可）。 */
+  requires: PassiveKind
+  /** 進化後顯示名（繁中）。 */
+  label: string
+  /** 進化層生效數值（取代滿級 levels[maxLevel-1]）。 */
+  level: WeaponLevelStats
+  /** 穿孔素：投射物穿透敵數。 */
+  pierce?: number
+  /** 補體級聯：取消每跳傷害衰減。 */
+  noFalloff?: boolean
+  /** 吞噬偽足：環掃半角（弧度，覆寫 PHAGOCYTE_HALF_ANGLE）。 */
+  halfAngle?: number
+  /** 發炎場：場域存在時每秒替玩家回血量。 */
+  fieldRegen?: number
+}
+
+/**
  * 一把武器的定義：等級上限與逐級數值表。
  * `levels[level-1]` 為該等級的生效值。新增武器或調數值都從 `systems/weaponDefs.ts` 下手。
  */
@@ -136,6 +162,8 @@ export interface WeaponDef {
   maxLevel: number
   /** 逐級數值表，長度 = maxLevel。 */
   levels: WeaponLevelStats[]
+  /** 進化定義（選用）；滿足條件時可進化。 */
+  evolution?: WeaponEvolution
 }
 
 /**
