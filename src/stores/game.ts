@@ -10,6 +10,7 @@
  *  - store → 引擎：UI 透過 pickUpgrade 觸發引擎事先註冊的 onUpgradePicked callback。
  */
 import { defineStore } from 'pinia'
+import type { WeaponKind, PassiveKind } from '../engine/types'
 
 /** 遊戲整體狀態階段；App.vue 依此切換要顯示的 UI overlay。 */
 export type Phase = 'menu' | 'playing' | 'upgrading' | 'over'
@@ -31,6 +32,12 @@ export interface Summary {
   bossMaxHp: number
 }
 
+/** 玩家目前持有的武器與被動快照（升級彈窗顯示用，純資料）。 */
+export interface LoadoutSnapshot {
+  weapons: { kind: WeaponKind; level: number; evolved: boolean }[]
+  passives: { kind: PassiveKind; level: number }[]
+}
+
 /** 一張升級卡的 UI 描述；不含任何引擎邏輯，apply 行為留在引擎端。 */
 export interface UpgradeDescriptor {
   id: string
@@ -48,6 +55,8 @@ interface State extends Summary {
    * 進而觸發引擎的 world.applyUpgrade。這是「store → 引擎」唯一的回呼通道。
    */
   onUpgradePicked: ((id: string) => void) | null
+  /** 目前持有的武器/被動快照；升級彈窗開啟時更新。 */
+  loadout: LoadoutSnapshot
 }
 
 /** 取得遊戲橋接 store 的 composable（Pinia 自動生成）。 */
@@ -66,6 +75,7 @@ export const useGameStore = defineStore('game', {
     bossMaxHp: 0,
     upgradeOptions: [],
     onUpgradePicked: null,
+    loadout: { weapons: [], passives: [] },
   }),
   actions: {
     /** 開始新的一場：切到 playing 並把所有 summary/升級狀態歸零。由 App.vue 在啟動引擎前呼叫。 */
@@ -83,6 +93,7 @@ export const useGameStore = defineStore('game', {
       this.bossMaxHp = 0
       this.upgradeOptions = []
       this.onUpgradePicked = null
+      this.loadout = { weapons: [], passives: [] }
     },
     /** 引擎 → store：把最新一份 summary 推進來供 HUD 渲染。不更動 phase。 */
     updateSummary(s: Summary) {
@@ -96,6 +107,10 @@ export const useGameStore = defineStore('game', {
       this.bossActive = s.bossActive
       this.bossHp = s.bossHp
       this.bossMaxHp = s.bossMaxHp
+    },
+    /** 引擎 → store：更新目前持有快照（升級彈窗顯示用）。 */
+    setLoadout(l: LoadoutSnapshot) {
+      this.loadout = l
     },
     /**
      * 升級握手（步驟 1）：引擎升級時呼叫此 action 提供三選一選項並切到 upgrading 階段。

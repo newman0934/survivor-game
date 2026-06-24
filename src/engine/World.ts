@@ -29,7 +29,7 @@ import { WEAPON_DEFS } from './systems/weaponDefs'
 import { circlesOverlap } from './systems/collision'
 import { attractGem } from './systems/pickup'
 import { xpForLevel, applyUpgradeById } from './systems/leveling'
-import type { Summary } from '../stores/game'
+import type { Summary, LoadoutSnapshot } from '../stores/game'
 
 /** 敵人生成的距離：在玩家周圍此半徑的圓上隨機生怪（畫面外）。 */
 const SPAWN_RADIUS = 700
@@ -661,6 +661,17 @@ export class World {
   /** @returns 玩家是否已死亡（hp <= 0）。 */
   isPlayerDead(): boolean {
     return this.player.hp <= 0
+  }
+
+  /**
+   * 產生目前持有的武器/被動快照（純資料），供升級彈窗顯示。
+   * @returns weapons（kind/level/evolved）與 passives（kind/level）的快照。
+   */
+  loadoutSnapshot(): LoadoutSnapshot {
+    return {
+      weapons: this.weapons.map((w) => ({ kind: w.kind, level: w.level, evolved: !!w.evolved })),
+      passives: this.passives.map((p) => ({ kind: p.kind, level: p.level })),
+    }
   }
 
   /**
