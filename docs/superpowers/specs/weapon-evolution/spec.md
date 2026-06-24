@@ -34,7 +34,7 @@
 | antibody | tome（干擾素/攻速） | 抗體風暴 | cooldown 0.12, damage 12, count 5, projectileSpeed 500 | 近乎無冷卻 + 多重彈（純數值） |
 | perforin | bracer（趨化因子/彈速） | 千刃穿孔 | cooldown 0.12, damage 8, count 5, projectileSpeed 750 | `pierce: 3`（彈體穿透 3 敵） |
 | complement | spinach（細胞激素/傷害） | 終末補體複合體 | damage 12, count 6, radius 150, angularSpeed 4.5 | 命中冷卻縮短 0.5→0.25s（進化專屬） |
-| inflammation | tomato（生長因子/回復） | 自體炎症風暴 | damage 16, radius 170 | `fieldRegen: 1.5`（場域存在時每秒回血 1.5） |
+| inflammation | tomato（生長因子/回復） | 自體炎症風暴 | damage 16, radius 170 | `fieldRegen: 6`（場域存在時每秒回血 6） |
 | phagocyte | wings（偽足/移速） | 巨噬吞噬漩渦 | cooldown 0.3, damage 30, radius 130 | `halfAngle: Math.PI`（近 360° 環掃） |
 | cascade | candle（組織胺/範圍） | 補體爆發級聯 | cooldown 0.45, damage 24, count 9, radius 260 | `noFalloff: true`（取消每跳衰減） |
 | nova | magnet（受體/吸取） | 抗原超載脈衝 | cooldown 0.8, damage 40, radius 300 | 巨大範圍 + 低冷卻（純數值） |
@@ -43,7 +43,7 @@
 - **pierce（perforin）**：`Entity.pierce` 記剩餘穿透數、`Entity.hitEnemies` 記已命中的敵人。子彈命中**尚未命中過**的敵人扣血後，若 `pierce>0` 則 `pierce-=1`、記入 `hitEnemies` 且**不失效**（繼續飛行命中下一隻不同敵人）；否則失效。已在 `hitEnemies` 內的敵人略過（同一敵人最多命中一次，不跨幀重複扣血／消耗 pierce）。每幀單發仍最多命中一隻（既有 `break`）。
 - **noFalloff（cascade）**：進化時每跳傷害係數用 `1.0`（不套 `CASCADE_FALLOFF`）。
 - **halfAngle（phagocyte）**：進化時 `phagocyteSweep` 的半角用 `def.evolution.halfAngle`（覆寫常數 `PHAGOCYTE_HALF_ANGLE`）。
-- **fieldRegen（inflammation）**：進化時 inflammation 分支每格替玩家回 `fieldRegen * dt` 血（夾 maxHp 上限；玩家存活時）。
+- **fieldRegen（inflammation）**：進化時 inflammation 分支每格替玩家回 `fieldRegen * dt` 血（夾 maxHp 上限；玩家存活時）。`fieldRegen=6` ＝ 每秒 6 血。
 - **命中冷卻（complement）**：進化的補體環 per-enemy 命中冷卻由 0.5s 改 0.25s（`updateBible` 內依 `evolved` 判定）。
 
 ### FR-5 視覺

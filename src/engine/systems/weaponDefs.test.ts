@@ -19,7 +19,7 @@ describe('武器進化資料表', () => {
     expect(WEAPON_DEFS.perforin.evolution!.pierce).toBe(3)
     expect(WEAPON_DEFS.cascade.evolution!.noFalloff).toBe(true)
     expect(WEAPON_DEFS.phagocyte.evolution!.halfAngle).toBeCloseTo(Math.PI)
-    expect(WEAPON_DEFS.inflammation.evolution!.fieldRegen).toBe(1.5)
+    expect(WEAPON_DEFS.inflammation.evolution!.fieldRegen).toBe(6)
     expect(WEAPON_DEFS.complement.evolution!.hitCooldown).toBe(0.25)
   })
   it('七把進化層數值快照（防止誤改）', () => {

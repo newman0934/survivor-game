@@ -76,7 +76,7 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
     evolution: {
       requires: 'tomato', label: '自體炎症風暴',
       level: { damage: 16, radius: 170 },
-      fieldRegen: 1.5,
+      fieldRegen: 6,
     },
   },
   phagocyte: {
