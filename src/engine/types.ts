@@ -21,6 +21,7 @@ export type FxEvent =
 
 /** 敵人子種類；僅 kind==='enemy' 的 entity 使用，決定數值/顏色/行為。 */
 export type EnemyKind = 'virus' | 'bacteria' | 'spore' | 'spiral' | 'superbug'
+  | 'spitter' | 'splitter' | 'exploder'
 
 /**
  * ECS 中的單一 entity（純資料）。
@@ -55,8 +56,8 @@ export interface Entity {
   enemyKind?: EnemyKind
   /** charger 行為相位時鐘（秒）；其他敵種忽略。 */
   behaviorTimer?: number
-  /** projectile 造型來源（抗體＝Y 形；穿孔素＝尖刺）；其他種類忽略。 */
-  projShape?: 'antibody' | 'perforin'
+  /** projectile 造型來源（抗體＝Y 形；穿孔素＝尖刺；病毒＝綠毒液）；其他種類忽略。 */
+  projShape?: 'antibody' | 'perforin' | 'toxin'
 }
 
 /**
@@ -278,4 +279,10 @@ export interface EnemyDef {
   walkTime?: number
   /** charger 衝刺相時長（秒）。 */
   dashTime?: number
+  /** 噴吐病原：開火間隔(秒)/彈速/彈傷/偏好距離。 */
+  spit?: { interval: number; projSpeed: number; projDamage: number; range: number }
+  /** 死亡分裂：在死亡位置生 count 隻 kind 子體。 */
+  splitInto?: { kind: EnemyKind; count: number }
+  /** 死亡爆炸：玩家在 radius 內扣 damage。 */
+  explode?: { radius: number; damage: number }
 }
