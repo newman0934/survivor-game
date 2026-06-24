@@ -7,6 +7,12 @@ import { ref } from 'vue'
 import { CHARACTER_ORDER, CHARACTER_DEFS } from '../engine/systems/characterDefs'
 import { MAP_ORDER, MAP_DEFS } from '../engine/systems/mapDefs'
 import type { CharacterKind, MapKind } from '../engine/types'
+import type { CumulativeStats } from '../persistence/saveStore'
+
+defineProps<{
+  /** 跨場累積統計（由 App.vue loadSave 後傳入）。 */
+  stats: CumulativeStats
+}>()
 
 const emit = defineEmits<{ start: [opts: { character: CharacterKind; map: MapKind }] }>()
 const character = ref<CharacterKind>('macrophage')
@@ -16,11 +22,26 @@ const map = ref<MapKind>('vessel')
 function css(color: number): string {
   return '#' + color.toString(16).padStart(6, '0')
 }
+
+/** 把秒數格式化為 m:ss；0 顯示「—」。 */
+function fmtBest(sec: number): string {
+  if (sec <= 0) return '—'
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
 </script>
 
 <template>
   <div class="overlay">
     <h1>Survivor</h1>
+
+    <div class="stats" v-if="stats.totalRuns > 0">
+      <span>總擊殺 <b>{{ stats.totalKills }}</b></span>
+      <span>場數 <b>{{ stats.totalRuns }}</b></span>
+      <span>最佳存活 <b>{{ fmtBest(stats.bestTime) }}</b></span>
+      <span>最高等級 <b>{{ stats.maxLevel }}</b></span>
+    </div>
 
     <div class="section-label">角色</div>
     <div class="row">
@@ -89,4 +110,8 @@ h1 { font-size: 3rem; margin: 0 0 0.5rem; letter-spacing: 0.1em; }
   .desc { font-size: 0.72rem; }
   .start { font-size: 1.2rem; padding: 0.5rem 1.6rem; }
 }
+.stats { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+  font-size: 0.85rem; opacity: 0.85; margin-bottom: 0.4rem; }
+.stats b { color: var(--immune-accent-strong); }
+@media (max-width: 600px) { .stats { gap: 0.6rem; font-size: 0.78rem; } }
 </style>
