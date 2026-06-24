@@ -375,10 +375,19 @@ export function drawBackgroundGrid(
 }
 
 /** 每張地圖的地表色斑色系（兩色交替，疊在底色上製造起伏）。 */
-const PATCH_COLORS: Record<MapKind, readonly [number, number]> = {
-  vessel:  [0x3a0d12, 0x2a0a0e],   // 暗紅血漿
-  stomach: [0x3a1c0a, 0x2c1408],   // 胃黏膜暖褐
-  lung:    [0x16303f, 0x102330],   // 藍灰肺泡
+const PATCH_COLORS: Record<MapKind, readonly [number, number, number]> = {
+  vessel:  [0x3a0d12, 0x2a0a0e, 0x4a1118],   // 暗紅血漿（含中間色階）
+  stomach: [0x3a1c0a, 0x2c1408, 0x4a2410],   // 胃黏膜暖褐
+  lung:    [0x16303f, 0x102330, 0x1c3e52],   // 藍灰肺泡
+}
+
+/** 結構深度層色（大尺度、低 alpha）。 */
+const STRUCT_COLORS: Record<MapKind, number> = {
+  vessel: 0x5a1620, stomach: 0x5a3010, lung: 0x1e4a5e,
+}
+/** 暖核漸層色（視野中心略亮略暖）。 */
+const CORE_COLORS: Record<MapKind, number> = {
+  vessel: 0x6e1822, stomach: 0x6e3c12, lung: 0x1d5066,
 }
 
 /** 地表色斑層：大格點疊柔和半透明大色斑（三層同心 falloff），取代網格提供地表質感。 */
@@ -397,10 +406,10 @@ function groundPatches(
       const px = gx * CELL + bgHash(gx + 11, gy + 23) * CELL
       const py = gy * CELL + bgHash(gx + 29, gy + 41) * CELL
       const rad = 70 + h * 95
-      const col = colors[h < 0.5 ? 0 : 1]
-      g.circle(px, py, rad).fill({ color: col, alpha: 0.05 })
-      g.circle(px, py, rad * 0.66).fill({ color: col, alpha: 0.05 })
-      g.circle(px, py, rad * 0.33).fill({ color: col, alpha: 0.05 })
+      const col = colors[h < 0.34 ? 0 : h < 0.67 ? 1 : 2]
+      g.circle(px, py, rad).fill({ color: col, alpha: 0.06 })
+      g.circle(px, py, rad * 0.66).fill({ color: col, alpha: 0.06 })
+      g.circle(px, py, rad * 0.33).fill({ color: col, alpha: 0.06 })
     }
   }
 }
@@ -430,12 +439,16 @@ function drawTerrain(
           }
           path(); g.stroke({ width: 3.2, color: 0x1a0900, alpha: 0.55 })
           path(); g.stroke({ width: 1.4, color: 0xc07838, alpha: 0.55 })
-        } else {
+        } else if (v < 0.8) {
           // 酸泡：外發光暈（暖橙）+ 亮核（脈動，沿用 clock）
           const a = 0.4 + 0.35 * Math.sin(clock * 3 + v * 6.28)
           g.circle(px, py, 6).fill({ color: 0xffb74d, alpha: a * 0.22 })
           g.circle(px, py, 3).fill({ color: 0xffb74d, alpha: a })
           g.circle(px, py, 1.4).fill({ color: 0xfff0c4, alpha: a })
+        } else {
+          // 胃小凹：暗點凹陷（暗圓 + 內更暗）
+          g.circle(px, py, 3.5).fill({ color: 0x2a1206, alpha: 0.5 })
+          g.circle(px, py, 1.6).fill({ color: 0x140702, alpha: 0.6 })
         }
       } else if (kind === 'lung') {
         if (v < 0.6) {
@@ -444,20 +457,34 @@ function drawTerrain(
           g.circle(px, py, rad).fill({ color: 0x4a9fbf, alpha: 0.12 })
           g.circle(px, py, rad).stroke({ width: 1.5, color: 0x8fcfe0, alpha: 0.35 })
           g.circle(px + rad * 0.22, py + rad * 0.22, rad * 0.6).fill({ color: 0x0a1a28, alpha: 0.1 })
-        } else {
+        } else if (v < 0.8) {
           // 氣孔小點
           g.circle(px, py, 2).fill({ color: 0x9fd4e8, alpha: 0.4 })
           g.circle(px, py, 1).fill({ color: 0xcdeaff, alpha: 0.55 })
+        } else {
+          // 微血管網：兩條交織淡紅細線
+          const a2 = bgHash(gx + 9, gy + 4) * Math.PI
+          g.moveTo(px - 8, py).lineTo(px + 8, py + Math.sin(a2) * 4)
+          g.moveTo(px, py - 8).lineTo(px + Math.cos(a2) * 4, py + 8)
+          g.stroke({ width: 0.8, color: 0xb05a5a, alpha: 0.22 })
         }
       } else {
         // vessel
-        if (v < 0.68) {
+        if (v < 0.55) {
           // 漂浮紅血球：雙色凹環橢圓（外紅環 + 暗中心凹）
           const rw = 9 + v * 5
           const rh = rw * 0.55
           g.ellipse(px, py, rw, rh).fill({ color: 0xc62828, alpha: 0.55 })
           g.ellipse(px, py, rw * 0.6, rh * 0.6).fill({ color: 0x7b1010, alpha: 0.6 })
           g.ellipse(px, py, rw, rh).stroke({ width: 1, color: 0xe57373, alpha: 0.35 })
+        } else if (v < 0.8) {
+          // 纖維蛋白絲：細淡網絲（兩段折線）
+          const a = bgHash(gx + 3, gy + 5) * Math.PI
+          const len = 10 + v * 8
+          const mx = px + Math.cos(a) * len, my = py + Math.sin(a) * len
+          g.moveTo(px, py).lineTo(mx, my)
+            .lineTo(mx + Math.cos(a + 1) * len * 0.6, my + Math.sin(a + 1) * len * 0.6)
+          g.stroke({ width: 1, color: 0xd98a8a, alpha: 0.28 })
         } else {
           // 血小板：不規則小點
           g.circle(px, py, 2.5).fill({ color: 0xef9a9a, alpha: 0.5 })
@@ -498,10 +525,82 @@ function drawAmbient(
   }
 }
 
-/** 地圖背景：柔和地表色斑 + 地面特徵 + 氛圍粒子（無網格）。取代 renderer 直接呼叫。 */
+/** 暖核漸層：以視野中心為核，大圓由外而內疊加，中央略亮略暖、減死黑。 */
+function warmCore(g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number): void {
+  const col = CORE_COLORS[kind]
+  const maxR = Math.hypot(viewW, viewH) * 0.6
+  for (let i = 0; i < 5; i++) {
+    const r = maxR * (1 - i / 5)
+    g.circle(cx, cy, r).fill({ color: col, alpha: 0.028 })
+  }
+}
+
+/** 結構深度層：大尺度地貌（血管流紋/壁、胃皺褶脊、肺泡囊+支氣管），含 clock 緩動。 */
+function drawMapStructure(
+  g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number, clock: number,
+): void {
+  const col = STRUCT_COLORS[kind]
+  if (kind === 'vessel') {
+    // 有機血漿流紋寬帶（沿斜向 + 柔和正弦波動成曲線，隨血流緩慢漂移）
+    const BAND = 320
+    const drift = (clock * 14) % BAND
+    const k0 = Math.floor((cx - viewW) / BAND) - 1
+    const k1 = Math.ceil((cx + viewW) / BAND) + 1
+    const top = cy - viewH, bot = cy + viewH
+    for (let k = k0; k <= k1; k++) {
+      const base = k * BAND + drift
+      const amp = 42 + 30 * bgHash(k, 7)        // 波幅
+      const phase = bgHash(k, 19) * 6.283
+      for (let s = 0; s <= 10; s++) {
+        const t = s / 10
+        const y = top + (bot - top) * t
+        // 斜向前進（×0.7 斜率）+ 沿長度疊加柔和正弦 → 有機曲線而非直紋
+        const x = base + (y - cy) * 0.7 + Math.sin(t * 3.1 + phase + clock * 0.4) * amp
+        if (s === 0) g.moveTo(x, y)
+        else g.lineTo(x, y)
+      }
+      g.stroke({ width: 54 + 28 * bgHash(k, 7), color: col, alpha: 0.04 })
+    }
+  } else if (kind === 'stomach') {
+    // 大尺度黏膜皺褶脊（橫向粗皺脊 + 蠕動波）
+    const RIDGE = 160
+    const r0 = Math.floor((cy - viewH / 2 - RIDGE) / RIDGE)
+    const r1 = Math.ceil((cy + viewH / 2 + RIDGE) / RIDGE)
+    const L = cx - viewW / 2 - 80, R = cx + viewW / 2 + 80
+    for (let r = r0; r <= r1; r++) {
+      const yb = r * RIDGE + Math.sin(clock * 0.8 + r) * 12 // 蠕動
+      for (let s = 0; s <= 10; s++) {
+        const x = L + (R - L) * (s / 10)
+        const y = yb + Math.sin(x * 0.009 + r * 1.7) * 24
+        if (s === 0) g.moveTo(x, y)
+        else g.lineTo(x, y)
+      }
+      g.stroke({ width: 28, color: col, alpha: 0.07 })
+    }
+  } else {
+    // 肺泡：大肺泡囊輪廓（呼吸縮放）
+    const SAC = 280
+    const breath = 1 + 0.05 * Math.sin(clock * 0.9)
+    const gx0 = Math.floor((cx - viewW / 2 - SAC) / SAC), gx1 = Math.ceil((cx + viewW / 2 + SAC) / SAC)
+    const gy0 = Math.floor((cy - viewH / 2 - SAC) / SAC), gy1 = Math.ceil((cy + viewH / 2 + SAC) / SAC)
+    for (let gx = gx0; gx <= gx1; gx++) {
+      for (let gy = gy0; gy <= gy1; gy++) {
+        const px = gx * SAC + bgHash(gx + 5, gy + 9) * SAC * 0.5
+        const py = gy * SAC + bgHash(gx + 13, gy + 21) * SAC * 0.5
+        const rad = (74 + bgHash(gx, gy) * 52) * breath
+        g.circle(px, py, rad).fill({ color: col, alpha: 0.05 })
+        g.circle(px, py, rad).stroke({ width: 2, color: 0x3a7c92, alpha: 0.1 })
+      }
+    }
+  }
+}
+
+/** 地圖背景：結構深度層 → 暖核 → 色斑 → 地面特徵 → 氛圍粒子（由底而上）。取代 renderer 直接呼叫。 */
 export function drawMapBackground(
   g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number, clock: number,
 ): void {
+  drawMapStructure(g, kind, cx, cy, viewW, viewH, clock)
+  warmCore(g, kind, cx, cy, viewW, viewH)
   groundPatches(g, kind, cx, cy, viewW, viewH)
   drawTerrain(g, kind, cx, cy, viewW, viewH, clock)
   drawAmbient(g, kind, cx, cy, viewW, viewH, clock)
