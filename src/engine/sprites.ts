@@ -192,6 +192,36 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       g.circle(len * 0.45, 0, r * 0.28).stroke({ width: 1.5, color: dim(color, 0.4) })
       break
     }
+    case 'spitter': {
+      // 噴吐病原：囊狀體 + 朝 +x 噴口短管 + 毒斑
+      shaded(g, 0, 0, r, color)
+      g.roundRect(r * 0.6, -r * 0.28, r * 0.7, r * 0.56, 3).fill(dim(color, 0.5)) // 噴口
+      g.circle(r * 1.15, 0, r * 0.18).fill(dim(color, 0.3))
+      for (const [px, py] of [[-r * 0.3, -r * 0.2], [r * 0.1, r * 0.3], [-r * 0.1, r * 0.05]] as const) {
+        g.circle(px, py, r * 0.12).fill(dim(color, 0.35))
+      }
+      break
+    }
+    case 'splitter': {
+      // 分裂菌：分裂中雙葉（兩交疊圓 + 中央縊縮）
+      shaded(g, -r * 0.45, 0, r * 0.7, color)
+      shaded(g, r * 0.45, 0, r * 0.7, color)
+      g.ellipse(0, 0, r * 0.18, r * 0.62).fill(dim(color, 0.4)) // 中央縊縮
+      g.circle(-r * 0.45, -r * 0.15, r * 0.16).fill(lighten(color, 0.3))
+      g.circle(r * 0.45, -r * 0.15, r * 0.16).fill(lighten(color, 0.3))
+      break
+    }
+    case 'exploder': {
+      // 膿疱自爆體：鼓脹膿包 + 外凸瘤 + 緊繃描邊
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2
+        g.circle(Math.cos(a) * r * 0.85, Math.sin(a) * r * 0.85, r * 0.32).fill(dim(color, 0.7))
+      }
+      shaded(g, 0, 0, r, color)
+      g.circle(0, 0, r).stroke({ width: 2, color: lighten(color, 0.3) })
+      g.circle(-r * 0.2, -r * 0.2, r * 0.22).fill({ color: lighten(color, 0.6), alpha: 0.7 })
+      break
+    }
     case 'superbug': {
       // 超級病原：不規則團塊（5 個交疊圓 lobes）+ 暗核 + 兩發光亮點
       const lobes = [
@@ -257,9 +287,16 @@ export function drawGem(g: Graphics, e: Entity): void {
   g.circle(0, 0, r * 0.22).fill(0xffffff)
 }
 
-/** 中和彈：依 projShape 區分抗體（Y 形）與穿孔素（尖刺）；方向由 PixiRenderer 依 vel 旋轉（指向 +x）。 */
+/** 中和彈：依 projShape 區分抗體（Y 形）與穿孔素（尖刺）與毒液彈；方向由 PixiRenderer 依 vel 旋轉（指向 +x）。 */
 export function drawProjectile(g: Graphics, e: Entity): void {
   const r = e.radius
+  if (e.projShape === 'toxin') {
+    // 敵方毒液彈：毒綠小球 + 淡綠暈
+    g.circle(0, 0, r * 1.8).fill({ color: 0xc0ca33, alpha: 0.22 })
+    g.circle(0, 0, r).fill(0xd4e157)
+    g.circle(0, 0, r * 0.5).fill(0xf0f4c3)
+    return
+  }
   if (e.projShape === 'perforin') {
     // 穿孔素飛鏢：細長琥珀色尖針（前尖 +x）+ 後方拖尾（明顯比抗體長）
     g.poly([-r * 2.6, 0, -r * 0.4, -r * 0.18, -r * 0.4, r * 0.18]).fill({ color: 0xffcc55, alpha: 0.5 })

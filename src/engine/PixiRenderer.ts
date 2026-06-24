@@ -128,6 +128,7 @@ export class PixiRenderer {
       ...world.gems(),
       ...world.activeEnemies(),
       ...world.projectiles.filter((p) => p.active),
+      ...world.enemyProjectiles.filter((p) => p.active),
       ...world.orbits(),
       ...world.chests(),
       world.player,
