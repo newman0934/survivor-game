@@ -5,29 +5,20 @@
  * 物件依座標被丟進對應方格。查詢某半徑內的物件時，只需檢視涵蓋該範圍的少數方格，
  * 避免對全部物件做 O(n) 的暴力距離掃描——在敵人數量龐大時可大幅降低碰撞偵測成本。
  *
- * 註：目前（階段 0/1）碰撞仍走陣列掃描，本結構尚未接進 {@link World}，是為階段 2 預留。
- * 純 TS、不依賴 Vue/Pinia。
+ * 已接進 {@link World}：每幀重建敵人網格供碰撞鄰近查詢。因每幀大量 insert/query，
+ * 內部以巢狀 `Map<cx, Map<cy, T[]>>` 索引方格——避免每次組字串 key 的配置開銷（GC 壓力），
+ * 同時原生支援負座標（無限捲動時 cx/cy 可為負）且不會發生 key 碰撞。純 TS、不依賴 Vue/Pinia。
  *
  * @typeParam T 網格中存放的物件型別
  */
 export class SpatialGrid<T> {
-  /** 方格 key（"cx,cy"）對應到落在該方格內的物件清單。 */
-  private cells = new Map<string, T[]>()
+  /** cx → (cy → 落在該方格內的物件清單)；巢狀數值索引，免字串 key 配置、原生支援負座標。 */
+  private cells = new Map<number, Map<number, T[]>>()
 
   /**
    * @param cellSize 每個方格的邊長；通常設為略大於查詢半徑或物件尺寸，以兼顧方格數與每格物件數
    */
   constructor(private readonly cellSize: number) {}
-
-  /**
-   * 由方格座標組出 Map 的字串 key。
-   * @param cx 方格 X 索引
-   * @param cy 方格 Y 索引
-   * @returns 形如 `"cx,cy"` 的唯一鍵
-   */
-  private key(cx: number, cy: number): string {
-    return `${cx},${cy}`
-  }
 
   /**
    * 將物件插入其世界座標所對應的方格。
@@ -39,10 +30,14 @@ export class SpatialGrid<T> {
     // 由世界座標換算成方格索引
     const cx = Math.floor(x / this.cellSize)
     const cy = Math.floor(y / this.cellSize)
-    const k = this.key(cx, cy)
-    const bucket = this.cells.get(k)
+    let col = this.cells.get(cx)
+    if (!col) {
+      col = new Map<number, T[]>()
+      this.cells.set(cx, col)
+    }
+    const bucket = col.get(cy)
     if (bucket) bucket.push(item)
-    else this.cells.set(k, [item]) // 該方格尚無清單時才建立
+    else col.set(cy, [item]) // 該方格尚無清單時才建立
   }
 
   /**
@@ -65,9 +60,11 @@ export class SpatialGrid<T> {
     const maxCy = Math.floor((y + radius) / this.cellSize)
     const result: T[] = []
     for (let cx = minCx; cx <= maxCx; cx++) {
+      const col = this.cells.get(cx)
+      if (!col) continue
       for (let cy = minCy; cy <= maxCy; cy++) {
-        const bucket = this.cells.get(this.key(cx, cy))
-        if (bucket) result.push(...bucket)
+        const bucket = col.get(cy)
+        if (bucket) for (let i = 0; i < bucket.length; i++) result.push(bucket[i])
       }
     }
     return result
