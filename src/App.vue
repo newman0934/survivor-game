@@ -13,13 +13,14 @@ import { ref, watch, onBeforeUnmount } from 'vue'
 import { useGameStore } from './stores/game'
 import { Game } from './engine/Game'
 import type { CharacterKind, MapKind } from './engine/types'
-import { loadSave, recordRun, type CumulativeStats } from './persistence/saveStore'
+import { loadSave, recordRun, type CumulativeStats, type RunRecord } from './persistence/saveStore'
 import MainMenu from './ui/MainMenu.vue'
 import Hud from './ui/Hud.vue'
 import UpgradeModal from './ui/UpgradeModal.vue'
 import GameOver from './ui/GameOver.vue'
 import BossBar from './ui/BossBar.vue'
 import MuteButton from './ui/MuteButton.vue'
+import Leaderboard from './ui/Leaderboard.vue'
 
 const store = useGameStore()
 // PixiJS 畫布要掛載的 DOM 容器（由 template 中的 ref 綁定）。
@@ -31,8 +32,12 @@ let seed = 1
 // 記住目前選定的角色與地圖（供「再玩一次」沿用）；預設戰士 + 平原。
 let selected: { character: CharacterKind; map: MapKind } = { character: 'macrophage', map: 'vessel' }
 
-// 跨場累積統計（開機讀取，記錄後刷新）；傳給主選單顯示。
-const stats = ref<CumulativeStats>(loadSave().stats)
+// 開機讀取存檔：累積統計（主選單用）+ 戰績列表（排行榜用）；記錄一場後一併刷新。
+const initialSave = loadSave()
+const stats = ref<CumulativeStats>(initialSave.stats)
+const runs = ref<RunRecord[]>(initialSave.runs)
+// 排行榜彈窗開關。
+const showLeaderboard = ref(false)
 // 最近一場的破紀錄資訊；傳給結算畫面顯示。
 const lastRun = ref<{ bestTime: number; isNewBestTime: boolean; isNewBestKills: boolean }>({
   bestTime: stats.value.bestTime,
@@ -43,6 +48,7 @@ const lastRun = ref<{ bestTime: number; isNewBestTime: boolean; isNewBestKills: 
 // 開始一場新遊戲：先把 store 重置為 playing，再非同步啟動引擎並掛上畫布。
 async function startGame(opts: { character: CharacterKind; map: MapKind } = selected) {
   selected = opts
+  showLeaderboard.value = false // 開賽前收起排行榜，避免日後回主選單時殘留自動重開
   store.start()
   if (!canvasParent.value) return
   game = await Game.start(canvasParent.value, seed++, opts.character, opts.map)
@@ -82,6 +88,7 @@ watch(
         date: Date.now(),
       })
       stats.value = res.save.stats
+      runs.value = res.save.runs
       lastRun.value = {
         bestTime: res.save.stats.bestTime,
         isNewBestTime: res.isNewBestTime,
@@ -105,7 +112,8 @@ onBeforeUnmount(() => game?.stop())
     <BossBar v-if="store.phase === 'playing' || store.phase === 'upgrading'" />
     <MuteButton v-if="store.phase !== 'menu'" />
     <!-- 以下三個 overlay 依 phase 互斥顯示 -->
-    <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" :stats="stats" @start="startGame" /></Transition>
+    <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" :stats="stats" @start="startGame" @open-leaderboard="showLeaderboard = true" /></Transition>
+    <Transition name="fade"><Leaderboard v-if="showLeaderboard && store.phase === 'menu'" :runs="runs" @close="showLeaderboard = false" /></Transition>
     <Transition name="fade"><UpgradeModal v-if="store.phase === 'upgrading'" /></Transition>
     <Transition name="fade"><GameOver v-if="store.phase === 'over'" :best-time="lastRun.bestTime" :is-new-best-time="lastRun.isNewBestTime" :is-new-best-kills="lastRun.isNewBestKills" @restart="restart" @menu="toMenu" /></Transition>
   </div>

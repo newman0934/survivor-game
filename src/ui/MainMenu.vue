@@ -14,7 +14,10 @@ defineProps<{
   stats: CumulativeStats
 }>()
 
-const emit = defineEmits<{ start: [opts: { character: CharacterKind; map: MapKind }] }>()
+const emit = defineEmits<{
+  start: [opts: { character: CharacterKind; map: MapKind }]
+  'open-leaderboard': []
+}>()
 const character = ref<CharacterKind>('macrophage')
 const map = ref<MapKind>('vessel')
 
@@ -74,6 +77,7 @@ function fmtBest(sec: number): string {
     </div>
 
     <button class="start" @click="emit('start', { character, map })">開始遊戲</button>
+    <button class="ranking" @click="emit('open-leaderboard')">排行榜</button>
     <p class="hint">WASD / 方向鍵移動 · 自動攻擊</p>
   </div>
 </template>
@@ -99,6 +103,9 @@ h1 { font-size: 3rem; margin: 0 0 0.5rem; letter-spacing: 0.1em; }
   font-size: 1.4rem; padding: 0.6rem 2rem; margin-top: 0.6rem; cursor: pointer; border: none;
   border-radius: 8px; background: var(--immune-accent); color: #06231f; font-weight: bold;
 }
+.ranking { font-size: 1.05rem; padding: 0.4rem 1.4rem; cursor: pointer;
+  border: 2px solid var(--immune-accent); border-radius: 8px;
+  background: transparent; color: #fff; font-weight: bold; }
 .hint { opacity: 0.7; }
 
 @media (max-width: 600px) {
@@ -109,6 +116,7 @@ h1 { font-size: 3rem; margin: 0 0 0.5rem; letter-spacing: 0.1em; }
   .name { font-size: 0.95rem; }
   .desc { font-size: 0.72rem; }
   .start { font-size: 1.2rem; padding: 0.5rem 1.6rem; }
+  .ranking { font-size: 0.95rem; padding: 0.4rem 1.1rem; }
 }
 .stats { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
   font-size: 0.85rem; opacity: 0.85; margin-bottom: 0.4rem; }

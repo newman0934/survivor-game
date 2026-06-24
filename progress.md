@@ -69,7 +69,7 @@ _最後更新：2026-06-24_
 ### 階段 4 — 後設系統
 - [x] 進度存檔（localStorage）— saveStore 純模組 + App 串接 + 破紀錄/統計 UI、引擎不動、SDD 五件套見 docs/superpowers/specs/save-progress/
 - [ ] 解鎖
-- [ ] 計分 / 排行榜
+- [x] 計分 / 排行榜 — 排行榜彈窗（前 10 場依存活時間降冪）；用既有 runs（saveStore 已管理）；引擎/store/saveStore 不動；SDD 五件套見 docs/superpowers/specs/leaderboard/
 - [x] 音效（SFX + 音樂）— Web Audio 程式合成：戰鬥/事件 SFX、合成背景音樂、靜音開關（語意事件佇列 + SoundManager 單例）
 - [x] 把佔位用的幾何圖形換成「美術」（**提前做**）— 程式化繪製：背景捲動網格、角色/五敵種造型、
   旋轉寶石/發光彈/聖經書本/大蒜呼吸光環、輕量動畫與命中閃白（全在 PixiRenderer + sprites.ts，引擎不動）
