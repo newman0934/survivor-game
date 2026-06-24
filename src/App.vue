@@ -59,6 +59,7 @@ function restart() {
 watch(
   () => store.phase,
   (phase, prev) => {
+    // game 為 null 時略過引擎暫停/恢復，但下方 over 記錄邏輯仍須執行，故不在此 early-return。
     if (game) {
       if (phase === 'upgrading') game.pause()
       else if (phase === 'playing') game.resume()
