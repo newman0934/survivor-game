@@ -80,7 +80,11 @@ export function loadSave(storage: StorageLike | null = defaultStorage()): SaveDa
     const base = emptySave()
     return {
       version: 1,
-      runs: parsed.runs as RunRecord[],
+      // 過濾掉竄改造成的壞元素（如 null）——讓「結構缺漏回空白/略過」延伸到陣列元素層級，
+      // 避免後續 recordRun 的 sort 對 null 取 .time 而拋例外。
+      runs: (parsed.runs as unknown[]).filter(
+        (r): r is RunRecord => !!r && typeof (r as RunRecord).time === 'number',
+      ),
       stats: { ...base.stats, ...parsed.stats },
     }
   } catch {

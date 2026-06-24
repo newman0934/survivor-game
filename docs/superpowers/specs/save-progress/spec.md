@@ -69,7 +69,9 @@ function recordRun(run: RunRecord, storage?: StorageLike): {
   5. 回傳更新後的 `save` 與兩個破紀錄旗標。
 
 ### FR-3 資料流串接（App.vue）
-- 開機與每次回到 `menu` 狀態：呼叫 `loadSave()`，將 `stats` 以 props 傳給 `MainMenu`。
+- 開機（元件掛載，含刷頁重新掛載）：呼叫 `loadSave()`，將 `stats` 以 props 傳給 `MainMenu`。
+  （目前無「回主選單」程式路徑；GameOver 僅「再玩一次」。每次進 `over` 後以 recordRun 回傳刷新 `stats`，
+  使日後若新增回 menu 路徑時也能顯示最新統計。）
 - 狀態轉為 `over` 時：以 store 的最終 summary（`time`/`kills`/`level`）+ 當局 `character`/`map`
   組出 `RunRecord`，呼叫 `recordRun()`，將回傳的破紀錄旗標與 `stats` 以 props 傳給 `GameOver`。
 

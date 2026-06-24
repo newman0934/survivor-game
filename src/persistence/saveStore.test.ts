@@ -43,6 +43,16 @@ describe('saveStore', () => {
     expect(s.stats.totalRuns).toBe(0)
   })
 
+  it('loadSave 過濾 runs 內壞元素（竄改成 null）不致後續 sort 拋例外', () => {
+    const st = memStorage(JSON.stringify({ version: 1, runs: [null, { time: 80, kills: 5, level: 3, character: 'macrophage', map: 'vessel', date: 1 }], stats: { totalKills: 5, totalRuns: 1, bestTime: 80, bestKills: 5, maxLevel: 3 } }))
+    const s = loadSave(st)
+    expect(s.runs).toHaveLength(1)
+    expect(s.runs[0].time).toBe(80)
+    // 後續 recordRun 不應因殘留 null 而 crash
+    const r = recordRun(makeRun({ time: 50, date: 2 }), st)
+    expect(r.save.runs.every((x) => typeof x.time === 'number')).toBe(true)
+  })
+
   it('loadSave 版號不符回空白存檔', () => {
     const s = loadSave(memStorage(JSON.stringify({ version: 999, runs: [], stats: {} })))
     expect(s.runs).toEqual([])

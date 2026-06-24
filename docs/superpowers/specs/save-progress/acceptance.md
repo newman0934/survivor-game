@@ -24,7 +24,7 @@ _驗證日期：2026-06-24_
 - [x] 所有 saveStore 邏輯無 `Math.random()`、無時間相依（date 由 run 傳入）
 
 ## App.vue 串接
-- [x] 開機 / 回 `menu` 時 `loadSave()`，stats 以 props 傳給 MainMenu
+- [x] 開機（含刷頁重新掛載）時 `loadSave()`，stats 以 props 傳給 MainMenu（目前無回 menu 程式路徑）
 - [x] 轉入 `over` 時組 RunRecord（summary.time/kills/level + 當局 character/map）呼叫 `recordRun()`
 - [x] recordRun 回傳的破紀錄旗標與 stats 以 props 傳給 GameOver
 - [x] 引擎 / game.ts / Game 迴圈未因此修改
