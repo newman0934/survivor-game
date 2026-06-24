@@ -14,8 +14,8 @@ import { AdvancedBloomFilter } from 'pixi-filters'
 const BLOOM = { threshold: 0.55, bloomScale: 0.85, brightness: 1.0, blur: 6, quality: 4 }
 /** 色彩分級（輕微對比 + 飽和 + 一抹免疫藍綠冷調 tint）。 */
 const GRADE = { contrast: 0.12, saturate: 0.1, tint: 0xe8fffb }
-/** 暈影（螢幕四角柔和壓暗）。 */
-const VIGNETTE = { color: 0x000010, alpha: 0.4, layers: 8, band: 26 }
+/** 暈影（螢幕四角柔和壓暗）：圓角 + 多層平滑漸層，避免硬方框。 */
+const VIGNETTE = { color: 0x000010, alpha: 0.42, layers: 18 }
 
 /**
  * 是否走輕量路徑（行動/觸控裝置）→ 不建立 bloom。
@@ -61,17 +61,27 @@ export class PostProcessing {
     this.drawVignette()
   }
 
-  /** 內部：以同心暗框 stroke 畫螢幕邊緣柔和壓暗（alpha 由內而外遞增）。 */
+  /**
+   * 內部：圓角同心矩形描邊畫螢幕邊緣柔和壓暗。
+   * 多層、低 alpha、往中心平滑延伸、大圓角——避免硬方框與內緣線。
+   */
   private drawVignette(): void {
     const w = this.app.renderer.width
     const h = this.app.renderer.height
     this.vignette.clear()
+    const reach = Math.min(w, h) * 0.5   // 由邊緣往中心漸暗的深度（達中央）
+    const radius = Math.min(w, h) * 0.3  // 大圓角，柔化四角、不成硬方框
+    const step = reach / VIGNETTE.layers
     for (let i = 0; i < VIGNETTE.layers; i++) {
-      const inset = i * VIGNETTE.band
-      const a = (VIGNETTE.alpha * (VIGNETTE.layers - i)) / VIGNETTE.layers
+      const inset = i * step
+      // 每層極低 alpha、靠重疊累加；越外圈越暗（i 小 = 外圈）
+      const a = (VIGNETTE.alpha / VIGNETTE.layers) * (VIGNETTE.layers - i) / VIGNETTE.layers * 2
+      const rw = w - 2 * inset
+      const rh = h - 2 * inset
+      if (rw <= 0 || rh <= 0) break
       this.vignette
-        .rect(inset, inset, w - 2 * inset, h - 2 * inset)
-        .stroke({ width: VIGNETTE.band, color: VIGNETTE.color, alpha: a })
+        .roundRect(inset, inset, rw, rh, Math.max(0, radius - inset))
+        .stroke({ width: step * 2.2, color: VIGNETTE.color, alpha: a })
     }
   }
 }
