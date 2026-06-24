@@ -43,6 +43,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
   免疫主題化、HUD/UI 動畫 → specs/{immune-war-theme, sprite-polish-b, ui-animation-c, effects-feedback} 等
 - [x] 整體後製：全域泛光 + 色彩分級 + 暈影（行動裝置自動關 bloom）→ specs/post-processing/
 - [x] 地圖背景精修：結構深度層（血管流紋/壁、胃皺褶脊、肺泡囊）+ 暖核漸層 + 細節變體 + 背景緩動 → specs/map-background-polish/
+- [x] 噪聲紋理視差背景：程序噪聲(fBm) + 2 視差 TilingSprite 取代向量調性底（保留特徵/粒子），連續有機組織質感 → specs/noise-background/
 - [x] 進度存檔（localStorage）— 戰績紀錄 + 累積統計 + 破紀錄/統計 UI；結算可「回主選單」重選 → specs/save-progress/
 - [x] 計分 / 排行榜 — 排行榜彈窗（前 10 場依存活時間），重用既有 runs → specs/leaderboard/
 - [ ] 解鎖 — 用 `CumulativeStats` 鎖/解角色與地圖（尚未開始）
@@ -59,7 +60,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 
 | 項目 | 結果 |
 |---------|------|
-| 單元測試（Vitest） | 173 通過 |
+| 單元測試（Vitest） | 178 通過 |
 | 型別檢查（vue-tsc） | 乾淨 |
 | Production build | 乾淨 |
 | 瀏覽器煙霧測試 | 階段 1–3 + 美術 + 特效 + 新武器/敵種 + 武器進化 + 進度存檔 + 排行榜 + 手機 + 音效 驗收通過（偶見既有 favicon 404，與功能無關） |

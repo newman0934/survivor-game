@@ -374,46 +374,6 @@ export function drawBackgroundGrid(
   g.stroke({ width: 1, color, alpha })
 }
 
-/** 每張地圖的地表色斑色系（兩色交替，疊在底色上製造起伏）。 */
-const PATCH_COLORS: Record<MapKind, readonly [number, number, number]> = {
-  vessel:  [0x3a0d12, 0x2a0a0e, 0x4a1118],   // 暗紅血漿（含中間色階）
-  stomach: [0x3a1c0a, 0x2c1408, 0x4a2410],   // 胃黏膜暖褐
-  lung:    [0x16303f, 0x102330, 0x1c3e52],   // 藍灰肺泡
-}
-
-/** 結構深度層色（大尺度、低 alpha）。 */
-const STRUCT_COLORS: Record<MapKind, number> = {
-  vessel: 0x5a1620, stomach: 0x5a3010, lung: 0x1e4a5e,
-}
-/** 暖核漸層色（視野中心略亮略暖）。 */
-const CORE_COLORS: Record<MapKind, number> = {
-  vessel: 0x6e1822, stomach: 0x6e3c12, lung: 0x1d5066,
-}
-
-/** 地表色斑層：大格點疊柔和半透明大色斑（三層同心 falloff），取代網格提供地表質感。 */
-function groundPatches(
-  g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number,
-): void {
-  const CELL = 220
-  const gx0 = Math.floor((cx - viewW / 2 - CELL) / CELL)
-  const gy0 = Math.floor((cy - viewH / 2 - CELL) / CELL)
-  const gx1 = Math.ceil((cx + viewW / 2 + CELL) / CELL)
-  const gy1 = Math.ceil((cy + viewH / 2 + CELL) / CELL)
-  const colors = PATCH_COLORS[kind]
-  for (let gx = gx0; gx <= gx1; gx++) {
-    for (let gy = gy0; gy <= gy1; gy++) {
-      const h = bgHash(gx * 3 + 1, gy * 3 + 1)
-      const px = gx * CELL + bgHash(gx + 11, gy + 23) * CELL
-      const py = gy * CELL + bgHash(gx + 29, gy + 41) * CELL
-      const rad = 70 + h * 95
-      const col = colors[h < 0.34 ? 0 : h < 0.67 ? 1 : 2]
-      g.circle(px, py, rad).fill({ color: col, alpha: 0.06 })
-      g.circle(px, py, rad * 0.66).fill({ color: col, alpha: 0.06 })
-      g.circle(px, py, rad * 0.33).fill({ color: col, alpha: 0.06 })
-    }
-  }
-}
-
 /** 地面特徵層：依 kind 在可視範圍格點散布專屬地貌（世界座標、隨鏡頭捲動）。 */
 function drawTerrain(
   g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number, clock: number,
@@ -525,83 +485,10 @@ function drawAmbient(
   }
 }
 
-/** 暖核漸層：以視野中心為核，大圓由外而內疊加，中央略亮略暖、減死黑。 */
-function warmCore(g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number): void {
-  const col = CORE_COLORS[kind]
-  const maxR = Math.hypot(viewW, viewH) * 0.6
-  for (let i = 0; i < 5; i++) {
-    const r = maxR * (1 - i / 5)
-    g.circle(cx, cy, r).fill({ color: col, alpha: 0.028 })
-  }
-}
-
-/** 結構深度層：大尺度地貌（血管流紋/壁、胃皺褶脊、肺泡囊+支氣管），含 clock 緩動。 */
-function drawMapStructure(
-  g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number, clock: number,
-): void {
-  const col = STRUCT_COLORS[kind]
-  if (kind === 'vessel') {
-    // 有機血漿流紋寬帶（沿斜向 + 柔和正弦波動成曲線，隨血流緩慢漂移）
-    const BAND = 320
-    const drift = (clock * 14) % BAND
-    const k0 = Math.floor((cx - viewW) / BAND) - 1
-    const k1 = Math.ceil((cx + viewW) / BAND) + 1
-    const top = cy - viewH, bot = cy + viewH
-    for (let k = k0; k <= k1; k++) {
-      const base = k * BAND + drift
-      const amp = 42 + 30 * bgHash(k, 7)        // 波幅
-      const phase = bgHash(k, 19) * 6.283
-      for (let s = 0; s <= 10; s++) {
-        const t = s / 10
-        const y = top + (bot - top) * t
-        // 斜向前進（×0.7 斜率）+ 沿長度疊加柔和正弦 → 有機曲線而非直紋
-        const x = base + (y - cy) * 0.7 + Math.sin(t * 3.1 + phase + clock * 0.4) * amp
-        if (s === 0) g.moveTo(x, y)
-        else g.lineTo(x, y)
-      }
-      g.stroke({ width: 54 + 28 * bgHash(k, 7), color: col, alpha: 0.04 })
-    }
-  } else if (kind === 'stomach') {
-    // 大尺度黏膜皺褶脊（橫向粗皺脊 + 蠕動波）
-    const RIDGE = 160
-    const r0 = Math.floor((cy - viewH / 2 - RIDGE) / RIDGE)
-    const r1 = Math.ceil((cy + viewH / 2 + RIDGE) / RIDGE)
-    const L = cx - viewW / 2 - 80, R = cx + viewW / 2 + 80
-    for (let r = r0; r <= r1; r++) {
-      const yb = r * RIDGE + Math.sin(clock * 0.8 + r) * 12 // 蠕動
-      for (let s = 0; s <= 10; s++) {
-        const x = L + (R - L) * (s / 10)
-        const y = yb + Math.sin(x * 0.009 + r * 1.7) * 24
-        if (s === 0) g.moveTo(x, y)
-        else g.lineTo(x, y)
-      }
-      g.stroke({ width: 28, color: col, alpha: 0.07 })
-    }
-  } else {
-    // 肺泡：大肺泡囊輪廓（呼吸縮放）
-    const SAC = 280
-    const breath = 1 + 0.05 * Math.sin(clock * 0.9)
-    const gx0 = Math.floor((cx - viewW / 2 - SAC) / SAC), gx1 = Math.ceil((cx + viewW / 2 + SAC) / SAC)
-    const gy0 = Math.floor((cy - viewH / 2 - SAC) / SAC), gy1 = Math.ceil((cy + viewH / 2 + SAC) / SAC)
-    for (let gx = gx0; gx <= gx1; gx++) {
-      for (let gy = gy0; gy <= gy1; gy++) {
-        const px = gx * SAC + bgHash(gx + 5, gy + 9) * SAC * 0.5
-        const py = gy * SAC + bgHash(gx + 13, gy + 21) * SAC * 0.5
-        const rad = (74 + bgHash(gx, gy) * 52) * breath
-        g.circle(px, py, rad).fill({ color: col, alpha: 0.05 })
-        g.circle(px, py, rad).stroke({ width: 2, color: 0x3a7c92, alpha: 0.1 })
-      }
-    }
-  }
-}
-
-/** 地圖背景：結構深度層 → 暖核 → 色斑 → 地面特徵 → 氛圍粒子（由底而上）。取代 renderer 直接呼叫。 */
+/** 地圖背景：地面特徵 + 氛圍粒子（有機調性底改由 NoiseBackground 提供）。 */
 export function drawMapBackground(
   g: Graphics, kind: MapKind, cx: number, cy: number, viewW: number, viewH: number, clock: number,
 ): void {
-  drawMapStructure(g, kind, cx, cy, viewW, viewH, clock)
-  warmCore(g, kind, cx, cy, viewW, viewH)
-  groundPatches(g, kind, cx, cy, viewW, viewH)
   drawTerrain(g, kind, cx, cy, viewW, viewH, clock)
   drawAmbient(g, kind, cx, cy, viewW, viewH, clock)
 }
