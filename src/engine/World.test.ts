@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { World } from './World'
 import { xpForLevel } from './systems/leveling'
-import { createEnemyProjectile } from './entities/factory'
+import { createEnemyProjectile, createProjectile } from './entities/factory'
+import { WEAPON_DEFS } from './systems/weaponDefs'
 
 describe('World', () => {
   it('starts with one player and no enemies', () => {
@@ -410,5 +411,72 @@ describe('World', () => {
     w.step(1 / 60) // 速度 0 → 與玩家重疊
     expect(w.player.hp).toBeLessThan(100)
     expect(w.enemyProjectiles.length).toBe(0) // 命中後消耗並清理
+  })
+})
+
+describe('武器進化效果', () => {
+  it('進化抗體用進化層數值開火（count 5、投射物標記 evolved、冷卻 0.12）', () => {
+    const w = new World(1)
+    // 抗體鎖定最近 count 隻；需有足夠敵人才會發滿 5 發（fireWand 受 findNearestN 限制）
+    for (let i = 0; i < 6; i++) w.spawnEnemyAt({ x: 60 + i * 20, y: 0 }, 'virus')
+    const ab = w.weapons.find((x) => x.kind === 'antibody')!
+    ab.level = WEAPON_DEFS.antibody.maxLevel
+    ab.evolved = true
+    w.forceFire()
+    w.step(1 / 60)
+    const shots = w.projectiles.filter((p) => p.active)
+    expect(shots.length).toBe(5)            // 進化 count
+    expect(shots.every((p) => p.evolved)).toBe(true)
+    expect(ab.cooldownTimer).toBeCloseTo(0.12, 5) // 進化低冷卻（cooldownMult 預設 1）
+  })
+
+  it('進化穿孔素子彈命中後續飛（pierce）', () => {
+    const w = new World(1)
+    // 兩隻沿 +x 排列的敵人，飛鏢朝右
+    const e1 = w.spawnEnemyAt({ x: 40, y: 0 }, 'virus')
+    const e2 = w.spawnEnemyAt({ x: 80, y: 0 }, 'virus')
+    w.weapons = [{ kind: 'perforin', level: WEAPON_DEFS.perforin.maxLevel, cooldownTimer: 0, evolved: true }]
+    w.lastMoveDir = { x: 1, y: 0 }
+    w.forceFire()
+    // 推進數格讓子彈穿過第一隻、續命中第二隻
+    for (let i = 0; i < 20; i++) w.step(1 / 60)
+    // 兩隻均被擊殺（active=false；step 結尾已清陣列，故用保留的 reference 驗證）
+    expect(e1.active).toBe(false) // 第一隻被穿透命中後死亡
+    expect(e2.active).toBe(false) // 第二隻被穿透後續命中死亡
+  })
+
+  it('穿透子彈對同一敵人只命中一次（嚴格穿透不同敵人）', () => {
+    const w = new World(1)
+    w.weapons = [] // 清空預設武器，隔離只測手動穿透子彈
+    const tank = w.spawnEnemyAt({ x: 30, y: 0 }, 'virus')
+    tank.hp = 1000; tank.maxHp = 1000 // 血厚到一發不死
+    // 手動放一顆慢速穿透子彈（60px/s ≈ 1px/格），會與 tank 重疊多幀
+    const p = createProjectile({ x: 0, y: 0 }, { x: 1, y: 0 }, 60, 8, 'perforin')
+    p.pierce = 3
+    p.hitEnemies = []
+    w.projectiles.push(p)
+    for (let i = 0; i < 60; i++) w.step(1 / 60)
+    expect(1000 - tank.hp).toBe(8) // 多幀重疊但只扣一次傷（非每幀重複）
+  })
+
+  it('進化補體級聯每跳全額傷害（noFalloff）', () => {
+    const w = new World(1)
+    const a = w.spawnEnemyAt({ x: 30, y: 0 }, 'virus')
+    const b = w.spawnEnemyAt({ x: 60, y: 0 }, 'virus')
+    a.hp = 1000; a.maxHp = 1000; b.hp = 1000; b.maxHp = 1000
+    w.weapons = [{ kind: 'cascade', level: WEAPON_DEFS.cascade.maxLevel, cooldownTimer: 0, evolved: true }]
+    w.forceFire()
+    w.step(1 / 60)
+    const dmgA = 1000 - a.hp, dmgB = 1000 - b.hp
+    expect(dmgB).toBeCloseTo(dmgA, 5) // 第二跳與第一跳等傷（無衰減）
+  })
+
+  it('進化發炎場場域存在時回血（fieldRegen）', () => {
+    const w = new World(1)
+    w.spawnEnemyAt({ x: 1000, y: 0 }, 'virus') // 遠處敵人，不接觸玩家
+    w.weapons = [{ kind: 'inflammation', level: WEAPON_DEFS.inflammation.maxLevel, cooldownTimer: 0, evolved: true }]
+    w.player.hp = 50
+    w.step(1 / 60)
+    expect(w.player.hp).toBeGreaterThan(50) // 場域回血
   })
 })

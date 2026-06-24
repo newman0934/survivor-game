@@ -14,6 +14,7 @@ const store = useGameStore()
     <div class="cards">
       <!-- 逐一渲染引擎提供的升級選項；點擊送出該升級 id 並恢復遊戲 -->
       <button v-for="(opt, i) in store.upgradeOptions" :key="opt.id" class="card"
+        :class="{ evolve: opt.id.startsWith('evolve:') }"
         :style="{ animationDelay: 0.06 * i + 's' }"
         @click="store.pickUpgrade(opt.id)">
         {{ opt.label }}
@@ -30,6 +31,8 @@ const store = useGameStore()
 .card { width: 160px; height: 120px; font-size: 1.2rem; cursor: pointer; padding: 0.4rem;
   border: 2px solid var(--immune-accent); border-radius: 12px; background: var(--card-bg); color: #fff; }
 .card:hover { background: var(--card-bg-hover); border-color: var(--immune-accent-strong); }
+.card.evolve { border-color: var(--antigen); box-shadow: 0 0 12px rgba(255, 213, 74, 0.6); }
+.card.evolve:hover { border-color: var(--antigen); }
 .title { animation: rise 0.3s ease-out backwards; }
 .card { animation: rise 0.35s ease-out backwards; }
 .card:active { transform: scale(0.96); }

@@ -23,6 +23,10 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { cooldown: 0.4, damage: 8, count: 2, projectileSpeed: 400 },
       { cooldown: 0.4, damage: 8, count: 3, projectileSpeed: 400 },
     ],
+    evolution: {
+      requires: 'tome', label: '抗體風暴',
+      level: { cooldown: 0.12, damage: 12, count: 5, projectileSpeed: 500 },
+    },
   },
   perforin: {
     kind: 'perforin',
@@ -35,6 +39,11 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { cooldown: 0.28, damage: 6, count: 2, projectileSpeed: 600 },
       { cooldown: 0.28, damage: 6, count: 3, projectileSpeed: 600 },
     ],
+    evolution: {
+      requires: 'bracer', label: '千刃穿孔',
+      level: { cooldown: 0.12, damage: 8, count: 5, projectileSpeed: 750 },
+      pierce: 3,
+    },
   },
   complement: {
     kind: 'complement',
@@ -47,6 +56,11 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { damage: 6, count: 3, radius: 120, angularSpeed: 2.5 },
       { damage: 6, count: 3, radius: 120, angularSpeed: 3.25 },
     ],
+    evolution: {
+      requires: 'spinach', label: '終末補體複合體',
+      level: { damage: 12, count: 6, radius: 150, angularSpeed: 4.5 },
+      hitCooldown: 0.25,
+    },
   },
   inflammation: {
     kind: 'inflammation',
@@ -59,6 +73,11 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { damage: 5, radius: 110 },
       { damage: 8, radius: 110 },
     ],
+    evolution: {
+      requires: 'tomato', label: '自體炎症風暴',
+      level: { damage: 16, radius: 170 },
+      fieldRegen: 6,
+    },
   },
   phagocyte: {
     kind: 'phagocyte', label: '吞噬偽足', maxLevel: 5,
@@ -69,6 +88,11 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { cooldown: 0.6, damage: 16, radius: 85 },
       { cooldown: 0.5, damage: 20, radius: 100 },
     ],
+    evolution: {
+      requires: 'wings', label: '巨噬吞噬漩渦',
+      level: { cooldown: 0.3, damage: 30, radius: 130 },
+      halfAngle: Math.PI,
+    },
   },
   cascade: {
     kind: 'cascade', label: '補體級聯', maxLevel: 5,
@@ -79,6 +103,11 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { cooldown: 0.85, damage: 14, count: 5, radius: 180 },
       { cooldown: 0.7, damage: 18, count: 6, radius: 200 },
     ],
+    evolution: {
+      requires: 'candle', label: '補體爆發級聯',
+      level: { cooldown: 0.45, damage: 24, count: 9, radius: 260 },
+      noFalloff: true,
+    },
   },
   nova: {
     kind: 'nova', label: '抗原脈衝', maxLevel: 5,
@@ -89,5 +118,9 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { cooldown: 1.4, damage: 18, radius: 180 },
       { cooldown: 1.2, damage: 26, radius: 210 },
     ],
+    evolution: {
+      requires: 'magnet', label: '抗原超載脈衝',
+      level: { cooldown: 0.8, damage: 40, radius: 300 },
+    },
   },
 }

@@ -4,6 +4,16 @@ import { createRng } from '../core/rng'
 import { createPlayer } from '../entities/factory'
 import type { PlayerStats, UpgradeContext, Weapon, Passive } from '../types'
 
+/** 組一個最小 UpgradeContext（只放本測試需要的欄位）。 */
+function ctxWith(weapons: Weapon[], passives: Passive[]): UpgradeContext {
+  return {
+    weapons, passives,
+    stats: {} as never,
+    player: { hp: 100, maxHp: 100 } as never,
+    heal: () => {},
+  }
+}
+
 function makeStats(): PlayerStats {
   return {
     moveSpeed: 200, pickupRadius: 120, damageMult: 1, cooldownMult: 1,
@@ -128,5 +138,48 @@ describe('leveling', () => {
     applyUpgradeById('passlvl:spinach', ctx)
     expect(ctx.passives.find((p) => p.kind === 'spinach')?.level).toBe(2)
     expect(ctx.stats.damageMult).toBeCloseTo(1.21, 5)
+  })
+})
+
+describe('武器進化候選與套用', () => {
+  it('滿級 + 持有所需被動 + 未進化 → 提供 evolve 卡', () => {
+    const ctx = ctxWith(
+      [{ kind: 'antibody', level: 5, cooldownTimer: 0 }],
+      [{ kind: 'tome', level: 1 }],
+    )
+    const ids = buildCandidates(ctx).map((o) => o.id)
+    expect(ids).toContain('evolve:antibody')
+  })
+  it('未滿級不提供 evolve 卡', () => {
+    const ctx = ctxWith(
+      [{ kind: 'antibody', level: 3, cooldownTimer: 0 }],
+      [{ kind: 'tome', level: 1 }],
+    )
+    expect(buildCandidates(ctx).map((o) => o.id)).not.toContain('evolve:antibody')
+  })
+  it('未持有所需被動不提供 evolve 卡', () => {
+    const ctx = ctxWith([{ kind: 'antibody', level: 5, cooldownTimer: 0 }], [])
+    expect(buildCandidates(ctx).map((o) => o.id)).not.toContain('evolve:antibody')
+  })
+  it('已進化武器不再提供 evolve 或 levelup 卡', () => {
+    const ctx = ctxWith(
+      [{ kind: 'antibody', level: 5, cooldownTimer: 0, evolved: true }],
+      [{ kind: 'tome', level: 1 }],
+    )
+    const ids = buildCandidates(ctx).map((o) => o.id)
+    expect(ids).not.toContain('evolve:antibody')
+    expect(ids).not.toContain('levelup:antibody')
+  })
+  it('applyUpgradeById 條件成立時設 evolved', () => {
+    const w: Weapon = { kind: 'antibody', level: 5, cooldownTimer: 0 }
+    const ctx = ctxWith([w], [{ kind: 'tome', level: 1 }])
+    applyUpgradeById('evolve:antibody', ctx)
+    expect(w.evolved).toBe(true)
+  })
+  it('applyUpgradeById 條件不成立（未滿級）時不設 evolved、不丟例外', () => {
+    const w: Weapon = { kind: 'antibody', level: 3, cooldownTimer: 0 }
+    const ctx = ctxWith([w], [{ kind: 'tome', level: 1 }])
+    expect(() => applyUpgradeById('evolve:antibody', ctx)).not.toThrow()
+    expect(w.evolved).toBeFalsy()
   })
 })

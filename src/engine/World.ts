@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind, SoundEvent, FxEvent } from './types'
+import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind, SoundEvent, FxEvent } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -308,6 +308,12 @@ export class World {
     applyUpgradeById(id, this.upgradeContext())
   }
 
+  /** 取武器的生效數值：進化則用 evolution.level，否則用當前等級值。 */
+  private effectiveLevel(weapon: Weapon): WeaponLevelStats {
+    const def = WEAPON_DEFS[weapon.kind]
+    return weapon.evolved && def.evolution ? def.evolution.level : def.levels[weapon.level - 1]
+  }
+
   /**
    * 推進一格固定步長的模擬。systems 以固定順序執行，順序具語意（移動→生怪→敵人追擊
    * →開火→子彈飛行與命中→寶石吸取與拾取→敵人接觸傷害→篩除死亡 entity）。
@@ -368,7 +374,9 @@ export class World {
 
     // 4) 武器：遍歷每把武器，各自倒數冷卻並結算行為（生效值 = 等級值 × 全域乘區）。
     for (const weapon of this.weapons) {
-      const lvl = WEAPON_DEFS[weapon.kind].levels[weapon.level - 1]
+      const def = WEAPON_DEFS[weapon.kind]
+      const lvl = this.effectiveLevel(weapon)
+      const evo = weapon.evolved ? def.evolution : undefined
       const damage = lvl.damage * this.stats.damageMult
 
       if (weapon.kind === 'antibody' || weapon.kind === 'perforin') {
@@ -381,6 +389,12 @@ export class World {
             weapon.kind === 'antibody'
               ? fireWand(this.player.pos, this.enemies, count, damage, speed)
               : fireKnife(this.player.pos, this.lastMoveDir, count, damage, speed)
+          if (evo) {
+            for (const p of projs) {
+              p.evolved = true
+              if (evo.pierce) { p.pierce = evo.pierce; p.hitEnemies = [] }
+            }
+          }
           this.projectiles.push(...projs)
           if (projs.length > 0) this.soundEventQueue.push('shoot')
         }
@@ -391,6 +405,9 @@ export class World {
           this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
         )
         garlicTick(this.player.pos, cands, radius, damage, dt)
+        if (evo?.fieldRegen && this.player.hp > 0) {
+          this.player.hp = Math.min(this.player.maxHp, this.player.hp + evo.fieldRegen * dt)
+        }
         this.checkKills()
       } else if (weapon.kind === 'phagocyte') {
         weapon.cooldownTimer -= dt
@@ -400,13 +417,14 @@ export class World {
           const cands = this.enemyGrid.queryRadius(
             this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
           )
-          const hits = phagocyteSweep(this.player.pos, this.lastMoveDir, cands, radius, PHAGOCYTE_HALF_ANGLE, damage)
+          const halfAngle = evo?.halfAngle ?? PHAGOCYTE_HALF_ANGLE
+          const hits = phagocyteSweep(this.player.pos, this.lastMoveDir, cands, radius, halfAngle, damage)
           if (hits.length > 0) {
             this.checkKills()
             this.soundEventQueue.push('hit')
             this.fxEventQueue.push({
               kind: 'sweep', x: this.player.pos.x, y: this.player.pos.y,
-              angle: Math.atan2(this.lastMoveDir.y, this.lastMoveDir.x), radius, halfAngle: PHAGOCYTE_HALF_ANGLE,
+              angle: Math.atan2(this.lastMoveDir.y, this.lastMoveDir.x), radius, halfAngle,
             })
           }
         }
@@ -418,7 +436,8 @@ export class World {
           const range = (lvl.radius ?? 160) * this.stats.areaMult
           const targets = chainTargets(this.player.pos, this.enemies, jumps, range)
           if (targets.length > 0) {
-            for (let k = 0; k < targets.length; k++) targets[k].hp -= damage * Math.pow(CASCADE_FALLOFF, k)
+            const falloff = evo?.noFalloff ? 1 : CASCADE_FALLOFF
+            for (let k = 0; k < targets.length; k++) targets[k].hp -= damage * Math.pow(falloff, k)
             this.checkKills()
             this.soundEventQueue.push('hit')
             this.fxEventQueue.push({
@@ -462,12 +481,15 @@ export class World {
       const cands = this.enemyGrid.queryRadius(p.pos.x, p.pos.y, p.radius + MAX_ENEMY_RADIUS)
       for (const e of cands) {
         if (!e.active) continue
+        if (p.hitEnemies && p.hitEnemies.includes(e)) continue // 已穿透過此敵，不重複命中
         if (circlesOverlap(p, e)) {
           e.hp -= p.damage
           this.soundEventQueue.push('hit')
-          p.active = false // 子彈單體命中即消耗
           if (e.hp <= 0) this.killEnemy(e)
-          break // 一發子彈只命中一隻敵人
+          // 穿透：記下此敵，仍有 pierce 額度則續飛、否則消耗
+          if (p.pierce && p.pierce > 0) { p.pierce -= 1; p.hitEnemies!.push(e) }
+          else p.active = false
+          break // 每幀單發最多命中一隻
         }
       }
     }
@@ -548,7 +570,9 @@ export class World {
       this.orbitEntities = []
       return
     }
-    const lvl = WEAPON_DEFS.complement.levels[bible.level - 1]
+    const evo = bible.evolved ? WEAPON_DEFS.complement.evolution : undefined
+    const lvl = evo ? evo.level : WEAPON_DEFS.complement.levels[bible.level - 1]
+    const hitCooldown = evo?.hitCooldown ?? 0.5
     const count = lvl.count ?? 1
     const radius = (lvl.radius ?? 90) * this.stats.areaMult
     const damage = lvl.damage * this.stats.damageMult
@@ -581,7 +605,7 @@ export class World {
         const dy = orb.pos.y - e.pos.y
         if (Math.hypot(dx, dy) <= orb.radius + e.radius) {
           e.hp -= orb.damage
-          this.bibleHitTimers.set(e, 0.5) // 0.5 秒內不再被同武器扣血
+          this.bibleHitTimers.set(e, hitCooldown) // 進化縮短命中冷卻
         }
       }
     }

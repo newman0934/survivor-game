@@ -300,6 +300,8 @@ export function drawProjectile(g: Graphics, e: Entity): void {
     g.circle(r * 0.95, -r * 0.45, r * 0.4).stroke({ width: 1.2, color: 0x33691e })
     return
   }
+  // 進化投射物：抗原黃光暈（畫在造型底層）
+  if (e.evolved) g.circle(0, 0, r * 3.0).fill({ color: 0xffd54a, alpha: 0.25 })
   if (e.projShape === 'perforin') {
     // 穿孔素飛鏢：細長琥珀色尖針（前尖 +x）+ 後方拖尾（明顯比抗體長）
     g.poly([-r * 2.6, 0, -r * 0.4, -r * 0.18, -r * 0.4, r * 0.18]).fill({ color: 0xffcc55, alpha: 0.5 })
