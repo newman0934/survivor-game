@@ -147,6 +147,8 @@ export interface WeaponEvolution {
   halfAngle?: number
   /** 發炎場：場域存在時每秒替玩家回血量。 */
   fieldRegen?: number
+  /** 補體環：per-enemy 命中冷卻秒數（覆寫預設 0.5）。 */
+  hitCooldown?: number
 }
 
 /**

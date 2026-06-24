@@ -59,6 +59,7 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
     evolution: {
       requires: 'spinach', label: '終末補體複合體',
       level: { damage: 12, count: 6, radius: 150, angularSpeed: 4.5 },
+      hitCooldown: 0.25,
     },
   },
   inflammation: {

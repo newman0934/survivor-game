@@ -571,7 +571,7 @@ export class World {
     }
     const evo = bible.evolved ? WEAPON_DEFS.complement.evolution : undefined
     const lvl = evo ? evo.level : WEAPON_DEFS.complement.levels[bible.level - 1]
-    const hitCooldown = evo ? 0.25 : 0.5
+    const hitCooldown = evo?.hitCooldown ?? 0.5
     const count = lvl.count ?? 1
     const radius = (lvl.radius ?? 90) * this.stats.areaMult
     const damage = lvl.damage * this.stats.damageMult
