@@ -412,6 +412,17 @@ describe('World', () => {
     expect(w.player.hp).toBeLessThan(100)
     expect(w.enemyProjectiles.length).toBe(0) // 命中後消耗並清理
   })
+
+  it('loadoutSnapshot 反映目前武器與被動（含 evolved）', () => {
+    const w = new World(1)
+    const ab = w.weapons.find((x) => x.kind === 'antibody')!
+    ab.level = 5
+    ab.evolved = true
+    w.passives.push({ kind: 'tome', level: 2 })
+    const snap = w.loadoutSnapshot()
+    expect(snap.weapons).toContainEqual({ kind: 'antibody', level: 5, evolved: true })
+    expect(snap.passives).toContainEqual({ kind: 'tome', level: 2 })
+  })
 })
 
 describe('武器進化效果', () => {
