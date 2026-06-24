@@ -38,7 +38,9 @@ export function findNearest(from: Vec2, enemies: Entity[]): Entity | null {
 /**
  * 找出距離 from 最近的 n 隻存活敵人，由近到遠排序。
  *
- * 用於多投射物武器（如高等魔杖）一次鎖定多個目標：先濾掉失效者，依距離排序後取前 n 隻。
+ * 用於多投射物武器（如高等魔杖）一次鎖定多個目標。以單次掃描維護一個依距離升冪、
+ * 最多 n 筆的 top-k——免去全排序的 O(n log n) 與 filter/map/sort/slice 的中間陣列與
+ * 包裝物件配置（敵人多、n 小時更划算）。平手（距離相等）保留較早出現者，與穩定排序一致。
  * 不足 n 隻時回傳全部存活者。
  *
  * @param from    量測距離的起點（通常是玩家座標）。
@@ -47,10 +49,33 @@ export function findNearest(from: Vec2, enemies: Entity[]): Entity | null {
  * @returns 最多 n 隻、由近到遠的存活敵人。
  */
 export function findNearestN(from: Vec2, enemies: Entity[], n: number): Entity[] {
-  return enemies
-    .filter((e) => e.active)
-    .map((e) => ({ e, d: distance(from, e.pos) }))
-    .sort((a, b) => a.d - b.d)
-    .slice(0, n)
-    .map((x) => x.e)
+  if (n <= 0) return []
+  const top: Entity[] = [] // 升冪排序的目前最近者
+  const dist: number[] = [] // 與 top 對齊的距離
+  for (const e of enemies) {
+    if (!e.active) continue // 略過已死亡/待回收的 entity
+    const d = distance(from, e.pos)
+    let i: number
+    if (top.length < n) {
+      // 還沒滿：附加到尾端再往前冒泡到正確位置
+      i = top.length
+      top.push(e)
+      dist.push(d)
+    } else {
+      // 已滿：不比最遠者近（含平手）就略過，否則覆寫末位再冒泡
+      if (d >= dist[n - 1]) continue
+      i = n - 1
+      top[i] = e
+      dist[i] = d
+    }
+    // 用嚴格大於比較往前移：平手者停在相等元素之後，保留先到順序（等同穩定排序）
+    while (i > 0 && dist[i - 1] > d) {
+      top[i] = top[i - 1]
+      dist[i] = dist[i - 1]
+      top[i - 1] = e
+      dist[i - 1] = d
+      i--
+    }
+  }
+  return top
 }
