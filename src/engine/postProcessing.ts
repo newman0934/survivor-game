@@ -46,6 +46,8 @@ export class PostProcessing {
       grade.tint(GRADE.tint, true)
       filters.push(grade)
       app.stage.filters = filters
+      // stage 被鏡頭平移，須固定濾鏡作用區為螢幕，否則 FilterSystem 取錯 bounds → 全黑。
+      app.stage.filterArea = app.screen
     } catch {
       // 濾鏡建立失敗 → 退回無濾鏡正常渲染。
     }
