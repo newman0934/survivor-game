@@ -33,4 +33,27 @@ describe('combat targeting', () => {
     const e1 = createEnemy({ x: 10, y: 0 })
     expect(findNearestN(player.pos, [e1], 3)).toEqual([e1])
   })
+  it('findNearestN ignores inactive enemies', () => {
+    const player = createPlayer({ x: 0, y: 0 })
+    const e1 = createEnemy({ x: 10, y: 0 })
+    const dead = createEnemy({ x: 20, y: 0 })
+    dead.active = false
+    const e3 = createEnemy({ x: 30, y: 0 })
+    expect(findNearestN(player.pos, [e1, dead, e3], 3)).toEqual([e1, e3])
+  })
+  it('findNearestN breaks distance ties by array order (stable)', () => {
+    const player = createPlayer({ x: 0, y: 0 })
+    // a 與 b 等距（皆 100），c 較遠；取 2 應為 [a, b]（保留先到者）
+    const a = createEnemy({ x: 100, y: 0 })
+    const b = createEnemy({ x: 0, y: 100 })
+    const c = createEnemy({ x: 0, y: 300 })
+    expect(findNearestN(player.pos, [a, b, c], 2)).toEqual([a, b])
+    // 反轉先後，平手順序也應反轉
+    expect(findNearestN(player.pos, [b, a, c], 2)).toEqual([b, a])
+  })
+  it('findNearestN returns empty for n <= 0', () => {
+    const player = createPlayer({ x: 0, y: 0 })
+    const e1 = createEnemy({ x: 10, y: 0 })
+    expect(findNearestN(player.pos, [e1], 0)).toEqual([])
+  })
 })
