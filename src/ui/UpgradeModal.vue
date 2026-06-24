@@ -13,8 +13,13 @@ import { PASSIVE_DEFS } from '../engine/systems/passiveDefs'
 import { evolutionStatus } from '../engine/systems/loadout'
 import Overlay from './Overlay.vue'
 import Panel from './Panel.vue'
+import GameIcon from './GameIcon.vue'
+import { resolveOptionIcon } from './icons/iconRegistry'
 
 const store = useGameStore()
+
+/** 每個升級選項對應的圖示（武器/被動/或 null）；預算避免 template 內重複呼叫。 */
+const cardIcons = computed(() => store.upgradeOptions.map((o) => resolveOptionIcon(o.id)))
 
 type WeaponItem = LoadoutSnapshot['weapons'][number]
 type PassiveItem = LoadoutSnapshot['passives'][number]
@@ -57,14 +62,14 @@ function passiveLevel(p: PassiveItem): string {
         <div class="ld-col" v-if="store.loadout.weapons.length">
           <div class="ld-title">武器</div>
           <div v-for="w in store.loadout.weapons" :key="w.kind" class="ld-item">
-            <span class="ld-name">{{ weaponName(w) }} {{ weaponLevel(w) }}</span>
+            <span class="ld-name"><GameIcon category="weapon" :kind="w.kind" :size="15" /> {{ weaponName(w) }} {{ weaponLevel(w) }}</span>
             <span class="ld-hint" :class="weaponHint(w).cls">{{ weaponHint(w).text }}</span>
           </div>
         </div>
         <div class="ld-col" v-if="store.loadout.passives.length">
           <div class="ld-title">被動</div>
           <div v-for="p in store.loadout.passives" :key="p.kind" class="ld-item">
-            <span class="ld-name">{{ passiveName(p) }} {{ passiveLevel(p) }}</span>
+            <span class="ld-name"><GameIcon category="passive" :kind="p.kind" :size="15" /> {{ passiveName(p) }} {{ passiveLevel(p) }}</span>
           </div>
         </div>
       </div>
@@ -74,7 +79,8 @@ function passiveLevel(p: PassiveItem): string {
           :class="{ evolve: opt.id.startsWith('evolve:') }"
           :style="{ animationDelay: 0.06 * i + 's' }"
           @click="store.pickUpgrade(opt.id)">
-          {{ opt.label }}
+          <GameIcon v-if="cardIcons[i]" :category="cardIcons[i]!.category" :kind="cardIcons[i]!.kind" :size="30" class="card-icon" />
+          <span class="card-label">{{ opt.label }}</span>
         </button>
       </div>
     </Panel>
@@ -86,7 +92,10 @@ function passiveLevel(p: PassiveItem): string {
 .title { font-family: var(--font-display); font-size: var(--fs-h2); }
 .cards { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
 .card { width: 160px; height: 120px; font-size: 1.2rem; cursor: pointer; padding: 0.4rem;
-  border: 2px solid var(--immune-accent); border-radius: 12px; background: var(--card-bg); color: #fff; }
+  border: 2px solid var(--immune-accent); border-radius: 12px; background: var(--card-bg); color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; }
+.card-icon { display: block; }
+.card-label { display: block; }
 .card:hover { background: var(--card-bg-hover); border-color: var(--immune-accent-strong); }
 .card.evolve { border-color: var(--antigen); box-shadow: 0 0 12px rgba(255, 213, 74, 0.6); }
 .card.evolve:hover { border-color: var(--antigen); }
@@ -112,7 +121,7 @@ function passiveLevel(p: PassiveItem): string {
 .ld-col { display: flex; flex-direction: column; gap: 0.2rem; min-width: 9rem; }
 .ld-title { font-size: 0.78rem; opacity: 0.6; letter-spacing: 0.15em; margin-bottom: 0.15rem; }
 .ld-item { display: flex; justify-content: space-between; gap: 0.6rem; }
-.ld-name { white-space: nowrap; }
+.ld-name { white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; }
 .ld-hint { white-space: nowrap; opacity: 0.85; }
 .ld-hint.ready { color: var(--immune-accent-strong); font-weight: bold; opacity: 1; }
 .ld-hint.evolved { color: var(--antigen); font-weight: bold; opacity: 1; }
