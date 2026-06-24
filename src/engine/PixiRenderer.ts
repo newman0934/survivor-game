@@ -19,6 +19,8 @@ import { ENEMY_DEFS } from './systems/enemyDefs'
 interface Sprite {
   root: Container
   flash: Graphics
+  /** 最後被處理的 frame 序號；render 結尾據此回收本幀未出現者（免每幀配置 Set）。 */
+  lastSeen: number
 }
 
 export class PixiRenderer {
@@ -39,6 +41,8 @@ export class PixiRenderer {
   private lastHp = new Map<Entity, number>()
   /** 動畫時鐘（每幀累加約 1/60；純視覺）。 */
   private clock = 0
+  /** render 幀序號（每次 render 遞增）；用於戳記本幀出現的 sprite 以回收消失者。 */
+  private frameId = 0
   /** 視覺特效層（擊殺/收集/升級/傷害數字/受傷紅暈/鏡頭震動）。 */
   private effects!: EffectsLayer
   /** 上一幀玩家等級，用來偵測升級上升沿。 */
@@ -95,15 +99,26 @@ export class PixiRenderer {
       flash.alpha = 0
       root.addChild(body, flash)
       this.world.addChild(root)
-      s = { root, flash }
+      s = { root, flash, lastSeen: this.frameId }
       this.sprites.set(e, s)
       this.lastHp.set(e, e.hp)
     }
     return s
   }
 
+  /** 處理單一 entity：取得/建立 sprite、更新位置與動畫、戳記本幀。 */
+  private syncSprite(e: Entity, world: World): void {
+    const s = this.spriteFor(e, world.playerColor, world.playerCharacter)
+    s.root.position.set(e.pos.x, e.pos.y)
+    s.root.visible = true
+    s.lastSeen = this.frameId
+    this.animate(e, s, world)
+    this.applyHitFlash(e, s)
+  }
+
   render(world: World): void {
     this.clock += 1 / 60
+    this.frameId += 1
 
     // 升級上升沿：玩家身上爆發光環。
     if (world.currentLevel > this.lastLevel) {
@@ -124,27 +139,19 @@ export class PixiRenderer {
     const gr = world.garlicRadius()
     if (gr > 0) drawGarlicAura(this.garlicAura, world.player.pos.x, world.player.pos.y, gr, this.clock)
 
-    const all: Entity[] = [
-      ...world.gems(),
-      ...world.activeEnemies(),
-      ...world.projectiles.filter((p) => p.active),
-      ...world.enemyProjectiles.filter((p) => p.active),
-      ...world.orbits(),
-      ...world.chests(),
-      world.player,
-    ]
-    const seen = new Set<Entity>()
-    for (const e of all) {
-      const s = this.spriteFor(e, world.playerColor, world.playerCharacter)
-      s.root.position.set(e.pos.x, e.pos.y)
-      s.root.visible = true
-      this.animate(e, s, world)
-      this.applyHitFlash(e, s)
-      seen.add(e)
-    }
-    // 回收：本格未出現者銷毀並移出對照表，避免洩漏。
+    // 依序處理各來源並就地戳記本幀（免每幀配置合併陣列與 seen Set）。
+    // 順序即首次建立時的 z-order：gems → enemies → projectiles → enemyProjectiles
+    // → orbits → chests → player（玩家最後建立，畫在最上層）。
+    for (const g of world.gems()) if (g.active) this.syncSprite(g, world)
+    for (const e of world.enemies) if (e.active) this.syncSprite(e, world)
+    for (const p of world.projectiles) if (p.active) this.syncSprite(p, world)
+    for (const p of world.enemyProjectiles) if (p.active) this.syncSprite(p, world)
+    for (const o of world.orbits()) if (o.active) this.syncSprite(o, world)
+    for (const c of world.chests()) if (c.active) this.syncSprite(c, world)
+    this.syncSprite(world.player, world)
+    // 回收：本幀未戳記者（已消失）銷毀並移出對照表，避免洩漏。
     for (const [e, s] of this.sprites) {
-      if (!seen.has(e)) {
+      if (s.lastSeen !== this.frameId) {
         if (e.kind === 'enemy') {
           const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
           this.effects.spawnKill(e.pos.x, e.pos.y, color)
