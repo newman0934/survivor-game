@@ -23,6 +23,8 @@ interface Sprite {
   flash: Graphics
   /** 最後被處理的 frame 序號；render 結尾據此回收本幀未出現者（免每幀配置 Set）。 */
   lastSeen: number
+  /** 待機動畫相位（建立時隨機，使各單位脈動/搖擺錯開、不同步）。 */
+  phase: number
 }
 
 export class PixiRenderer {
@@ -106,7 +108,7 @@ export class PixiRenderer {
       flash.alpha = 0
       root.addChild(body, flash)
       this.world.addChild(root)
-      s = { root, flash, lastSeen: this.frameId }
+      s = { root, flash, lastSeen: this.frameId, phase: Math.random() * Math.PI * 2 }
       this.sprites.set(e, s)
       this.lastHp.set(e, e.hp)
     }
@@ -201,26 +203,75 @@ export class PixiRenderer {
     }
   }
 
-  /** 依 entity 種類套用每幀動畫 transform（純視覺）。 */
+  /** 依 entity 種類套用每幀動畫 transform（純視覺；待機脈動/搖擺以 clock + sprite phase 驅動）。 */
   private animate(e: Entity, s: Sprite, world: World): void {
+    const t = this.clock, ph = s.phase
     switch (e.kind) {
       case 'gem':
-        s.root.rotation = this.clock * 1.5
-        s.root.scale.set(1 + 0.08 * Math.sin(this.clock * 4))
+        s.root.rotation = t * 1.5
+        s.root.scale.set(1 + 0.08 * Math.sin(t * 4))
         break
       case 'orbit':
-        s.root.rotation = this.clock * 3
+        s.root.rotation = t * 3
         break
       case 'projectile':
         s.root.rotation = Math.atan2(e.vel.y, e.vel.x)
         break
-      case 'player':
-        s.root.rotation = Math.atan2(world.lastMoveDir.y, world.lastMoveDir.x)
+      case 'player': {
+        // 細胞：朝向 + 微搖擺；緩慢呼吸擠壓拉伸（果凍感）
+        s.root.rotation = Math.atan2(world.lastMoveDir.y, world.lastMoveDir.x) + 0.06 * Math.sin(t * 2 + ph)
+        const b = 0.05 * Math.sin(t * 1.8 + ph)
+        s.root.scale.set(1 + b, 1 - b)
         break
-      case 'enemy':
-        if (e.enemyKind === 'superbug') s.root.scale.set(1 + 0.04 * Math.sin(this.clock * 4))
-        else if (e.enemyKind === 'spiral') s.root.rotation = Math.atan2(e.vel.y, e.vel.x)
+      }
+      case 'enemy': {
+        switch (e.enemyKind) {
+          case 'superbug': {
+            const p = 0.05 * Math.sin(t * 3 + ph) // 沉重大脈動
+            s.root.scale.set(1 + p, 1 + p)
+            s.root.rotation = 0.04 * Math.sin(t * 1.2 + ph)
+            break
+          }
+          case 'spiral': {
+            s.root.rotation = Math.atan2(e.vel.y, e.vel.x)
+            const w = 0.06 * Math.sin(t * 6 + ph) // 沿身蠕動
+            s.root.scale.set(1 + w, 1 - w)
+            break
+          }
+          case 'bacteria':
+            // 游動式抖擺：朝速度 + 較快旋轉震盪（鞭毛擺游）
+            s.root.rotation = Math.atan2(e.vel.y, e.vel.x) + 0.18 * Math.sin(t * 9 + ph)
+            break
+          case 'spore': {
+            const p = 0.03 * Math.sin(t * 1.2 + ph) // 極緩呼吸（休眠）
+            s.root.scale.set(1 + p, 1 + p)
+            break
+          }
+          case 'spitter': {
+            const p = Math.max(0, Math.sin(t * 1.5 + ph)) * 0.08 // 偏鼓脹蓄勢
+            s.root.scale.set(1 + p * 1.4, 1 + p)
+            break
+          }
+          case 'splitter': {
+            const p = 0.07 * Math.sin(t * 4 + ph) // 將分裂的鼓動
+            s.root.scale.set(1 + p, 1 + p)
+            break
+          }
+          case 'exploder': {
+            const p = 0.05 * Math.sin(t * 11 + ph) // 緊張快脈動
+            s.root.scale.set(1 + p, 1 + p)
+            s.root.rotation = 0.05 * Math.sin(t * 23 + ph) // 抖動
+            break
+          }
+          default: {
+            // virus（及其他）：呼吸脈動 + 緩慢 wobble 旋轉（懸浮）
+            const p = 0.045 * Math.sin(t * 2.4 + ph)
+            s.root.scale.set(1 + p, 1 + p)
+            s.root.rotation = 0.08 * Math.sin(t * 1.5 + ph)
+          }
+        }
         break
+      }
     }
   }
 
