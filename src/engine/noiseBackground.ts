@@ -7,7 +7,7 @@
  */
 import { Application, Container, Sprite, Texture, TilingSprite } from 'pixi.js'
 import type { MapKind } from './types'
-import { fbm } from './core/noise'
+import { fbm, ridgedFbm, cellular } from './core/noise'
 
 /** 各場景兩層 tint（深層底色 / 中層提色）與暖核色。 */
 const MAP_TINT: Record<MapKind, { deep: number; mid: number; core: number }> = {
@@ -16,8 +16,11 @@ const MAP_TINT: Record<MapKind, { deep: number; mid: number; core: number }> = {
   lung:    { deep: 0x123440, mid: 0x276079, core: 0x1d5066 },
 }
 
-/** 生成無縫平鋪灰階噪聲紋理（period 週期環繞）。 */
-function makeNoiseTexture(seed: number): Texture {
+/**
+ * 生成無縫平鋪灰階噪聲紋理（period 週期環繞），依場景採不同性格的噪聲：
+ * 血管＝domain-warp fBm（血漿流動渦流）、胃＝ridged（黏膜皺褶折痕）、肺＝cellular（肺泡蜂窩）。
+ */
+function makeNoiseTexture(kind: MapKind, seed: number): Texture {
   const T = 256, P = 8
   const cv = document.createElement('canvas')
   cv.width = cv.height = T
@@ -25,7 +28,20 @@ function makeNoiseTexture(seed: number): Texture {
   const img = ctx.createImageData(T, T)
   for (let py = 0; py < T; py++) {
     for (let px = 0; px < T; px++) {
-      const v = fbm((px / T) * P, (py / T) * P, seed, 4, P) // 0..1、平鋪
+      const wx = (px / T) * P, wy = (py / T) * P
+      let v: number
+      if (kind === 'vessel') {
+        // domain warp → 流動渦流/大理石流紋
+        const wu = wx + 1.4 * fbm(wx, wy, seed + 11, 3, P)
+        const wv = wy + 1.4 * fbm(wx + 3.3, wy + 1.7, seed + 23, 3, P)
+        v = fbm(wu, wv, seed, 4, P)
+      } else if (kind === 'stomach') {
+        // ridged → 黏膜皺褶折痕
+        v = ridgedFbm(wx, wy, seed, 4, P)
+      } else {
+        // cellular → 肺泡蜂窩（反相：細胞中心亮、邊界暗）
+        v = 1 - cellular(wx, wy, seed, P)
+      }
       const g = Math.round(40 + v * 200) // 灰階（避免純黑，留 tint 空間）
       const i = (py * T + px) * 4
       img.data[i] = g; img.data[i + 1] = g; img.data[i + 2] = g; img.data[i + 3] = 255
@@ -62,7 +78,7 @@ export class NoiseBackground {
   constructor(private app: Application, kind: MapKind) {
     try {
       const tint = MAP_TINT[kind]
-      this.noiseTex = makeNoiseTexture(Math.floor(Math.random() * 1e6))
+      this.noiseTex = makeNoiseTexture(kind, Math.floor(Math.random() * 1e6))
       const w = app.renderer.width, h = app.renderer.height
       // 深層：大尺度、慢視差、底色
       this.deep = new TilingSprite({ texture: this.noiseTex, width: w, height: h })

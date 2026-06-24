@@ -6,10 +6,11 @@
 _驗證日期：2026-06-25（typecheck/build/178 測試 + 三場景瀏覽器截圖實機驗證通過）_
 
 ## 噪聲純函式（含單元測試）
-- [x] `src/engine/core/noise.ts`：`valueNoise` / `fbm` 純函式
-- [x] `fbm` 給定 seed 確定性可重現、輸出落在已知範圍（0..1）
+- [x] `src/engine/core/noise.ts`：`valueNoise` / `fbm` / `ridgedFbm` / `cellular` 純函式
+- [x] 各函式給定 seed 確定性可重現、輸出落在已知範圍（0..1）、支援 period 平鋪
 - [x] 不同 seed 一般產生不同噪聲
-- [x] 走 TDD（先寫失敗測試，5 測試）
+- [x] 走 TDD（先寫失敗測試，8 測試）
+- [x] 三場景採不同性格噪聲：血管 warp 流動 / 胃 ridged 皺褶 / 肺 cellular 蜂窩
 
 ## 噪聲背景模組（NoiseBackground，呈現層）
 - [x] 開機以 canvas 生成無縫平鋪灰階噪聲 `Texture`

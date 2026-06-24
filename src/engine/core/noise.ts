@@ -47,3 +47,42 @@ export function fbm(x: number, y: number, seed: number, octaves = 4, period = 0)
   }
   return sum / norm
 }
+
+/**
+ * 脊狀 fBm（ridged）：每八度取 1-|2n-1| 形成脊線，疊出折痕/皺褶質感。輸出 0..1。
+ * 適合胃黏膜皺褶這類「有方向折痕」的結構。
+ */
+export function ridgedFbm(x: number, y: number, seed: number, octaves = 4, period = 0): number {
+  let sum = 0, amp = 1, freq = 1, norm = 0
+  for (let i = 0; i < octaves; i++) {
+    const n = valueNoise(x * freq, y * freq, seed + i, period > 0 ? period * freq : 0)
+    sum += amp * (1 - Math.abs(2 * n - 1))
+    norm += amp
+    amp *= 0.5
+    freq *= 2
+  }
+  return sum / norm
+}
+
+/**
+ * 細胞噪聲（Voronoi F1）：到最近特徵點的距離，形成蜂窩/泡狀結構。輸出 0..1（近 0、遠接近 1）。
+ * 適合肺泡囊這類「細胞分格」的結構。
+ * @param period >0 時格點環繞此週期，使紋理無縫平鋪。
+ */
+export function cellular(x: number, y: number, seed: number, period = 0): number {
+  const xi = Math.floor(x), yi = Math.floor(y)
+  const wrap = (v: number): number => (period > 0 ? ((v % period) + period) % period : v)
+  let best = 1e9
+  for (let oy = -1; oy <= 1; oy++) {
+    for (let ox = -1; ox <= 1; ox++) {
+      const cx = xi + ox, cy = yi + oy
+      // 特徵點位置 = 格原點(連續) + 雜湊偏移(以環繞索引取，維持平鋪)
+      const fx = cx + hash2(wrap(cx), wrap(cy), seed)
+      const fy = cy + hash2(wrap(cx), wrap(cy), seed + 7)
+      const dx = x - fx, dy = y - fy
+      const d = Math.sqrt(dx * dx + dy * dy)
+      if (d < best) best = d
+    }
+  }
+  return Math.min(1, best)
+}
