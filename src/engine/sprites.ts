@@ -541,15 +541,25 @@ function drawMapStructure(
 ): void {
   const col = STRUCT_COLORS[kind]
   if (kind === 'vessel') {
-    // 斜向血漿流紋寬帶（隨血流緩慢漂移）
-    const BAND = 300
-    const drift = (clock * 16) % BAND
+    // 有機血漿流紋寬帶（沿斜向 + 柔和正弦波動成曲線，隨血流緩慢漂移）
+    const BAND = 320
+    const drift = (clock * 14) % BAND
     const k0 = Math.floor((cx - viewW) / BAND) - 1
     const k1 = Math.ceil((cx + viewW) / BAND) + 1
+    const top = cy - viewH, bot = cy + viewH
     for (let k = k0; k <= k1; k++) {
       const base = k * BAND + drift
-      g.moveTo(base - viewH, cy - viewH).lineTo(base + viewH, cy + viewH)
-      g.stroke({ width: 64 + 36 * bgHash(k, 7), color: col, alpha: 0.06 })
+      const amp = 42 + 30 * bgHash(k, 7)        // 波幅
+      const phase = bgHash(k, 19) * 6.283
+      for (let s = 0; s <= 10; s++) {
+        const t = s / 10
+        const y = top + (bot - top) * t
+        // 斜向前進（×0.7 斜率）+ 沿長度疊加柔和正弦 → 有機曲線而非直紋
+        const x = base + (y - cy) * 0.7 + Math.sin(t * 3.1 + phase + clock * 0.4) * amp
+        if (s === 0) g.moveTo(x, y)
+        else g.lineTo(x, y)
+      }
+      g.stroke({ width: 54 + 28 * bgHash(k, 7), color: col, alpha: 0.04 })
     }
   } else if (kind === 'stomach') {
     // 大尺度黏膜皺褶脊（橫向粗皺脊 + 蠕動波）
