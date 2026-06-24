@@ -29,7 +29,7 @@ const mmss = computed(() => {
 
 <style scoped>
 .overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(16, 16, 24, 0.9); color: #fff; font-family: sans-serif; }
+  background: rgba(18, 10, 14, 0.9); color: #fff; font-family: sans-serif; }
 .panel { display: flex; flex-direction: column; align-items: center; gap: 1rem;
   animation: gopop 0.35s ease-out both; }
 @keyframes gopop {
@@ -38,5 +38,5 @@ const mmss = computed(() => {
 }
 @media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
 button { font-size: 1.3rem; padding: 0.5rem 1.5rem; cursor: pointer; border: none;
-  border-radius: 8px; background: #4aa3ff; color: #fff; }
+  border-radius: 8px; background: var(--immune-accent); color: #06231f; font-weight: bold; }
 </style>

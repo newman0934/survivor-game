@@ -25,11 +25,11 @@ const store = useGameStore()
 <style scoped>
 .overlay { position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 1.5rem;
-  background: rgba(16, 16, 24, 0.8); color: #fff; font-family: sans-serif; }
+  background: rgba(18, 10, 14, 0.8); color: #fff; font-family: sans-serif; }
 .cards { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
 .card { width: 160px; height: 120px; font-size: 1.2rem; cursor: pointer; padding: 0.4rem;
-  border: 2px solid #4aa3ff; border-radius: 12px; background: #1c2030; color: #fff; }
-.card:hover { background: #283050; }
+  border: 2px solid var(--immune-accent); border-radius: 12px; background: var(--card-bg); color: #fff; }
+.card:hover { background: var(--card-bg-hover); border-color: var(--immune-accent-strong); }
 .title { animation: rise 0.3s ease-out backwards; }
 .card { animation: rise 0.35s ease-out backwards; }
 .card:active { transform: scale(0.96); }

@@ -58,7 +58,7 @@ watch(() => store.hp, (n, o) => {
 .bar { height: 8px; margin: 2px 1rem; background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
 .bar.xp { order: 3; margin-top: auto; }
 .bar.hp { order: 4; margin-bottom: 0.6rem; height: 12px; }
-.xp .fill { background: #6bff6b; height: 100%; border-radius: 4px; }
+.xp .fill { background: var(--antigen); height: 100%; border-radius: 4px; }
 .hp .fill { background: #ff5252; height: 100%; border-radius: 4px; }
 .bar .fill { transition: width 0.25s ease-out; }
 .lv.pop { display: inline-block; animation: levelpop 0.4s ease-out; }
