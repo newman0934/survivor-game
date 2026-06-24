@@ -13,6 +13,7 @@ import {
   drawMapBackground, drawGarlicAura,
 } from './sprites'
 import { EffectsLayer } from './effects'
+import { PostProcessing } from './postProcessing'
 import { ENEMY_DEFS } from './systems/enemyDefs'
 
 /** 每個 entity 的顯示物件：body（造型）+ flash（命中閃白用的白色覆蓋圓）。 */
@@ -45,6 +46,8 @@ export class PixiRenderer {
   private frameId = 0
   /** 視覺特效層（擊殺/收集/升級/傷害數字/受傷紅暈/鏡頭震動）。 */
   private effects!: EffectsLayer
+  /** 全域後製（泛光/色調/暈影）。 */
+  private post!: PostProcessing
   /** 上一幀玩家等級，用來偵測升級上升沿。 */
   private lastLevel = 1
   /** 上一幀畫面尺寸，用來偵測 resize 重畫紅暈。 */
@@ -70,6 +73,7 @@ export class PixiRenderer {
     this.effects = new EffectsLayer(this.world, app.stage, app.renderer.width, app.renderer.height)
     this.lastW = app.renderer.width
     this.lastH = app.renderer.height
+    this.post = new PostProcessing(app)
   }
 
   static async create(canvasParent: HTMLElement): Promise<PixiRenderer> {
@@ -169,6 +173,7 @@ export class PixiRenderer {
       this.lastW = this.app.renderer.width
       this.lastH = this.app.renderer.height
       this.effects.resize(this.lastW, this.lastH)
+      this.post.resize()
     }
     // 推進特效並取得鏡頭震動偏移。
     const shake = this.effects.update()

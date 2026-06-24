@@ -41,6 +41,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 音效 — Web Audio 合成 SFX／背景音樂 + 靜音開關
 - [x] 美術（程式化繪製，引擎不動）— 角色/敵人/道具造型與精緻化、三地圖地貌背景、打擊反饋特效（`EffectsLayer`）、
   免疫主題化、HUD/UI 動畫 → specs/{immune-war-theme, sprite-polish-b, ui-animation-c, effects-feedback} 等
+- [x] 整體後製：全域泛光 + 色彩分級 + 暈影（行動裝置自動關 bloom）→ specs/post-processing/
 - [x] 進度存檔（localStorage）— 戰績紀錄 + 累積統計 + 破紀錄/統計 UI；結算可「回主選單」重選 → specs/save-progress/
 - [x] 計分 / 排行榜 — 排行榜彈窗（前 10 場依存活時間），重用既有 runs → specs/leaderboard/
 - [ ] 解鎖 — 用 `CumulativeStats` 鎖/解角色與地圖（尚未開始）
