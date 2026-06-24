@@ -13,6 +13,7 @@ import { ref, watch, onBeforeUnmount } from 'vue'
 import { useGameStore } from './stores/game'
 import { Game } from './engine/Game'
 import type { CharacterKind, MapKind } from './engine/types'
+import { loadSave, recordRun, type CumulativeStats } from './persistence/saveStore'
 import MainMenu from './ui/MainMenu.vue'
 import Hud from './ui/Hud.vue'
 import UpgradeModal from './ui/UpgradeModal.vue'
@@ -30,6 +31,15 @@ let seed = 1
 // 記住目前選定的角色與地圖（供「再玩一次」沿用）；預設戰士 + 平原。
 let selected: { character: CharacterKind; map: MapKind } = { character: 'macrophage', map: 'vessel' }
 
+// 跨場累積統計（開機讀取，記錄後刷新）；傳給主選單顯示。
+const stats = ref<CumulativeStats>(loadSave().stats)
+// 最近一場的破紀錄資訊；傳給結算畫面顯示。
+const lastRun = ref<{ bestTime: number; isNewBestTime: boolean; isNewBestKills: boolean }>({
+  bestTime: stats.value.bestTime,
+  isNewBestTime: false,
+  isNewBestKills: false,
+})
+
 // 開始一場新遊戲：先把 store 重置為 playing，再非同步啟動引擎並掛上畫布。
 async function startGame(opts: { character: CharacterKind; map: MapKind } = selected) {
   selected = opts
@@ -45,13 +55,31 @@ function restart() {
   startGame(selected)
 }
 
-// 監聽 phase：升級彈窗出現時暫停引擎迴圈，回到遊戲時恢復——即升級暫停握手的 UI 端。
+// 監聽 phase：升級暫停握手 + 進入 over 時記錄本場戰績。
 watch(
   () => store.phase,
-  (phase) => {
-    if (!game) return
-    if (phase === 'upgrading') game.pause()
-    else if (phase === 'playing') game.resume()
+  (phase, prev) => {
+    if (game) {
+      if (phase === 'upgrading') game.pause()
+      else if (phase === 'playing') game.resume()
+    }
+    // 進入結束畫面（上升沿）：以最終 summary + 當局角色/地圖記錄一場，並刷新統計與破紀錄旗標。
+    if (phase === 'over' && prev !== 'over') {
+      const res = recordRun({
+        time: store.time,
+        kills: store.kills,
+        level: store.level,
+        character: selected.character,
+        map: selected.map,
+        date: Date.now(),
+      })
+      stats.value = res.save.stats
+      lastRun.value = {
+        bestTime: res.save.stats.bestTime,
+        isNewBestTime: res.isNewBestTime,
+        isNewBestKills: res.isNewBestKills,
+      }
+    }
   },
 )
 
@@ -69,9 +97,9 @@ onBeforeUnmount(() => game?.stop())
     <BossBar v-if="store.phase === 'playing' || store.phase === 'upgrading'" />
     <MuteButton v-if="store.phase !== 'menu'" />
     <!-- 以下三個 overlay 依 phase 互斥顯示 -->
-    <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" @start="startGame" /></Transition>
+    <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" :stats="stats" @start="startGame" /></Transition>
     <Transition name="fade"><UpgradeModal v-if="store.phase === 'upgrading'" /></Transition>
-    <Transition name="fade"><GameOver v-if="store.phase === 'over'" @restart="restart" /></Transition>
+    <Transition name="fade"><GameOver v-if="store.phase === 'over'" :best-time="lastRun.bestTime" :is-new-best-time="lastRun.isNewBestTime" :is-new-best-kills="lastRun.isNewBestKills" @restart="restart" /></Transition>
   </div>
 </template>
 
