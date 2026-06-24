@@ -40,7 +40,7 @@
 | nova | magnet（受體/吸取） | 抗原超載脈衝 | cooldown 0.8, damage 40, radius 300 | 巨大範圍 + 低冷卻（純數值） |
 
 ### FR-4 招牌行為加成的實作（沿用既有分派）
-- **pierce（perforin）**：`Entity.pierce` 記剩餘穿透數。子彈命中敵人扣血後，若 `pierce>0` 則 `pierce-=1` 且**不失效**（繼續飛行命中下一隻）；否則失效。每幀單發仍最多命中一隻（既有 `break`）。
+- **pierce（perforin）**：`Entity.pierce` 記剩餘穿透數、`Entity.hitEnemies` 記已命中的敵人。子彈命中**尚未命中過**的敵人扣血後，若 `pierce>0` 則 `pierce-=1`、記入 `hitEnemies` 且**不失效**（繼續飛行命中下一隻不同敵人）；否則失效。已在 `hitEnemies` 內的敵人略過（同一敵人最多命中一次，不跨幀重複扣血／消耗 pierce）。每幀單發仍最多命中一隻（既有 `break`）。
 - **noFalloff（cascade）**：進化時每跳傷害係數用 `1.0`（不套 `CASCADE_FALLOFF`）。
 - **halfAngle（phagocyte）**：進化時 `phagocyteSweep` 的半角用 `def.evolution.halfAngle`（覆寫常數 `PHAGOCYTE_HALF_ANGLE`）。
 - **fieldRegen（inflammation）**：進化時 inflammation 分支每格替玩家回 `fieldRegen * dt` 血（夾 maxHp 上限；玩家存活時）。
@@ -59,7 +59,7 @@
 - 武器滿級但尚未持有所需被動：不提供進化卡；之後取得該被動 → 進化卡才出現（動態 `buildCandidates`）。
 - 已進化的武器：不再出現進化卡，也不出現 levelup 卡（已達 maxLevel）。
 - `applyUpgradeById('evolve:X')` 時條件已不成立（理論上不會，因卡片動態產生）：不設 evolved、安靜略過。
-- pierce 子彈跨幀可能再次接近同一敵人：接受（每幀單發單命中，子彈持續位移，重複命中機率低且無害）。
+- pierce 子彈與同一敵人跨幀持續重疊：以 `hitEnemies` 記錄，同一敵人只命中一次，`pierce` 嚴格等於「穿透不同敵人數」。
 - 被動無法被移除（既有設計），故「進化後失去被動」不存在。
 
 ## Data Model Changes

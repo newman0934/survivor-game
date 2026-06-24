@@ -392,7 +392,7 @@ export class World {
           if (evo) {
             for (const p of projs) {
               p.evolved = true
-              if (evo.pierce) p.pierce = evo.pierce
+              if (evo.pierce) { p.pierce = evo.pierce; p.hitEnemies = [] }
             }
           }
           this.projectiles.push(...projs)
@@ -481,12 +481,13 @@ export class World {
       const cands = this.enemyGrid.queryRadius(p.pos.x, p.pos.y, p.radius + MAX_ENEMY_RADIUS)
       for (const e of cands) {
         if (!e.active) continue
+        if (p.hitEnemies && p.hitEnemies.includes(e)) continue // 已穿透過此敵，不重複命中
         if (circlesOverlap(p, e)) {
           e.hp -= p.damage
           this.soundEventQueue.push('hit')
           if (e.hp <= 0) this.killEnemy(e)
-          // 穿透：仍有 pierce 額度則續飛，否則消耗
-          if (p.pierce && p.pierce > 0) p.pierce -= 1
+          // 穿透：記下此敵，仍有 pierce 額度則續飛、否則消耗
+          if (p.pierce && p.pierce > 0) { p.pierce -= 1; p.hitEnemies!.push(e) }
           else p.active = false
           break // 每幀單發最多命中一隻
         }

@@ -20,7 +20,7 @@ _驗證日期：2026-06-24_
 
 ## World 進化效果（含單元測試）
 - [x] 進化武器以 `def.evolution.level` 取生效數值（仍乘全域乘區）
-- [x] perforin pierce：子彈命中後 pierce>0 不失效、可續命中，最多穿透設定敵數
+- [x] perforin pierce：子彈命中後 pierce>0 不失效、可續命中不同敵人，最多穿透設定敵數；同一敵人只命中一次（hitEnemies，不跨幀重複）
 - [x] cascade noFalloff：每跳全額傷害（不套 0.75 衰減）
 - [x] phagocyte halfAngle：環掃用進化半角
 - [x] inflammation fieldRegen：場域存在時每格回 `fieldRegen*dt` 血（夾 maxHp）

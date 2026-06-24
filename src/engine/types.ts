@@ -60,6 +60,8 @@ export interface Entity {
   projShape?: 'antibody' | 'perforin' | 'toxin'
   /** 投射物剩餘穿透敵數（進化穿孔素用）；命中後 >0 則續飛、否則失效。其他忽略。 */
   pierce?: number
+  /** 此穿透投射物已命中過的敵人（避免同一敵人跨幀重複命中／消耗 pierce）。 */
+  hitEnemies?: Entity[]
   /** 是否為進化武器產生的投射物（純視覺：drawProjectile 進化上色）。 */
   evolved?: boolean
 }

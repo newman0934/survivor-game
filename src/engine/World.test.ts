@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { World } from './World'
 import { xpForLevel } from './systems/leveling'
-import { createEnemyProjectile } from './entities/factory'
+import { createEnemyProjectile, createProjectile } from './entities/factory'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 
 describe('World', () => {
@@ -443,6 +443,20 @@ describe('武器進化效果', () => {
     // 兩隻均被擊殺（active=false；step 結尾已清陣列，故用保留的 reference 驗證）
     expect(e1.active).toBe(false) // 第一隻被穿透命中後死亡
     expect(e2.active).toBe(false) // 第二隻被穿透後續命中死亡
+  })
+
+  it('穿透子彈對同一敵人只命中一次（嚴格穿透不同敵人）', () => {
+    const w = new World(1)
+    w.weapons = [] // 清空預設武器，隔離只測手動穿透子彈
+    const tank = w.spawnEnemyAt({ x: 30, y: 0 }, 'virus')
+    tank.hp = 1000; tank.maxHp = 1000 // 血厚到一發不死
+    // 手動放一顆慢速穿透子彈（60px/s ≈ 1px/格），會與 tank 重疊多幀
+    const p = createProjectile({ x: 0, y: 0 }, { x: 1, y: 0 }, 60, 8, 'perforin')
+    p.pierce = 3
+    p.hitEnemies = []
+    w.projectiles.push(p)
+    for (let i = 0; i < 60; i++) w.step(1 / 60)
+    expect(1000 - tank.hp).toBe(8) // 多幀重疊但只扣一次傷（非每幀重複）
   })
 
   it('進化補體級聯每跳全額傷害（noFalloff）', () => {
