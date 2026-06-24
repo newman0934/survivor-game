@@ -56,7 +56,7 @@ export interface Entity {
   enemyKind?: EnemyKind
   /** charger 行為相位時鐘（秒）；其他敵種忽略。 */
   behaviorTimer?: number
-  /** projectile 造型來源（抗體＝Y 形；穿孔素＝尖刺；病毒＝綠毒液）；其他種類忽略。 */
+  /** projectile 造型來源（抗體＝Y 形；穿孔素＝尖刺；噴吐病原毒液＝綠毒球）；其他種類忽略。 */
   projShape?: 'antibody' | 'perforin' | 'toxin'
 }
 
