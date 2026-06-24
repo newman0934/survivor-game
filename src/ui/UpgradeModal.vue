@@ -20,9 +20,10 @@ type PassiveItem = LoadoutSnapshot['passives'][number]
 /** 目前持有的被動種類（供進化判定）。 */
 const ownedPassiveKinds = computed(() => store.loadout.passives.map((p) => p.kind))
 
-/** 武器顯示名（已進化顯示進化名）。 */
+/** 武器顯示名（已進化顯示進化名；無進化定義則退回原名）。 */
 function weaponName(w: WeaponItem): string {
-  return w.evolved ? WEAPON_DEFS[w.kind].evolution!.label : WEAPON_DEFS[w.kind].label
+  const def = WEAPON_DEFS[w.kind]
+  return w.evolved ? (def.evolution?.label ?? def.label) : def.label
 }
 /** 武器等級顯示（滿級 MAX）。 */
 function weaponLevel(w: WeaponItem): string {
@@ -33,8 +34,9 @@ function weaponHint(w: WeaponItem): { text: string; cls: string } {
   const s = evolutionStatus(w, ownedPassiveKinds.value)
   if (s === 'evolved') return { text: '★ 已進化', cls: 'evolved' }
   if (s === 'ready') return { text: '可進化！', cls: 'ready' }
-  const req = WEAPON_DEFS[w.kind].evolution!.requires
-  return { text: '進化需：滿級＋' + PASSIVE_DEFS[req].label, cls: 'pending' }
+  const evo = WEAPON_DEFS[w.kind].evolution
+  if (!evo) return { text: '', cls: 'pending' } // 無進化定義（防禦；現況 7 把皆有）
+  return { text: '進化需：滿級＋' + PASSIVE_DEFS[evo.requires].label, cls: 'pending' }
 }
 /** 被動顯示名與等級。 */
 function passiveName(p: PassiveItem): string {
