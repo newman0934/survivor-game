@@ -48,6 +48,7 @@ const lastRun = ref<{ bestTime: number; isNewBestTime: boolean; isNewBestKills: 
 // 開始一場新遊戲：先把 store 重置為 playing，再非同步啟動引擎並掛上畫布。
 async function startGame(opts: { character: CharacterKind; map: MapKind } = selected) {
   selected = opts
+  showLeaderboard.value = false // 開賽前收起排行榜，避免日後回主選單時殘留自動重開
   store.start()
   if (!canvasParent.value) return
   game = await Game.start(canvasParent.value, seed++, opts.character, opts.map)
