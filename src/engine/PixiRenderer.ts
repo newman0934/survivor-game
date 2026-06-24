@@ -167,7 +167,7 @@ export class PixiRenderer {
       if (s.lastSeen !== this.frameId) {
         if (e.kind === 'enemy') {
           const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
-          this.effects.spawnKill(e.pos.x, e.pos.y, color)
+          this.effects.spawnKill(e.pos.x, e.pos.y, color, e.enemyKind)
         } else if (e.kind === 'gem') {
           this.effects.spawnPickup(e.pos.x, e.pos.y)
         }
@@ -299,8 +299,13 @@ export class PixiRenderer {
     const prev = this.lastHp.get(e)
     if (prev !== undefined && e.hp < prev) {
       s.flash.alpha = 0.8
-      if (e.kind === 'enemy') this.effects.spawnDamage(e.pos.x, e.pos.y, prev - e.hp)
-      else if (e.kind === 'player') this.effects.hurt(Math.min(1, (prev - e.hp) / 15))
+      if (e.kind === 'enemy') {
+        this.effects.spawnDamage(e.pos.x, e.pos.y, prev - e.hp)
+        const col = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
+        this.effects.spawnHit(e.pos.x, e.pos.y, col)
+      } else if (e.kind === 'player') {
+        this.effects.hurt(Math.min(1, (prev - e.hp) / 15))
+      }
     } else {
       s.flash.alpha = Math.max(0, s.flash.alpha - 0.16)
     }

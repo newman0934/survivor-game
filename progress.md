@@ -46,6 +46,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 噪聲紋理視差背景：程序噪聲(fBm) + 2 視差 TilingSprite 取代向量調性底（保留特徵/粒子），連續有機組織質感 → specs/noise-background/
 - [x] 隊伍造型材質+發光（B1）：共用 rim/內陰影/高光/膜/發光核 helper 套全隊伍（角色細胞核冷光、病原毒核發光、接 bloom）→ specs/cast-material-polish/
 - [x] 隊伍動態生命感（B2）：待機呼吸/搖擺/擠壓/抖動微動畫（純 transform、相位錯開，各病原性格）→ specs/cast-idle-animation/
+- [x] 打擊反饋強化（B3）：命中火花+主題色體液濺紅 + 逐病原差異化死亡特效（細菌濺射/病毒碎片/孢子爆孢/自爆大爆/超級加大）→ specs/hit-feedback/
 - [x] 進度存檔（localStorage）— 戰績紀錄 + 累積統計 + 破紀錄/統計 UI；結算可「回主選單」重選 → specs/save-progress/
 - [x] 計分 / 排行榜 — 排行榜彈窗（前 10 場依存活時間），重用既有 runs → specs/leaderboard/
 - [ ] 解鎖 — 用 `CumulativeStats` 鎖/解角色與地圖（尚未開始）

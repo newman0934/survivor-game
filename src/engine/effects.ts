@@ -3,6 +3,7 @@
  * 擊殺粒子/環波、收集閃光、升級光環、傷害數字、受傷紅暈、鏡頭震動。純呈現、不碰模擬、走固定 dt。
  */
 import { Container, Graphics, Text } from 'pixi.js'
+import type { EnemyKind } from './types'
 
 const DT = 1 / 60
 const TAU = Math.PI * 2
@@ -64,21 +65,46 @@ export class EffectsLayer {
     this.drawVignette()
   }
 
-  /** 擊殺：環形衝擊波 + 敵色碎屑粒子（達粒子上限時只出環波）。 */
-  spawnKill(x: number, y: number, color: number): void {
-    this.addExpand(x, y, color, 6, 40, 3, 0.35)
-    for (let i = 0; i < 9; i++) {
-      if (this.particles.length >= MAX_PARTICLES) break
-      const ang = Math.random() * TAU
-      const spd = 60 + Math.random() * 130
-      const pr = 1.5 + Math.random() * 2
-      const g = new Graphics()
-      g.circle(0, 0, pr).fill(color)
-      g.position.set(x, y)
-      this.worldFx.addChild(g)
-      this.particles.push({
-        g, vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, gravity: 200, life: 0.4, maxLife: 0.4,
-      })
+  /** 擊殺：環波 + 依病原種類差異化死亡碎屑/濺射（達粒子上限時自動略過）。 */
+  spawnKill(x: number, y: number, color: number, kind?: EnemyKind): void {
+    const big = kind === 'superbug' || kind === 'exploder'
+    this.addExpand(x, y, color, big ? 10 : 6, big ? 72 : 40, big ? 4 : 3, big ? 0.45 : 0.35)
+    switch (kind) {
+      case 'bacteria': // 體液大濺射
+        for (let i = 0; i < 12; i++) {
+          const a = Math.random() * TAU, spd = 50 + Math.random() * 120
+          this.addDot(x, y, Math.cos(a) * spd, Math.sin(a) * spd, 140, 0.42, color, 1.5 + Math.random() * 2.2)
+        }
+        break
+      case 'virus': // 外殼碎裂（碎片）
+        for (let i = 0; i < 8; i++) {
+          const a = Math.random() * TAU, spd = 70 + Math.random() * 150
+          this.addShard(x, y, Math.cos(a) * spd, Math.sin(a) * spd, 160, 0.45, color, 2.5 + Math.random() * 2)
+        }
+        break
+      case 'spore': // 爆孢（一圈放射小點）
+        for (let i = 0; i < 14; i++) {
+          const a = (i / 14) * TAU
+          this.addDot(x, y, Math.cos(a) * 95, Math.sin(a) * 95, 40, 0.5, color, 1.6)
+        }
+        break
+      case 'exploder': // 大爆裂碎屑（死亡另觸發 nova fx）
+        for (let i = 0; i < 16; i++) {
+          const a = Math.random() * TAU, spd = 100 + Math.random() * 190
+          this.addShard(x, y, Math.cos(a) * spd, Math.sin(a) * spd, 120, 0.5, color, 2 + Math.random() * 2.5)
+        }
+        break
+      case 'superbug': // 加大版
+        for (let i = 0; i < 18; i++) {
+          const a = Math.random() * TAU, spd = 80 + Math.random() * 170
+          this.addDot(x, y, Math.cos(a) * spd, Math.sin(a) * spd, 160, 0.5, color, 2 + Math.random() * 2.5)
+        }
+        break
+      default: // 螺旋/噴吐/分裂/其餘：既有基礎爆裂
+        for (let i = 0; i < 9; i++) {
+          const a = Math.random() * TAU, spd = 60 + Math.random() * 130
+          this.addDot(x, y, Math.cos(a) * spd, Math.sin(a) * spd, 200, 0.4, color, 1.5 + Math.random() * 2)
+        }
     }
   }
 
@@ -114,6 +140,18 @@ export class EffectsLayer {
     t.position.set(x, y - 12)
     this.worldFx.addChild(t)
     this.texts.push({ t, vy: -42, life: 0.5, maxLife: 0.5 })
+  }
+
+  /** 命中：撞擊點噴亮火花（快、短壽）+ 主題色體液滴（輕重力）。 */
+  spawnHit(x: number, y: number, color: number): void {
+    for (let i = 0; i < 3; i++) {
+      const a = Math.random() * TAU, spd = 90 + Math.random() * 140
+      this.addDot(x, y, Math.cos(a) * spd, Math.sin(a) * spd, 40, 0.18, i === 0 ? 0xffffff : 0xfff3c4, 1 + Math.random() * 1.4)
+    }
+    for (let i = 0; i < 2; i++) {
+      const a = Math.random() * TAU, spd = 50 + Math.random() * 80
+      this.addDot(x, y, Math.cos(a) * spd, Math.sin(a) * spd, 180, 0.3, color, 1.4 + Math.random() * 1.6)
+    }
   }
 
   /** 吞噬偽足：分層新月刀光（柔光扇 + 亮白前緣弧）+ 沿弧噴濺碎屑。 */
@@ -270,6 +308,31 @@ export class EffectsLayer {
     this.expands = []
     this.texts = []
     this.flashes = []
+  }
+
+  /** 內部：新增一顆圓點粒子（走既有粒子系統；達上限略過）。 */
+  private addDot(
+    x: number, y: number, vx: number, vy: number, gravity: number, life: number, color: number, r: number,
+  ): void {
+    if (this.particles.length >= MAX_PARTICLES) return
+    const g = new Graphics()
+    g.circle(0, 0, r).fill(color)
+    g.position.set(x, y)
+    this.worldFx.addChild(g)
+    this.particles.push({ g, vx, vy, gravity, life, maxLife: life })
+  }
+
+  /** 內部：新增一片小三角碎片粒子（隨機初始旋轉）。 */
+  private addShard(
+    x: number, y: number, vx: number, vy: number, gravity: number, life: number, color: number, size: number,
+  ): void {
+    if (this.particles.length >= MAX_PARTICLES) return
+    const g = new Graphics()
+    g.poly([0, -size, size * 0.8, size * 0.6, -size * 0.8, size * 0.6]).fill(color)
+    g.rotation = Math.random() * TAU
+    g.position.set(x, y)
+    this.worldFx.addChild(g)
+    this.particles.push({ g, vx, vy, gravity, life, maxLife: life })
   }
 
   /** 內部：新增一個擴張環特效。 */
