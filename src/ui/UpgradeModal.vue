@@ -11,6 +11,8 @@ import { useGameStore, type LoadoutSnapshot } from '../stores/game'
 import { WEAPON_DEFS } from '../engine/systems/weaponDefs'
 import { PASSIVE_DEFS } from '../engine/systems/passiveDefs'
 import { evolutionStatus } from '../engine/systems/loadout'
+import Overlay from './Overlay.vue'
+import Panel from './Panel.vue'
 
 const store = useGameStore()
 
@@ -48,39 +50,40 @@ function passiveLevel(p: PassiveItem): string {
 </script>
 
 <template>
-  <div class="overlay">
-    <h2 class="title">選擇升級</h2>
-    <div class="loadout" v-if="store.loadout.weapons.length || store.loadout.passives.length">
-      <div class="ld-col" v-if="store.loadout.weapons.length">
-        <div class="ld-title">武器</div>
-        <div v-for="w in store.loadout.weapons" :key="w.kind" class="ld-item">
-          <span class="ld-name">{{ weaponName(w) }} {{ weaponLevel(w) }}</span>
-          <span class="ld-hint" :class="weaponHint(w).cls">{{ weaponHint(w).text }}</span>
+  <Overlay>
+    <Panel class="upgrade-panel">
+      <h2 class="title">選擇升級</h2>
+      <div class="loadout" v-if="store.loadout.weapons.length || store.loadout.passives.length">
+        <div class="ld-col" v-if="store.loadout.weapons.length">
+          <div class="ld-title">武器</div>
+          <div v-for="w in store.loadout.weapons" :key="w.kind" class="ld-item">
+            <span class="ld-name">{{ weaponName(w) }} {{ weaponLevel(w) }}</span>
+            <span class="ld-hint" :class="weaponHint(w).cls">{{ weaponHint(w).text }}</span>
+          </div>
+        </div>
+        <div class="ld-col" v-if="store.loadout.passives.length">
+          <div class="ld-title">被動</div>
+          <div v-for="p in store.loadout.passives" :key="p.kind" class="ld-item">
+            <span class="ld-name">{{ passiveName(p) }} {{ passiveLevel(p) }}</span>
+          </div>
         </div>
       </div>
-      <div class="ld-col" v-if="store.loadout.passives.length">
-        <div class="ld-title">被動</div>
-        <div v-for="p in store.loadout.passives" :key="p.kind" class="ld-item">
-          <span class="ld-name">{{ passiveName(p) }} {{ passiveLevel(p) }}</span>
-        </div>
+      <div class="cards">
+        <!-- 逐一渲染引擎提供的升級選項；點擊送出該升級 id 並恢復遊戲 -->
+        <button v-for="(opt, i) in store.upgradeOptions" :key="opt.id" class="card"
+          :class="{ evolve: opt.id.startsWith('evolve:') }"
+          :style="{ animationDelay: 0.06 * i + 's' }"
+          @click="store.pickUpgrade(opt.id)">
+          {{ opt.label }}
+        </button>
       </div>
-    </div>
-    <div class="cards">
-      <!-- 逐一渲染引擎提供的升級選項；點擊送出該升級 id 並恢復遊戲 -->
-      <button v-for="(opt, i) in store.upgradeOptions" :key="opt.id" class="card"
-        :class="{ evolve: opt.id.startsWith('evolve:') }"
-        :style="{ animationDelay: 0.06 * i + 's' }"
-        @click="store.pickUpgrade(opt.id)">
-        {{ opt.label }}
-      </button>
-    </div>
-  </div>
+    </Panel>
+  </Overlay>
 </template>
 
 <style scoped>
-.overlay { position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 1.5rem;
-  background: rgba(18, 10, 14, 0.8); color: #fff; font-family: sans-serif; }
+.upgrade-panel { gap: 1.5rem; }
+.title { font-family: var(--font-display); font-size: var(--fs-h2); }
 .cards { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; max-width: 92vw; }
 .card { width: 160px; height: 120px; font-size: 1.2rem; cursor: pointer; padding: 0.4rem;
   border: 2px solid var(--immune-accent); border-radius: 12px; background: var(--card-bg); color: #fff; }

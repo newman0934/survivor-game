@@ -1,0 +1,73 @@
+/* UI 精修地基：設計 token、展示字體套用與共用按鈕類別（全域；由 main.ts 匯入）。
+   既有主題色（--immune-accent 等）定義於 App.vue :root，此處只新增、不重定義。 */
+
+:root {
+  /* 字體 */
+  --font-display: 'Chakra Petch', 'Noto Sans TC', system-ui, sans-serif;
+  --font-body: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+
+  /* 免疫膜質面板 */
+  --panel-surface: rgba(20, 14, 18, 0.72);
+  --panel-surface-solid: rgba(20, 14, 18, 0.96); /* backdrop-filter 不支援時退回 */
+  --panel-border: rgba(111, 227, 214, 0.35);     /* immune-accent 低透明 */
+  --panel-blur: 14px;
+  --panel-radius: 16px;
+  --panel-glow: 0 0 40px rgba(77, 208, 192, 0.12);
+  --panel-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+
+  /* 遮罩暈染 */
+  --overlay-bg: radial-gradient(ellipse at center, rgba(18, 10, 14, 0.55) 0%, rgba(10, 6, 9, 0.88) 100%);
+  --overlay-blur: 6px;
+
+  /* 間距級距 */
+  --space-1: 0.4rem;
+  --space-2: 0.8rem;
+  --space-3: 1.2rem;
+  --space-4: 1.8rem;
+
+  /* 字級階層 */
+  --fs-title: 3rem;
+  --fs-h2: 1.6rem;
+  --fs-body: 1rem;
+  --fs-sm: 0.85rem;
+
+  /* 過渡 */
+  --ui-fast: 0.12s ease-out;
+  --ui-med: 0.22s ease-out;
+}
+
+/* 全域內文字體：中文走系統字體棧（拉丁展示字體由各處用 --font-display 局部套用） */
+body { font-family: var(--font-body); }
+
+/* 共用按鈕 */
+.ui-btn {
+  font-family: var(--font-display);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  border-radius: 10px;
+  transition: transform var(--ui-fast), box-shadow var(--ui-med), background var(--ui-med), border-color var(--ui-med);
+}
+.ui-btn:focus-visible { outline: 2px solid var(--immune-accent-strong); outline-offset: 2px; }
+.ui-btn:active { transform: scale(0.96); }
+
+.ui-btn-primary { background: var(--immune-accent); color: #06231f; }
+.ui-btn-primary:hover {
+  background: var(--immune-accent-strong);
+  box-shadow: 0 0 18px rgba(77, 208, 192, 0.6);
+  transform: translateY(-1px);
+}
+
+.ui-btn-ghost { background: transparent; color: #fff; border: 2px solid var(--immune-accent); }
+.ui-btn-ghost:hover {
+  background: rgba(77, 208, 192, 0.14);
+  border-color: var(--immune-accent-strong);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn, .ui-btn:hover, .ui-btn:active { transform: none; }
+}
+@media (max-width: 600px) {
+  :root { --panel-blur: 8px; --overlay-blur: 3px; }
+}

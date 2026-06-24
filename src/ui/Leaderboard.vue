@@ -8,6 +8,8 @@ import type { RunRecord } from '../persistence/saveStore'
 import { CHARACTER_DEFS } from '../engine/systems/characterDefs'
 import { MAP_DEFS } from '../engine/systems/mapDefs'
 import type { CharacterKind, MapKind } from '../engine/types'
+import Overlay from './Overlay.vue'
+import Panel from './Panel.vue'
 
 defineProps<{ runs: RunRecord[] }>()
 const emit = defineEmits<{ close: [] }>()
@@ -42,8 +44,8 @@ function mapName(kind: MapKind): string {
 </script>
 
 <template>
-  <div class="overlay">
-    <div class="panel">
+  <Overlay>
+    <Panel class="lb-panel">
       <h1>排行榜</h1>
       <p v-if="runs.length === 0" class="empty">尚無紀錄，快去存活看看！</p>
       <div v-else class="table-wrap">
@@ -64,18 +66,16 @@ function mapName(kind: MapKind): string {
           </tbody>
         </table>
       </div>
-      <button @click="emit('close')">關閉</button>
-    </div>
-  </div>
+      <button class="ui-btn ui-btn-primary" @click="emit('close')">關閉</button>
+    </Panel>
+  </Overlay>
 </template>
 
 <style scoped>
-.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(18, 10, 14, 0.9); color: #fff; font-family: sans-serif; padding: 1rem; }
-.panel { display: flex; flex-direction: column; align-items: center; gap: 1rem; max-width: 92vw;
-  animation: lbpop 0.3s ease-out both; }
+.lb-panel { gap: 1rem; animation: lbpop 0.3s ease-out both; }
 @keyframes lbpop { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: none; } }
-h1 { margin: 0; letter-spacing: 0.08em; }
+@media (prefers-reduced-motion: reduce) { .lb-panel { animation: none; } }
+h1 { font-family: var(--font-display); margin: 0; letter-spacing: 0.08em; }
 .empty { opacity: 0.8; }
 .table-wrap { max-width: 92vw; overflow-x: auto; }
 .board { border-collapse: collapse; font-size: 0.95rem; }
@@ -84,9 +84,7 @@ h1 { margin: 0; letter-spacing: 0.08em; }
 .board tbody tr:nth-child(odd) { background: rgba(255, 255, 255, 0.05); }
 .board .rank { color: var(--immune-accent-strong); font-weight: bold; }
 .board .date { opacity: 0.75; }
-button { font-size: 1.2rem; padding: 0.5rem 1.6rem; cursor: pointer; border: none;
-  border-radius: 8px; background: var(--immune-accent); color: #06231f; font-weight: bold; }
-@media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
+.lb-panel > .ui-btn { font-size: 1.2rem; padding: 0.5rem 1.6rem; }
 @media (max-width: 600px) {
   .board { font-size: 0.82rem; }
   .board th, .board td { padding: 0.3rem 0.45rem; }

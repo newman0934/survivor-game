@@ -8,6 +8,8 @@ import { CHARACTER_ORDER, CHARACTER_DEFS } from '../engine/systems/characterDefs
 import { MAP_ORDER, MAP_DEFS } from '../engine/systems/mapDefs'
 import type { CharacterKind, MapKind } from '../engine/types'
 import type { CumulativeStats } from '../persistence/saveStore'
+import Overlay from './Overlay.vue'
+import Panel from './Panel.vue'
 
 defineProps<{
   /** 跨場累積統計（由 App.vue loadSave 後傳入）。 */
@@ -36,59 +38,57 @@ function fmtBest(sec: number): string {
 </script>
 
 <template>
-  <div class="overlay">
-    <h1>Survivor</h1>
+  <Overlay>
+    <Panel class="menu-panel">
+      <h1>Survivor</h1>
 
-    <div class="stats" v-if="stats.totalRuns > 0">
-      <span>總擊殺 <b>{{ stats.totalKills }}</b></span>
-      <span>場數 <b>{{ stats.totalRuns }}</b></span>
-      <span>最佳存活 <b>{{ fmtBest(stats.bestTime) }}</b></span>
-      <span>最高等級 <b>{{ stats.maxLevel }}</b></span>
-    </div>
+      <div class="stats" v-if="stats.totalRuns > 0">
+        <span>總擊殺 <b>{{ stats.totalKills }}</b></span>
+        <span>場數 <b>{{ stats.totalRuns }}</b></span>
+        <span>最佳存活 <b>{{ fmtBest(stats.bestTime) }}</b></span>
+        <span>最高等級 <b>{{ stats.maxLevel }}</b></span>
+      </div>
 
-    <div class="section-label">角色</div>
-    <div class="row">
-      <button
-        v-for="kind in CHARACTER_ORDER"
-        :key="kind"
-        class="card"
-        :class="{ active: character === kind }"
-        :style="character === kind ? { borderColor: css(CHARACTER_DEFS[kind].color) } : {}"
-        @click="character = kind"
-      >
-        <span class="name" :style="{ color: css(CHARACTER_DEFS[kind].color) }">{{ CHARACTER_DEFS[kind].name }}</span>
-        <span class="desc">{{ CHARACTER_DEFS[kind].description }}</span>
-      </button>
-    </div>
+      <div class="section-label">角色</div>
+      <div class="row">
+        <button
+          v-for="kind in CHARACTER_ORDER"
+          :key="kind"
+          class="card"
+          :class="{ active: character === kind }"
+          :style="character === kind ? { borderColor: css(CHARACTER_DEFS[kind].color) } : {}"
+          @click="character = kind"
+        >
+          <span class="name" :style="{ color: css(CHARACTER_DEFS[kind].color) }">{{ CHARACTER_DEFS[kind].name }}</span>
+          <span class="desc">{{ CHARACTER_DEFS[kind].description }}</span>
+        </button>
+      </div>
 
-    <div class="section-label">地圖</div>
-    <div class="row">
-      <button
-        v-for="kind in MAP_ORDER"
-        :key="kind"
-        class="card"
-        :class="{ active: map === kind }"
-        :style="map === kind ? { borderColor: css(MAP_DEFS[kind].gridColor) } : {}"
-        @click="map = kind"
-      >
-        <span class="name" :style="{ color: css(MAP_DEFS[kind].gridColor) }">{{ MAP_DEFS[kind].name }}</span>
-        <span class="desc">{{ MAP_DEFS[kind].description }}</span>
-      </button>
-    </div>
+      <div class="section-label">地圖</div>
+      <div class="row">
+        <button
+          v-for="kind in MAP_ORDER"
+          :key="kind"
+          class="card"
+          :class="{ active: map === kind }"
+          :style="map === kind ? { borderColor: css(MAP_DEFS[kind].gridColor) } : {}"
+          @click="map = kind"
+        >
+          <span class="name" :style="{ color: css(MAP_DEFS[kind].gridColor) }">{{ MAP_DEFS[kind].name }}</span>
+          <span class="desc">{{ MAP_DEFS[kind].description }}</span>
+        </button>
+      </div>
 
-    <button class="start" @click="emit('start', { character, map })">開始遊戲</button>
-    <button class="ranking" @click="emit('open-leaderboard')">排行榜</button>
-    <p class="hint">WASD / 方向鍵移動 · 自動攻擊</p>
-  </div>
+      <button class="ui-btn ui-btn-primary start" @click="emit('start', { character, map })">開始遊戲</button>
+      <button class="ui-btn ui-btn-ghost ranking" @click="emit('open-leaderboard')">排行榜</button>
+      <p class="hint">WASD / 方向鍵移動 · 自動攻擊</p>
+    </Panel>
+  </Overlay>
 </template>
 
 <style scoped>
-.overlay {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 0.6rem;
-  color: #fff; font-family: sans-serif; background: rgba(18, 10, 14, 0.85); overflow: auto;
-}
-h1 { font-size: 3rem; margin: 0 0 0.5rem; letter-spacing: 0.1em; }
+.menu-panel { gap: 0.6rem; }
+h1 { font-family: var(--font-display); font-size: var(--fs-title); margin: 0 0 0.5rem; letter-spacing: 0.1em; }
 .section-label { font-size: 0.9rem; opacity: 0.7; letter-spacing: 0.2em; margin-top: 0.4rem; }
 .row { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center; max-width: 90vw; }
 .card {
@@ -99,13 +99,8 @@ h1 { font-size: 3rem; margin: 0 0 0.5rem; letter-spacing: 0.1em; }
 .card.active { background: rgba(255, 255, 255, 0.14); }
 .name { font-size: 1.1rem; font-weight: bold; }
 .desc { font-size: 0.8rem; opacity: 0.8; }
-.start {
-  font-size: 1.4rem; padding: 0.6rem 2rem; margin-top: 0.6rem; cursor: pointer; border: none;
-  border-radius: 8px; background: var(--immune-accent); color: #06231f; font-weight: bold;
-}
-.ranking { font-size: 1.05rem; padding: 0.4rem 1.4rem; cursor: pointer;
-  border: 2px solid var(--immune-accent); border-radius: 8px;
-  background: transparent; color: #fff; font-weight: bold; }
+.start { font-size: 1.4rem; padding: 0.6rem 2rem; margin-top: 0.6rem; }
+.ranking { font-size: 1.05rem; padding: 0.4rem 1.4rem; }
 .hint { opacity: 0.7; }
 
 @media (max-width: 600px) {
