@@ -291,10 +291,13 @@ export function drawGem(g: Graphics, e: Entity): void {
 export function drawProjectile(g: Graphics, e: Entity): void {
   const r = e.radius
   if (e.projShape === 'toxin') {
-    // 敵方毒液彈：毒綠小球 + 淡綠暈
-    g.circle(0, 0, r * 1.8).fill({ color: 0xc0ca33, alpha: 0.22 })
-    g.circle(0, 0, r).fill(0xd4e157)
-    g.circle(0, 0, r * 0.5).fill(0xf0f4c3)
+    // 敵方毒液彈：放大 + 暗綠描邊（高對比）+ 亮毒核 + 毒滴，明顯易辨
+    g.circle(0, 0, r * 2.6).fill({ color: 0x7cb342, alpha: 0.28 }) // 外毒暈
+    g.circle(0, 0, r * 1.5).fill(0xaeea00)                          // 主體（亮毒黃綠）
+    g.circle(0, 0, r * 1.5).stroke({ width: 2, color: 0x33691e })   // 暗綠描邊（對比）
+    g.circle(0, 0, r * 0.7).fill(0xf0f4c3)                          // 亮核
+    g.circle(r * 0.95, -r * 0.45, r * 0.4).fill(0xaeea00)           // 毒滴點綴
+    g.circle(r * 0.95, -r * 0.45, r * 0.4).stroke({ width: 1.2, color: 0x33691e })
     return
   }
   if (e.projShape === 'perforin') {
