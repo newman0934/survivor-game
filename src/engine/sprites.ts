@@ -40,11 +40,6 @@ export function bgHash(gx: number, gy: number): number {
   return (h % 100000) / 100000
 }
 
-/** 落地陰影：壓扁的半透明深色橢圓，墊在造型最底，讓單位「站」在地上。 */
-function groundShadow(g: Graphics, rad: number): void {
-  g.ellipse(0, rad * 0.85, rad * 0.9, rad * 0.4).fill({ color: 0x000000, alpha: 0.25 })
-}
-
 /** 立體圓身：暗部底（略下偏）+ 主色 + 描邊 + 左上高光。 */
 function shaded(g: Graphics, cx: number, cy: number, rad: number, color: number): void {
   g.circle(cx, cy + rad * 0.12, rad).fill(dim(color, 0.55))
@@ -53,13 +48,45 @@ function shaded(g: Graphics, cx: number, cy: number, rad: number, color: number)
   g.circle(cx - rad * 0.32, cy - rad * 0.34, rad * 0.42).fill({ color: lighten(color, 0.5), alpha: 0.6 })
 }
 
+/** 固定光源方向（左上，單位向量）；高光朝光源、陰影背光源。供材質 helper 共用。 */
+const LIGHT = { x: -0.5, y: -0.6 }
+/** 免疫細胞核冷光色（青）。 */
+const CELL_CORE = 0x9be8ff
+
+/** 膜透光：外圈一層極淡同色暈（半透明膜感）。 */
+function membrane(g: Graphics, r: number, color: number): void {
+  g.circle(0, 0, r * 1.18).fill({ color: lighten(color, 0.25), alpha: 0.08 })
+}
+
+/** 形體陰影：背光側（右下）柔暗，增立體。 */
+function innerShade(g: Graphics, r: number, color: number): void {
+  g.circle(-LIGHT.x * r * 0.42, -LIGHT.y * r * 0.42, r * 0.92).fill({ color: dim(color, 0.25), alpha: 0.26 })
+}
+
+/** 邊光：受光側（左上）緣一道柔和邊緣光（克制、往內收、用本色避免被 bloom 暈成發亮鉤）。 */
+function rimLight(g: Graphics, r: number, color: number): void {
+  const a = Math.atan2(LIGHT.y, LIGHT.x)
+  g.arc(0, 0, r * 0.9, a - 0.8, a + 0.8).stroke({ width: r * 0.09, color: lighten(color, 0.35), alpha: 0.3 })
+}
+
+/** 高光點：受光側小亮斑（濕潤反光）。 */
+function specular(g: Graphics, r: number): void {
+  g.circle(LIGHT.x * r * 0.45, LIGHT.y * r * 0.45, r * 0.18).fill({ color: 0xffffff, alpha: 0.5 })
+}
+
+/** 發光核：柔光暈 + 亮核 + 亮心（亮到被 bloom 暈染）。 */
+function emissiveCore(g: Graphics, x: number, y: number, r: number, color: number): void {
+  g.circle(x, y, r * 1.9).fill({ color, alpha: 0.22 })
+  g.circle(x, y, r).fill(lighten(color, 0.35))
+  g.circle(x, y, r * 0.5).fill(lighten(color, 0.75))
+}
+
 /**
  * 玩家：四種免疫細胞各有獨特輪廓（依玩法定位 + 生物特徵），顏色為角色色。
  * 由 renderer 依 lastMoveDir 旋轉朝 +x。
  */
 export function drawPlayer(g: Graphics, e: Entity, color: number, character: CharacterKind): void {
   const r = e.radius
-  groundShadow(g, r)
   const stroke = dim(color, 0.5)
   switch (character) {
     case 'neutrophil': {
@@ -76,6 +103,11 @@ export function drawPlayer(g: Graphics, e: Entity, color: number, character: Cha
       for (const [px, py] of [[-r * 0.42, r * 0.28], [r * 0.3, r * 0.34], [-r * 0.46, -r * 0.22]] as const) {
         g.circle(px, py, r * 0.08).fill({ color: lighten(color, 0.6), alpha: 0.75 })
       }
+      innerShade(g, r * 0.9, color)
+      rimLight(g, r * 0.9, color)
+      specular(g, r * 0.9)
+      emissiveCore(g, 0, 0, r * 0.2, CELL_CORE)
+      membrane(g, r * 0.9, color)
       break
     }
     case 'nkcell': {
@@ -87,6 +119,11 @@ export function drawPlayer(g: Graphics, e: Entity, color: number, character: Cha
       for (const [px, py] of [[r * 0.3, -r * 0.15], [r * 0.48, r * 0.08], [r * 0.26, r * 0.26], [r * 0.5, -r * 0.28]] as const) {
         g.circle(px, py, r * 0.12).fill({ color: lighten(color, 0.7), alpha: 0.85 })
       }
+      innerShade(g, r, color)
+      rimLight(g, r, color)
+      specular(g, r)
+      emissiveCore(g, -r * 0.25, r * 0.08, r * 0.26, CELL_CORE)
+      membrane(g, r, color)
       break
     }
     case 'dendritic': {
@@ -104,6 +141,11 @@ export function drawPlayer(g: Graphics, e: Entity, color: number, character: Cha
       g.circle(0, 0, r * 0.72).fill({ color, alpha: 0.88 })
       g.circle(0, 0, r * 0.72).stroke({ width: 2, color: stroke })
       g.circle(0, 0, r * 0.32).fill(dim(color, 0.4))
+      innerShade(g, r * 0.72, color)
+      rimLight(g, r * 0.72, color)
+      specular(g, r * 0.72)
+      emissiveCore(g, 0, 0, r * 0.22, CELL_CORE)
+      membrane(g, r * 0.72, color)
       break
     }
     default: {
@@ -117,6 +159,11 @@ export function drawPlayer(g: Graphics, e: Entity, color: number, character: Cha
       g.circle(-r * 0.3, -r * 0.3, r * 0.4).fill({ color: lighten(color, 0.5), alpha: 0.3 })
       g.circle(r * 0.08, 0, r * 0.46).fill(dim(color, 0.4))
       g.circle(r * 0.03, -r * 0.1, r * 0.15).fill({ color: lighten(color, 0.55), alpha: 0.7 })
+      innerShade(g, r * 1.04, color)
+      rimLight(g, r * 1.04, color)
+      specular(g, r * 1.04)
+      emissiveCore(g, r * 0.08, 0, r * 0.26, CELL_CORE)
+      membrane(g, r * 1.04, color)
     }
   }
 }
@@ -125,7 +172,6 @@ export function drawPlayer(g: Graphics, e: Entity, color: number, character: Cha
 export function drawEnemy(g: Graphics, e: Entity): void {
   const r = e.radius
   const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
-  groundShadow(g, r)
   switch (e.enemyKind) {
     case 'bacteria': {
       // 桿菌：膠囊身（兩圓覆蓋橢圓）+ 鞭毛尾曲線 + 細胞壁描邊 + 微高光
@@ -146,6 +192,8 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       g.stroke({ width: 1.2, color: dim(color, 0.45) })
       // 高光：左上亮斑
       g.circle(bw * 0.2, -r * 0.25, r * 0.22).fill({ color: lighten(color, 0.5), alpha: 0.55 })
+      specular(g, r)
+      membrane(g, r, color)
       break
     }
     case 'spore': {
@@ -161,6 +209,10 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       }
       // 高光：右上亮斑
       g.circle(-r * 0.28, -r * 0.3, r * 0.28).fill({ color: lighten(color, 0.45), alpha: 0.5 })
+      innerShade(g, r, color)
+      rimLight(g, r, color)
+      specular(g, r)
+      emissiveCore(g, 0, 0, r * 0.34, lighten(color, 0.1))
       break
     }
     case 'spiral': {
@@ -190,6 +242,7 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       // 前端頭部小圓（+x 一側）
       g.circle(len * 0.45, 0, r * 0.28).fill(lighten(color, 0.25))
       g.circle(len * 0.45, 0, r * 0.28).stroke({ width: 1.5, color: dim(color, 0.4) })
+      emissiveCore(g, len * 0.45, 0, r * 0.2, lighten(color, 0.2))
       break
     }
     case 'spitter': {
@@ -200,6 +253,10 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       for (const [px, py] of [[-r * 0.3, -r * 0.2], [r * 0.1, r * 0.3], [-r * 0.1, r * 0.05]] as const) {
         g.circle(px, py, r * 0.12).fill(dim(color, 0.35))
       }
+      innerShade(g, r, color)
+      rimLight(g, r, color)
+      specular(g, r)
+      emissiveCore(g, 0, 0, r * 0.3, lighten(color, 0.15))
       break
     }
     case 'splitter': {
@@ -209,6 +266,9 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       g.ellipse(0, 0, r * 0.18, r * 0.62).fill(dim(color, 0.4)) // 中央縊縮
       g.circle(-r * 0.45, -r * 0.15, r * 0.16).fill(lighten(color, 0.3))
       g.circle(r * 0.45, -r * 0.15, r * 0.16).fill(lighten(color, 0.3))
+      emissiveCore(g, -r * 0.45, 0, r * 0.2, lighten(color, 0.15))
+      emissiveCore(g, r * 0.45, 0, r * 0.2, lighten(color, 0.15))
+      membrane(g, r, color)
       break
     }
     case 'exploder': {
@@ -220,6 +280,10 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       shaded(g, 0, 0, r, color)
       g.circle(0, 0, r).stroke({ width: 2, color: lighten(color, 0.3) })
       g.circle(-r * 0.2, -r * 0.2, r * 0.22).fill({ color: lighten(color, 0.6), alpha: 0.7 })
+      innerShade(g, r, color)
+      rimLight(g, r, color)
+      emissiveCore(g, 0, 0, r * 0.42, lighten(color, 0.25)) // 蓄爆核（更大更亮）
+      membrane(g, r, color)
       break
     }
     case 'superbug': {
@@ -248,6 +312,9 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       g.circle(-r * 0.28, -r * 0.12, r * 0.17).stroke({ width: 1.5, color: 0xffffff })
       g.circle(r * 0.28, -r * 0.12, r * 0.17).fill(0xce93d8)
       g.circle(r * 0.28, -r * 0.12, r * 0.17).stroke({ width: 1.5, color: 0xffffff })
+      emissiveCore(g, -r * 0.28, -r * 0.12, r * 0.17, 0xe1a8ff)
+      emissiveCore(g, r * 0.28, -r * 0.12, r * 0.17, 0xe1a8ff)
+      membrane(g, r, color)
       break
     }
     default: {
@@ -267,6 +334,10 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       }
       // 衣殼核心（深色小圓）
       g.circle(0, 0, r * 0.45).fill(dim(color, 0.3))
+      innerShade(g, r, color)
+      rimLight(g, r, color)
+      specular(g, r)
+      emissiveCore(g, 0, 0, r * 0.3, lighten(color, 0.1))
     }
   }
 }
@@ -298,6 +369,7 @@ export function drawProjectile(g: Graphics, e: Entity): void {
     g.circle(0, 0, r * 0.7).fill(0xf0f4c3)                          // 亮核
     g.circle(r * 0.95, -r * 0.45, r * 0.4).fill(0xaeea00)           // 毒滴點綴
     g.circle(r * 0.95, -r * 0.45, r * 0.4).stroke({ width: 1.2, color: 0x33691e })
+    emissiveCore(g, 0, 0, r * 0.55, 0xd6ff6e)                       // 毒核發光（接 bloom）
     return
   }
   // 進化投射物：抗原黃光暈（畫在造型底層）
@@ -307,6 +379,7 @@ export function drawProjectile(g: Graphics, e: Entity): void {
     g.poly([-r * 2.6, 0, -r * 0.4, -r * 0.18, -r * 0.4, r * 0.18]).fill({ color: 0xffcc55, alpha: 0.5 })
     g.poly([r * 2.7, 0, -r * 0.3, -r * 0.42, -r * 0.95, 0, -r * 0.3, r * 0.42]).fill(0xffa000)
     g.poly([r * 2.7, 0, -r * 0.1, -r * 0.2, -r * 0.1, r * 0.2]).fill(0xfff3c4)
+    emissiveCore(g, r * 2.2, 0, r * 0.32, 0xffe08a)                 // 針尖發光（接 bloom）
   } else {
     // 抗體：青色 Y 形（雙叉朝 +x、叉端亮球）+ 冷光暈（緊湊、與尖針對比）
     g.circle(0, 0, r * 2.0).fill({ color: 0x4ad6ff, alpha: 0.22 })
@@ -317,6 +390,7 @@ export function drawProjectile(g: Graphics, e: Entity): void {
     g.circle(r * 1.2, -r * 1.05, r * 0.3).fill(0xeaffff)
     g.circle(r * 1.2, r * 1.05, r * 0.3).fill(0xeaffff)
     g.circle(0, 0, r * 0.42).fill(0x4ad6ff)
+    emissiveCore(g, 0, 0, r * 0.42, 0x8be9ff)                      // 核發光（接 bloom）
   }
 }
 
@@ -341,7 +415,6 @@ export function drawOrbit(g: Graphics, e: Entity): void {
 /** 寶箱 → 補給囊泡：半透明金膜 + 內部金色發光核 + 高光點。 */
 export function drawChest(g: Graphics, e: Entity): void {
   const r = e.radius
-  groundShadow(g, r)
   // 金色外暈（獎勵感）
   g.circle(0, 0, r * 1.25).fill({ color: 0xffd54a, alpha: 0.18 })
   // 半透明金膜囊泡
