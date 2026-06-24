@@ -439,12 +439,16 @@ function drawTerrain(
           }
           path(); g.stroke({ width: 3.2, color: 0x1a0900, alpha: 0.55 })
           path(); g.stroke({ width: 1.4, color: 0xc07838, alpha: 0.55 })
-        } else {
+        } else if (v < 0.8) {
           // 酸泡：外發光暈（暖橙）+ 亮核（脈動，沿用 clock）
           const a = 0.4 + 0.35 * Math.sin(clock * 3 + v * 6.28)
           g.circle(px, py, 6).fill({ color: 0xffb74d, alpha: a * 0.22 })
           g.circle(px, py, 3).fill({ color: 0xffb74d, alpha: a })
           g.circle(px, py, 1.4).fill({ color: 0xfff0c4, alpha: a })
+        } else {
+          // 胃小凹：暗點凹陷（暗圓 + 內更暗）
+          g.circle(px, py, 3.5).fill({ color: 0x2a1206, alpha: 0.5 })
+          g.circle(px, py, 1.6).fill({ color: 0x140702, alpha: 0.6 })
         }
       } else if (kind === 'lung') {
         if (v < 0.6) {
@@ -453,20 +457,34 @@ function drawTerrain(
           g.circle(px, py, rad).fill({ color: 0x4a9fbf, alpha: 0.12 })
           g.circle(px, py, rad).stroke({ width: 1.5, color: 0x8fcfe0, alpha: 0.35 })
           g.circle(px + rad * 0.22, py + rad * 0.22, rad * 0.6).fill({ color: 0x0a1a28, alpha: 0.1 })
-        } else {
+        } else if (v < 0.8) {
           // 氣孔小點
           g.circle(px, py, 2).fill({ color: 0x9fd4e8, alpha: 0.4 })
           g.circle(px, py, 1).fill({ color: 0xcdeaff, alpha: 0.55 })
+        } else {
+          // 微血管網：兩條交織淡紅細線
+          const a2 = bgHash(gx + 9, gy + 4) * Math.PI
+          g.moveTo(px - 8, py).lineTo(px + 8, py + Math.sin(a2) * 4)
+          g.moveTo(px, py - 8).lineTo(px + Math.cos(a2) * 4, py + 8)
+          g.stroke({ width: 0.8, color: 0xb05a5a, alpha: 0.22 })
         }
       } else {
         // vessel
-        if (v < 0.68) {
+        if (v < 0.55) {
           // 漂浮紅血球：雙色凹環橢圓（外紅環 + 暗中心凹）
           const rw = 9 + v * 5
           const rh = rw * 0.55
           g.ellipse(px, py, rw, rh).fill({ color: 0xc62828, alpha: 0.55 })
           g.ellipse(px, py, rw * 0.6, rh * 0.6).fill({ color: 0x7b1010, alpha: 0.6 })
           g.ellipse(px, py, rw, rh).stroke({ width: 1, color: 0xe57373, alpha: 0.35 })
+        } else if (v < 0.8) {
+          // 纖維蛋白絲：細淡網絲（兩段折線）
+          const a = bgHash(gx + 3, gy + 5) * Math.PI
+          const len = 10 + v * 8
+          const mx = px + Math.cos(a) * len, my = py + Math.sin(a) * len
+          g.moveTo(px, py).lineTo(mx, my)
+            .lineTo(mx + Math.cos(a + 1) * len * 0.6, my + Math.sin(a + 1) * len * 0.6)
+          g.stroke({ width: 1, color: 0xd98a8a, alpha: 0.28 })
         } else {
           // 血小板：不規則小點
           g.circle(px, py, 2.5).fill({ color: 0xef9a9a, alpha: 0.5 })
