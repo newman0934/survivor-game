@@ -2,7 +2,7 @@
 /**
  * GameOver.vue — 結束畫面 overlay（phase === 'over' 時顯示）。
  * 從 store 讀本場戰績；最佳存活與破紀錄旗標由 App.vue 以 props 傳入。
- * 按「再玩一次」向 App.vue 發出 restart 事件。
+ * 「再玩一次」發出 restart（同角色/地圖快速重開）；「回主選單」發出 menu（重選角色/地圖）。
  */
 import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
@@ -24,8 +24,8 @@ function fmt(sec: number): string {
 }
 const mmss = computed(() => fmt(store.time))
 const bestText = computed(() => (props.bestTime > 0 ? fmt(props.bestTime) : '—'))
-// 重新開始事件，無 payload；由 App.vue 監聽以重啟引擎。
-const emit = defineEmits<{ restart: [] }>()
+// restart：同角色/地圖快速重開；menu：回主選單重選。皆無 payload，由 App.vue 監聽。
+const emit = defineEmits<{ restart: []; menu: [] }>()
 </script>
 
 <template>
@@ -37,7 +37,10 @@ const emit = defineEmits<{ restart: [] }>()
       <p v-if="isNewBestTime" class="record">🏆 存活新紀錄！</p>
       <p v-if="isNewBestKills" class="record">🏆 擊殺新紀錄！</p>
       <p class="best">最佳存活：{{ bestText }}</p>
-      <button @click="emit('restart')">再玩一次</button>
+      <div class="actions">
+        <button @click="emit('restart')">再玩一次</button>
+        <button class="secondary" @click="emit('menu')">回主選單</button>
+      </div>
     </div>
   </div>
 </template>
@@ -52,8 +55,10 @@ const emit = defineEmits<{ restart: [] }>()
   to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
+.actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center; }
 button { font-size: 1.3rem; padding: 0.5rem 1.5rem; cursor: pointer; border: none;
   border-radius: 8px; background: var(--immune-accent); color: #06231f; font-weight: bold; }
+button.secondary { background: transparent; color: #fff; border: 2px solid var(--immune-accent); }
 .record { color: var(--antigen); font-weight: bold; margin: 0; animation: gopop 0.35s ease-out both; }
 .best { opacity: 0.85; margin: 0; }
 @media (prefers-reduced-motion: reduce) { .record { animation: none; } }

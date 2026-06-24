@@ -55,6 +55,13 @@ function restart() {
   startGame(selected)
 }
 
+// 回主選單：停掉引擎並切回 menu，讓玩家重選角色/地圖（startGame 由 MainMenu 的 start 事件觸發）。
+function toMenu() {
+  game?.stop()
+  game = null
+  store.toMenu()
+}
+
 // 監聽 phase：升級暫停握手 + 進入 over 時記錄本場戰績。
 watch(
   () => store.phase,
@@ -100,7 +107,7 @@ onBeforeUnmount(() => game?.stop())
     <!-- 以下三個 overlay 依 phase 互斥顯示 -->
     <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" :stats="stats" @start="startGame" /></Transition>
     <Transition name="fade"><UpgradeModal v-if="store.phase === 'upgrading'" /></Transition>
-    <Transition name="fade"><GameOver v-if="store.phase === 'over'" :best-time="lastRun.bestTime" :is-new-best-time="lastRun.isNewBestTime" :is-new-best-kills="lastRun.isNewBestKills" @restart="restart" /></Transition>
+    <Transition name="fade"><GameOver v-if="store.phase === 'over'" :best-time="lastRun.bestTime" :is-new-best-time="lastRun.isNewBestTime" :is-new-best-kills="lastRun.isNewBestKills" @restart="restart" @menu="toMenu" /></Transition>
   </div>
 </template>
 
