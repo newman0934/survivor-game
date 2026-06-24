@@ -73,6 +73,25 @@ function unlockPassiveOption(kind: PassiveKind): UpgradeOption {
   }
 }
 
+/** 產生「進化某武器」選項（選到時若條件仍成立則設 evolved=true）。 */
+function evolveOption(kind: WeaponKind): UpgradeOption {
+  const evo = WEAPON_DEFS[kind].evolution!
+  return {
+    id: `evolve:${kind}`,
+    label: `⭐ 進化：${evo.label}`,
+    apply: (c) => {
+      const w = c.weapons.find((x) => x.kind === kind)
+      if (
+        w && !w.evolved &&
+        w.level >= WEAPON_DEFS[kind].maxLevel &&
+        c.passives.some((p) => p.kind === evo.requires)
+      ) {
+        w.evolved = true
+      }
+    },
+  }
+}
+
 /** 產生「升級某被動」選項（選到時 level+1 並再套用一次增量；label 顯示當前→下一級）。 */
 function levelUpPassiveOption(kind: PassiveKind, curLevel: number): UpgradeOption {
   const def = PASSIVE_DEFS[kind]
@@ -106,6 +125,16 @@ export function buildCandidates(ctx: UpgradeContext): UpgradeOption[] {
   }
   for (const w of ctx.weapons) {
     if (w.level < WEAPON_DEFS[w.kind].maxLevel) out.push(levelUpOption(w.kind, w.level))
+  }
+  for (const w of ctx.weapons) {
+    const evo = WEAPON_DEFS[w.kind].evolution
+    if (
+      evo && !w.evolved &&
+      w.level >= WEAPON_DEFS[w.kind].maxLevel &&
+      ctx.passives.some((p) => p.kind === evo.requires)
+    ) {
+      out.push(evolveOption(w.kind))
+    }
   }
   const ownedP = new Set(ctx.passives.map((p) => p.kind))
   if (ctx.passives.length < PASSIVE_CAP) {
@@ -164,5 +193,6 @@ export function applyUpgradeById(id: string, ctx: UpgradeContext): void {
     const p = ctx.passives.find((x) => x.kind === kind)
     return levelUpPassiveOption(kind, p ? p.level : 1).apply(ctx)
   }
+  if (id.startsWith('evolve:')) return evolveOption(id.slice(7) as WeaponKind).apply(ctx)
   // 未知 id：安靜略過
 }
