@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createPlayer, createEnemy, createProjectile, createGem, createChest } from './factory'
+import { createPlayer, createEnemy, createProjectile, createEnemyProjectile, createGem, createChest } from './factory'
 import { ENEMY_DEFS } from '../systems/enemyDefs'
 
 describe('entity factory', () => {
@@ -60,5 +60,15 @@ describe('createChest', () => {
     expect(c.pos).toEqual({ x: 5, y: 6 })
     expect(c.radius).toBe(14)
     expect(c.active).toBe(true)
+  })
+})
+
+describe('createEnemyProjectile', () => {
+  it('createEnemyProjectile 為 toxin 投射物、帶傷害', () => {
+    const p = createEnemyProjectile({ x: 0, y: 0 }, { x: 1, y: 0 }, 180, 8)
+    expect(p.kind).toBe('projectile')
+    expect(p.projShape).toBe('toxin')
+    expect(p.damage).toBe(8)
+    expect(p.vel.x).toBeCloseTo(180, 5)
   })
 })

@@ -66,7 +66,7 @@ export function createEnemy(pos: Vec2, kind: EnemyKind = 'virus'): Entity {
  * @returns 新的 projectile entity，`life` 預設 1.5 秒後自動失效。
  */
 export function createProjectile(
-  pos: Vec2, dir: Vec2, speed: number, damage: number, shape: 'antibody' | 'perforin' = 'antibody',
+  pos: Vec2, dir: Vec2, speed: number, damage: number, shape: 'antibody' | 'perforin' | 'toxin' = 'antibody',
 ): Entity {
   return {
     ...base(),
@@ -110,4 +110,11 @@ export function createOrbit(pos: Vec2, damage: number): Entity {
  */
 export function createChest(pos: Vec2): Entity {
   return { ...base(), kind: 'chest', pos: { ...pos }, radius: 14 }
+}
+
+/**
+ * 建立敵方投射物（毒液彈）：複用 projectile，projShape 'toxin'，命中玩家扣血。
+ */
+export function createEnemyProjectile(pos: Vec2, dir: Vec2, speed: number, damage: number): Entity {
+  return createProjectile(pos, dir, speed, damage, 'toxin')
 }

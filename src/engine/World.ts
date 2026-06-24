@@ -14,10 +14,10 @@ import type { Entity, PlayerStats, Weapon, UpgradeContext, EnemyKind, Passive, C
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
-import { createPlayer, createEnemy, createGem, createOrbit, createChest } from './entities/factory'
+import { createPlayer, createEnemy, createGem, createOrbit, createChest, createEnemyProjectile } from './entities/factory'
 import { applyVelocity } from './systems/movement'
 import { spawnInterval, spawnPositionAround, pickEnemyKind } from './systems/spawn'
-import { steerEnemy } from './systems/enemyAI'
+import { steerEnemy, spitterTick } from './systems/enemyAI'
 import { ENEMY_DEFS, ENEMY_ORDER } from './systems/enemyDefs'
 import { SpatialGrid } from './core/spatialGrid'
 import { CHARACTER_DEFS } from './systems/characterDefs'
@@ -49,6 +49,8 @@ export class World {
   enemies: Entity[] = []
   /** 場上所有 projectile（含本格剛失效、待篩除者）。 */
   projectiles: Entity[] = []
+  /** 場上所有敵方投射物（毒液彈）；與玩家 projectiles 分離。 */
+  enemyProjectiles: Entity[] = []
   /** 場上所有經驗寶石。 */
   gemEntities: Entity[] = []
   /** 場上所有寶箱（Boss 掉落）。 */
@@ -347,6 +349,18 @@ export class World {
       if (!e.active) continue
       steerEnemy(e, this.player.pos, dt)
       applyVelocity(e, dt)
+      // 噴吐病原：固定間隔朝玩家當前位置吐一發毒液彈。
+      if (e.enemyKind === 'spitter') {
+        const spit = ENEMY_DEFS.spitter.spit!
+        if (spitterTick(e, dt, spit.interval)) {
+          const dx = this.player.pos.x - e.pos.x, dy = this.player.pos.y - e.pos.y
+          const len = Math.hypot(dx, dy) || 1
+          this.enemyProjectiles.push(
+            createEnemyProjectile(e.pos, { x: dx / len, y: dy / len }, spit.projSpeed, spit.projDamage),
+          )
+          this.soundEventQueue.push('shoot')
+        }
+      }
     }
 
     // 3b) 重建敵人空間網格（敵人移動後、碰撞查詢前），供本格鄰近查詢使用。
@@ -458,6 +472,19 @@ export class World {
       }
     }
 
+    // 5b) 敵方投射物：飛行 + 壽命；與玩家重疊即扣血（套護甲）後消耗。
+    for (const p of this.enemyProjectiles) {
+      if (!p.active) continue
+      applyVelocity(p, dt)
+      p.life -= dt
+      if (p.life <= 0) { p.active = false; continue }
+      if (circlesOverlap(p, this.player)) {
+        this.player.hp -= Math.max(0, p.damage - this.stats.armor)
+        this.soundEventQueue.push('hurt')
+        p.active = false
+      }
+    }
+
     // 6) 寶石：進入感應半徑後朝玩家吸取並位移；碰到玩家本體即拾取並給經驗。
     for (const g of this.gemEntities) {
       if (!g.active) continue
@@ -499,9 +526,13 @@ export class World {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.stats.regen * dt)
     }
 
+    // 7c) 補漏殺：掃描所有 hp<=0 但尚未結算的敵人（含外部設值、接觸傷害等非武器路徑）。
+    this.checkKills()
+
     // 8) 清理：本格結束後一次篩除所有死亡／失效的 entity。
     this.enemies = this.enemies.filter((e) => e.active)
     this.projectiles = this.projectiles.filter((p) => p.active)
+    this.enemyProjectiles = this.enemyProjectiles.filter((p) => p.active)
     this.gemEntities = this.gemEntities.filter((g) => g.active)
     this.chestEntities = this.chestEntities.filter((c) => c.active)
   }
@@ -574,6 +605,7 @@ export class World {
 
   /**
    * 統一處理敵人死亡：失效、記擊殺、掉經驗寶石；Boss 額外掉寶箱。
+   * 分裂敵人死亡時在原地生子體；爆炸敵人死亡時對玩家造成範圍傷害並推特效。
    * @param e 已判定 hp<=0 的敵人。
    */
   private killEnemy(e: Entity): void {
@@ -582,6 +614,24 @@ export class World {
     this.gemEntities.push(createGem(e.pos, e.xp))
     if (e.enemyKind === 'superbug') this.chestEntities.push(createChest(e.pos))
     this.soundEventQueue.push('kill')
+    const def = e.enemyKind ? ENEMY_DEFS[e.enemyKind] : undefined
+    // 死亡分裂：在原地生 count 隻子體（小角度錯位，確定性）。
+    if (def?.splitInto) {
+      const { kind, count } = def.splitInto
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2
+        this.spawnEnemyAt({ x: e.pos.x + Math.cos(a) * 14, y: e.pos.y + Math.sin(a) * 14 }, kind)
+      }
+    }
+    // 死亡爆炸：玩家在半徑內扣血（套護甲）+ 推爆裂視覺與音效。
+    if (def?.explode) {
+      const { radius, damage } = def.explode
+      if (distance(e.pos, this.player.pos) <= radius) {
+        this.player.hp -= Math.max(0, damage - this.stats.armor)
+        this.soundEventQueue.push('hit')
+      }
+      this.fxEventQueue.push({ kind: 'nova', x: e.pos.x, y: e.pos.y, radius })
+    }
   }
 
   /** @returns 玩家是否已死亡（hp <= 0）。 */

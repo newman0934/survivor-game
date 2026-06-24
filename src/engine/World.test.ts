@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { World } from './World'
 import { xpForLevel } from './systems/leveling'
+import { createEnemyProjectile } from './entities/factory'
 
 describe('World', () => {
   it('starts with one player and no enemies', () => {
@@ -376,5 +377,38 @@ describe('World', () => {
     w.step(1 / 60) // 仍在冷卻內
     expect(e.hp).toBe(hpAfterFire) // 未再扣血
     expect(w.consumeFxEvents().some((f) => f.kind === 'nova')).toBe(false)
+  })
+
+  it('分裂菌死亡生成 2 隻細菌', () => {
+    const w = new World(1)
+    const s = w.spawnEnemyAt({ x: 100, y: 0 }, 'splitter')
+    const before = w.activeEnemies().filter((e) => e.enemyKind === 'bacteria').length
+    s.hp = 0
+    w.step(1 / 60) // checkKills → 分裂
+    const after = w.activeEnemies().filter((e) => e.enemyKind === 'bacteria').length
+    expect(after - before).toBe(2)
+  })
+
+  it('膿疱自爆體死亡時玩家在半徑內扣血、半徑外不扣', () => {
+    const near = new World(1)
+    near.player.hp = 100
+    const e1 = near.spawnEnemyAt({ x: 30, y: 0 }, 'exploder'); e1.hp = 0
+    near.step(1 / 60)
+    expect(near.player.hp).toBeLessThan(100)
+
+    const far = new World(1)
+    far.player.hp = 100
+    const e2 = far.spawnEnemyAt({ x: 500, y: 0 }, 'exploder'); e2.hp = 0
+    far.step(1 / 60)
+    expect(far.player.hp).toBe(100)
+  })
+
+  it('敵方毒液彈命中玩家扣血後消失', () => {
+    const w = new World(1)
+    w.player.hp = 100
+    w.enemyProjectiles.push(createEnemyProjectile(w.player.pos, { x: 1, y: 0 }, 0, 8))
+    w.step(1 / 60) // 速度 0 → 與玩家重疊
+    expect(w.player.hp).toBeLessThan(100)
+    expect(w.enemyProjectiles.length).toBe(0) // 命中後消耗並清理
   })
 })

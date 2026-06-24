@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { steerEnemy } from './enemyAI'
+import { steerEnemy, steerSpitter, spitterTick } from './enemyAI'
 import { createEnemy } from '../entities/factory'
 import { ENEMY_DEFS } from './enemyDefs'
 
@@ -33,5 +33,26 @@ describe('enemyAI', () => {
     e.vel = { x: -320, y: 0 }
     steerEnemy(e, { x: 0, y: 999 }, 1 / 60) // 玩家換位置，但不應改變 vel
     expect(e.vel).toEqual({ x: -320, y: 0 })
+  })
+})
+
+describe('steerSpitter', () => {
+  it('steerSpitter 太遠靠近、太近後退、區間停步', () => {
+    const range = ENEMY_DEFS.spitter.spit!.range
+    const e1 = createEnemy({ x: 0, y: 0 }, 'spitter'); steerSpitter(e1, { x: range + 100, y: 0 })
+    expect(e1.vel.x).toBeGreaterThan(0) // 太遠 → 朝 +x 靠近
+    const e2 = createEnemy({ x: 0, y: 0 }, 'spitter'); steerSpitter(e2, { x: range - 100, y: 0 })
+    expect(e2.vel.x).toBeLessThan(0)    // 太近 → 朝 -x 後退
+    const e3 = createEnemy({ x: 0, y: 0 }, 'spitter'); steerSpitter(e3, { x: range, y: 0 })
+    expect(e3.vel).toEqual({ x: 0, y: 0 }) // 區間內停步
+  })
+})
+
+describe('spitterTick', () => {
+  it('spitterTick 達 interval 開火並扣回', () => {
+    const e = createEnemy({ x: 0, y: 0 }, 'spitter'); e.behaviorTimer = 0
+    expect(spitterTick(e, 1, 2.2)).toBe(false)
+    expect(spitterTick(e, 1.5, 2.2)).toBe(true) // 累計 2.5 ≥ 2.2
+    expect(e.behaviorTimer).toBeCloseTo(0.3, 5)
   })
 })
