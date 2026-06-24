@@ -61,7 +61,7 @@ function css(color: number): string {
 .overlay {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 0.6rem;
-  color: #fff; font-family: sans-serif; background: rgba(16, 16, 24, 0.85); overflow: auto;
+  color: #fff; font-family: sans-serif; background: rgba(18, 10, 14, 0.85); overflow: auto;
 }
 h1 { font-size: 3rem; margin: 0 0 0.5rem; letter-spacing: 0.1em; }
 .section-label { font-size: 0.9rem; opacity: 0.7; letter-spacing: 0.2em; margin-top: 0.4rem; }
@@ -76,7 +76,7 @@ h1 { font-size: 3rem; margin: 0 0 0.5rem; letter-spacing: 0.1em; }
 .desc { font-size: 0.8rem; opacity: 0.8; }
 .start {
   font-size: 1.4rem; padding: 0.6rem 2rem; margin-top: 0.6rem; cursor: pointer; border: none;
-  border-radius: 8px; background: #4aa3ff; color: #fff;
+  border-radius: 8px; background: var(--immune-accent); color: #06231f; font-weight: bold;
 }
 .hint { opacity: 0.7; }
 

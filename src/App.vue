@@ -80,6 +80,15 @@ onBeforeUnmount(() => game?.stop())
 </style>
 
 <style>
+/* 免疫主題 UI 配色（全域 CSS 變數；scoped 元件可繼承取用）。 */
+:root {
+  --immune-accent: #4dd0c0;        /* 主色：免疫藍綠 */
+  --immune-accent-strong: #6fe3d6; /* 主色亮版（hover/高亮邊框） */
+  --antigen: #ffd54a;              /* 抗原黃（經驗） */
+  --card-bg: #18221f;              /* 卡片底（去藍調的生物深色） */
+  --card-bg-hover: #244038;        /* 卡片 hover */
+}
+
 /* phase overlay 淡入淡出（轉場類別套在子元件根節點，需非 scoped）。 */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
