@@ -30,6 +30,13 @@ describe('saveStore', () => {
     expect(s.stats).toEqual({ totalKills: 0, totalRuns: 0, bestTime: 0, bestKills: 0, maxLevel: 0 })
   })
 
+  it('loadSave storage 為 null 回空白存檔（非瀏覽器/無 localStorage）', () => {
+    const s = loadSave(null)
+    expect(s.version).toBe(1)
+    expect(s.runs).toEqual([])
+    expect(s.stats.totalRuns).toBe(0)
+  })
+
   it('loadSave 壞 JSON 回空白存檔且不丟例外', () => {
     const s = loadSave(memStorage('{not valid json'))
     expect(s.runs).toEqual([])
