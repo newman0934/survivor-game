@@ -40,11 +40,6 @@ export function bgHash(gx: number, gy: number): number {
   return (h % 100000) / 100000
 }
 
-/** 落地陰影：壓扁的半透明深色橢圓，墊在造型最底，讓單位「站」在地上。 */
-function groundShadow(g: Graphics, rad: number): void {
-  g.ellipse(0, rad * 0.85, rad * 0.9, rad * 0.4).fill({ color: 0x000000, alpha: 0.25 })
-}
-
 /** 立體圓身：暗部底（略下偏）+ 主色 + 描邊 + 左上高光。 */
 function shaded(g: Graphics, cx: number, cy: number, rad: number, color: number): void {
   g.circle(cx, cy + rad * 0.12, rad).fill(dim(color, 0.55))
@@ -68,10 +63,10 @@ function innerShade(g: Graphics, r: number, color: number): void {
   g.circle(-LIGHT.x * r * 0.42, -LIGHT.y * r * 0.42, r * 0.92).fill({ color: dim(color, 0.25), alpha: 0.26 })
 }
 
-/** 邊光：受光側（左上）緣一道亮細弧，使輪廓跳出背景。 */
+/** 邊光：受光側（左上）緣一道柔和邊緣光（克制、往內收、用本色避免被 bloom 暈成發亮鉤）。 */
 function rimLight(g: Graphics, r: number, color: number): void {
   const a = Math.atan2(LIGHT.y, LIGHT.x)
-  g.arc(0, 0, r * 0.98, a - 0.9, a + 0.9).stroke({ width: r * 0.13, color: lighten(color, 0.6), alpha: 0.5 })
+  g.arc(0, 0, r * 0.9, a - 0.8, a + 0.8).stroke({ width: r * 0.09, color: lighten(color, 0.35), alpha: 0.3 })
 }
 
 /** 高光點：受光側小亮斑（濕潤反光）。 */
@@ -92,7 +87,6 @@ function emissiveCore(g: Graphics, x: number, y: number, r: number, color: numbe
  */
 export function drawPlayer(g: Graphics, e: Entity, color: number, character: CharacterKind): void {
   const r = e.radius
-  groundShadow(g, r)
   const stroke = dim(color, 0.5)
   switch (character) {
     case 'neutrophil': {
@@ -178,7 +172,6 @@ export function drawPlayer(g: Graphics, e: Entity, color: number, character: Cha
 export function drawEnemy(g: Graphics, e: Entity): void {
   const r = e.radius
   const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
-  groundShadow(g, r)
   switch (e.enemyKind) {
     case 'bacteria': {
       // 桿菌：膠囊身（兩圓覆蓋橢圓）+ 鞭毛尾曲線 + 細胞壁描邊 + 微高光
@@ -422,7 +415,6 @@ export function drawOrbit(g: Graphics, e: Entity): void {
 /** 寶箱 → 補給囊泡：半透明金膜 + 內部金色發光核 + 高光點。 */
 export function drawChest(g: Graphics, e: Entity): void {
   const r = e.radius
-  groundShadow(g, r)
   // 金色外暈（獎勵感）
   g.circle(0, 0, r * 1.25).fill({ color: 0xffd54a, alpha: 0.18 })
   // 半透明金膜囊泡
