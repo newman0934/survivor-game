@@ -13,6 +13,12 @@ export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit' | '
 /** 由 World 發射、供音訊層解讀的語意事件。 */
 export type SoundEvent = 'shoot' | 'hit' | 'kill' | 'pickup' | 'levelup' | 'hurt' | 'boss' | 'chest'
 
+/** 武器視覺事件（呈現層用；由 World 推、Game 每幀排空交特效層繪製）。 */
+export type FxEvent =
+  | { kind: 'sweep'; x: number; y: number; angle: number; radius: number; halfAngle: number }
+  | { kind: 'chain'; points: { x: number; y: number }[] }
+  | { kind: 'nova'; x: number; y: number; radius: number }
+
 /** 敵人子種類；僅 kind==='enemy' 的 entity 使用，決定數值/顏色/行為。 */
 export type EnemyKind = 'virus' | 'bacteria' | 'spore' | 'spiral' | 'superbug'
 
@@ -82,6 +88,7 @@ export interface PlayerStats {
 
 /** 武器種類。 */
 export type WeaponKind = 'antibody' | 'perforin' | 'complement' | 'inflammation'
+  | 'phagocyte' | 'cascade' | 'nova'
 
 /**
  * 一把武器的執行期狀態（純資料，存於 `World.weapons`）。

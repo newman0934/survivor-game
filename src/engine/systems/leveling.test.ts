@@ -35,12 +35,15 @@ describe('leveling', () => {
     expect(ids).not.toContain('levelup:antibody')
   })
 
-  it('持有四把武器後不再出現解鎖候選', () => {
+  it('持有七把武器後不再出現解鎖候選', () => {
     const ctx = makeCtx([
       { kind: 'antibody', level: 1, cooldownTimer: 0 },
       { kind: 'perforin', level: 1, cooldownTimer: 0 },
       { kind: 'complement', level: 1, cooldownTimer: 0 },
       { kind: 'inflammation', level: 1, cooldownTimer: 0 },
+      { kind: 'phagocyte', level: 1, cooldownTimer: 0 },
+      { kind: 'cascade', level: 1, cooldownTimer: 0 },
+      { kind: 'nova', level: 1, cooldownTimer: 0 },
     ])
     const ids = buildCandidates(ctx).map((o) => o.id)
     expect(ids.some((id) => id.startsWith('unlock:'))).toBe(false)

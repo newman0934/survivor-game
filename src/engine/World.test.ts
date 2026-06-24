@@ -333,4 +333,48 @@ describe('World', () => {
     expect(w.consumeLevelUp()).toBe(true)
     expect(w.consumeLevelUp()).toBe(false)
   })
+
+  it('吞噬偽足對前方敵人扣血並推 sweep fx', () => {
+    const w = new World(1)
+    w.weapons = [{ kind: 'phagocyte', level: 1, cooldownTimer: 0 }]
+    w.lastMoveDir = { x: 1, y: 0 }
+    const e = w.spawnEnemyAt({ x: 30, y: 0 })
+    const hp0 = e.hp
+    w.step(1 / 60)
+    expect(e.hp).toBeLessThan(hp0)
+    expect(w.consumeFxEvents().some((f) => f.kind === 'sweep')).toBe(true)
+  })
+
+  it('抗原脈衝對範圍內敵人扣血並推 nova fx', () => {
+    const w = new World(1)
+    w.weapons = [{ kind: 'nova', level: 1, cooldownTimer: 0 }]
+    const e = w.spawnEnemyAt({ x: 60, y: 0 })
+    const hp0 = e.hp
+    w.step(1 / 60)
+    expect(e.hp).toBeLessThan(hp0)
+    expect(w.consumeFxEvents().some((f) => f.kind === 'nova')).toBe(true)
+  })
+
+  it('補體級聯連鎖命中並推 chain fx', () => {
+    const w = new World(1)
+    w.weapons = [{ kind: 'cascade', level: 1, cooldownTimer: 0 }]
+    const a = w.spawnEnemyAt({ x: 40, y: 0 })
+    const hp0 = a.hp
+    w.step(1 / 60)
+    expect(a.hp).toBeLessThan(hp0)
+    expect(w.consumeFxEvents().some((f) => f.kind === 'chain')).toBe(true)
+  })
+
+  it('抗原脈衝冷卻期間不重複觸發', () => {
+    const w = new World(1)
+    w.weapons = [{ kind: 'nova', level: 1, cooldownTimer: 0 }]
+    const e = w.spawnEnemyAt({ x: 60, y: 0 })
+    e.hp = 100; e.maxHp = 100 // 提高血量，確保第一擊後仍存活（隔離冷卻為唯一變因）
+    w.step(1 / 60) // Lv1 冷卻 1.6s，本步觸發一次
+    w.consumeFxEvents()
+    const hpAfterFire = e.hp
+    w.step(1 / 60) // 仍在冷卻內
+    expect(e.hp).toBe(hpAfterFire) // 未再扣血
+    expect(w.consumeFxEvents().some((f) => f.kind === 'nova')).toBe(false)
+  })
 })

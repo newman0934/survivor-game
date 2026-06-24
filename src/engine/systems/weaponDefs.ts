@@ -7,7 +7,8 @@
 import type { WeaponDef, WeaponKind } from '../types'
 
 /** 解鎖時提供候選的順序（antibody 為起始武器，恆持有）。 */
-export const WEAPON_ORDER: WeaponKind[] = ['antibody', 'perforin', 'complement', 'inflammation']
+export const WEAPON_ORDER: WeaponKind[] = ['antibody', 'perforin', 'complement', 'inflammation',
+  'phagocyte', 'cascade', 'nova']
 
 /** 全部武器的等級表。 */
 export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
@@ -57,6 +58,36 @@ export const WEAPON_DEFS: Record<WeaponKind, WeaponDef> = {
       { damage: 5, radius: 90 },
       { damage: 5, radius: 110 },
       { damage: 8, radius: 110 },
+    ],
+  },
+  phagocyte: {
+    kind: 'phagocyte', label: '吞噬偽足', maxLevel: 5,
+    levels: [
+      { cooldown: 0.7, damage: 8, radius: 70 },
+      { cooldown: 0.7, damage: 12, radius: 70 },
+      { cooldown: 0.6, damage: 12, radius: 85 },
+      { cooldown: 0.6, damage: 16, radius: 85 },
+      { cooldown: 0.5, damage: 20, radius: 100 },
+    ],
+  },
+  cascade: {
+    kind: 'cascade', label: '補體級聯', maxLevel: 5,
+    levels: [
+      { cooldown: 1.0, damage: 10, count: 3, radius: 160 },
+      { cooldown: 1.0, damage: 10, count: 4, radius: 160 },
+      { cooldown: 0.85, damage: 14, count: 4, radius: 180 },
+      { cooldown: 0.85, damage: 14, count: 5, radius: 180 },
+      { cooldown: 0.7, damage: 18, count: 6, radius: 200 },
+    ],
+  },
+  nova: {
+    kind: 'nova', label: '抗原脈衝', maxLevel: 5,
+    levels: [
+      { cooldown: 1.6, damage: 12, radius: 120 },
+      { cooldown: 1.6, damage: 12, radius: 150 },
+      { cooldown: 1.4, damage: 18, radius: 150 },
+      { cooldown: 1.4, damage: 18, radius: 180 },
+      { cooldown: 1.2, damage: 26, radius: 210 },
     ],
   },
 }

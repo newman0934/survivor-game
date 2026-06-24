@@ -45,6 +45,7 @@ export class EffectsLayer {
   private particles: Particle[] = []
   private expands: Expand[] = []
   private texts: FloatText[] = []
+  private flashes: { g: Graphics; life: number; maxLife: number }[] = []
   private vignetteAlpha = 0
   private shakeIntensity = 0
   private screenW: number
@@ -115,6 +116,82 @@ export class EffectsLayer {
     this.texts.push({ t, vy: -42, life: 0.5, maxLife: 0.5 })
   }
 
+  /** 吞噬偽足：分層新月刀光（柔光扇 + 亮白前緣弧）+ 沿弧噴濺碎屑。 */
+  spawnSweep(x: number, y: number, angle: number, radius: number, halfAngle: number): void {
+    const g = new Graphics()
+    // 外層柔光扇形
+    g.moveTo(0, 0)
+    g.arc(0, 0, radius, angle - halfAngle, angle + halfAngle)
+    g.closePath()
+    g.fill({ color: 0x8bc34a, alpha: 0.24 })
+    // 內層亮白前緣弧（沿外緣描邊，刀光鋒面）
+    const sx = Math.cos(angle - halfAngle) * radius * 0.96
+    const sy = Math.sin(angle - halfAngle) * radius * 0.96
+    g.moveTo(sx, sy)
+    g.arc(0, 0, radius * 0.96, angle - halfAngle, angle + halfAngle)
+    g.stroke({ width: 3, color: 0xeaffc0, alpha: 0.9 })
+    g.position.set(x, y)
+    this.worldFx.addChild(g)
+    this.flashes.push({ g, life: 0.22, maxLife: 0.22 })
+    // 沿弧噴濺碎屑
+    for (let i = 0; i < 5; i++) {
+      if (this.particles.length >= MAX_PARTICLES) break
+      const a = angle - halfAngle + Math.random() * halfAngle * 2
+      const spd = 80 + Math.random() * 120
+      const pr = 1.2 + Math.random() * 1.5
+      const p = new Graphics()
+      p.circle(0, 0, pr).fill(0xaed581)
+      p.position.set(x + Math.cos(a) * radius * 0.7, y + Math.sin(a) * radius * 0.7)
+      this.worldFx.addChild(p)
+      this.particles.push({ g: p, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, gravity: 120, life: 0.3, maxLife: 0.3 })
+    }
+  }
+
+  /** 補體級聯：鋸齒閃電（雙層外暈+亮核 + 命中點亮球，世界座標、短壽命淡出）。 */
+  spawnChain(points: { x: number; y: number }[]): void {
+    if (points.length < 2) return
+    // 每段插入垂直抖動中點，形成 lightning 折線
+    const path: { x: number; y: number }[] = [points[0]]
+    for (let i = 1; i < points.length; i++) {
+      const a = points[i - 1], b = points[i]
+      const dx = b.x - a.x, dy = b.y - a.y
+      const len = Math.hypot(dx, dy) || 1
+      const off = (Math.random() - 0.5) * Math.min(24, len * 0.35)
+      path.push({ x: (a.x + b.x) / 2 - (dy / len) * off, y: (a.y + b.y) / 2 + (dx / len) * off })
+      path.push(b)
+    }
+    const trace = (g: Graphics): void => {
+      g.moveTo(path[0].x, path[0].y)
+      for (let i = 1; i < path.length; i++) g.lineTo(path[i].x, path[i].y)
+    }
+    // 外暈（粗、淡）
+    const glow = new Graphics()
+    trace(glow)
+    glow.stroke({ width: 7, color: 0x4ad6ff, alpha: 0.3 })
+    this.worldFx.addChild(glow)
+    this.flashes.push({ g: glow, life: 0.2, maxLife: 0.2 })
+    // 亮核（細、亮）+ 命中點亮球節點
+    const core = new Graphics()
+    trace(core)
+    core.stroke({ width: 2, color: 0xeaffff, alpha: 0.95 })
+    for (let i = 1; i < points.length; i++) core.circle(points[i].x, points[i].y, 4).fill({ color: 0x8be9ff, alpha: 0.9 })
+    this.worldFx.addChild(core)
+    this.flashes.push({ g: core, life: 0.2, maxLife: 0.2 })
+  }
+
+  /** 抗原脈衝：雙環衝擊波 + 內層淡色填充碟快速淡出。 */
+  spawnNova(x: number, y: number, radius: number): void {
+    // 內層淡色填充碟（衝擊感、快速淡出）
+    const disc = new Graphics()
+    disc.circle(0, 0, radius * 0.5).fill({ color: 0x4dd0c0, alpha: 0.18 })
+    disc.position.set(x, y)
+    this.worldFx.addChild(disc)
+    this.flashes.push({ g: disc, life: 0.25, maxLife: 0.25 })
+    // 亮白前緣環（主衝擊、快）+ 外擴薄環（稍慢、更遠）
+    this.addExpand(x, y, 0xeaffff, 6, radius, 5, 0.35)
+    this.addExpand(x, y, 0x4dd0c0, 2, radius * 1.15, 2, 0.5)
+  }
+
   /** 受傷：拉高紅暈與震動強度（intensity 越大越強，boss 撞擊較大）。 */
   hurt(intensity: number): void {
     this.vignetteAlpha = Math.min(0.55, this.vignetteAlpha + 0.3 + intensity * 0.3)
@@ -162,6 +239,12 @@ export class EffectsLayer {
       ft.t.y += ft.vy * DT
       ft.t.alpha = ft.life / ft.maxLife
     }
+    for (let i = this.flashes.length - 1; i >= 0; i--) {
+      const f = this.flashes[i]
+      f.life -= DT
+      if (f.life <= 0) { f.g.destroy(); this.flashes.splice(i, 1); continue }
+      f.g.alpha = f.life / f.maxLife
+    }
     this.vignetteAlpha = Math.max(0, this.vignetteAlpha - DT * 1.5)
     this.vignette.alpha = this.vignetteAlpha
     this.shakeIntensity = Math.max(0, this.shakeIntensity - DT * 60)
@@ -182,9 +265,11 @@ export class EffectsLayer {
     for (const p of this.particles) p.g.destroy()
     for (const e of this.expands) e.g.destroy()
     for (const ft of this.texts) ft.t.destroy()
+    for (const f of this.flashes) f.g.destroy()
     this.particles = []
     this.expands = []
     this.texts = []
+    this.flashes = []
   }
 
   /** 內部：新增一個擴張環特效。 */

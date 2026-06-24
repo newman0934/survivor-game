@@ -104,3 +104,72 @@ export function garlicTick(center: Vec2, enemies: Entity[], radius: number, dps:
     }
   }
 }
+
+/** 吞噬偽足扇形半角（弧度，70°）。 */
+export const PHAGOCYTE_HALF_ANGLE = (Math.PI * 70) / 180
+/** 補體級聯每跳傷害遞減係數。 */
+export const CASCADE_FALLOFF = 0.75
+
+/**
+ * 吞噬偽足：對 center 半徑內、且與 dir 夾角 ≤ halfAngle 的存活敵人扣 damage（就地改 hp）。
+ * @returns 被命中的敵人（供結算/視覺）。
+ */
+export function phagocyteSweep(
+  center: Vec2, dir: Vec2, enemies: Entity[], radius: number, halfAngle: number, damage: number,
+): Entity[] {
+  const base = Math.atan2(dir.y, dir.x)
+  const hits: Entity[] = []
+  for (const e of enemies) {
+    if (!e.active) continue
+    const dx = e.pos.x - center.x
+    const dy = e.pos.y - center.y
+    const d = Math.hypot(dx, dy)
+    if (d > radius) continue
+    if (d > 0) {
+      let diff = Math.abs(Math.atan2(dy, dx) - base)
+      if (diff > Math.PI) diff = 2 * Math.PI - diff
+      if (diff > halfAngle) continue
+    }
+    e.hp -= damage
+    hits.push(e)
+  }
+  return hits
+}
+
+/**
+ * 補體級聯：從距 origin 最近的存活敵人起跳，之後每次跳到距上一命中點最近、未命中過、
+ * 且距離 ≤ jumpRange 的敵人，最多 maxJumps 個。不在此扣血（由 World 套遞減）。
+ * @returns 依序命中的敵人（確定性：距離排序、平手以陣列順序）。
+ */
+export function chainTargets(origin: Vec2, enemies: Entity[], maxJumps: number, jumpRange: number): Entity[] {
+  const hits: Entity[] = []
+  const used = new Set<Entity>()
+  let from = origin
+  while (hits.length < maxJumps) {
+    let best: Entity | null = null
+    let bestD = Infinity
+    for (const e of enemies) {
+      if (!e.active || used.has(e)) continue
+      const d = distance(from, e.pos)
+      if (d <= jumpRange && d < bestD) { bestD = d; best = e }
+    }
+    if (!best) break
+    used.add(best)
+    hits.push(best)
+    from = best.pos
+  }
+  return hits
+}
+
+/**
+ * 抗原脈衝：對 center 半徑內所有存活敵人扣 damage（就地改 hp）。
+ * @returns 被命中的敵人。
+ */
+export function novaBurst(center: Vec2, enemies: Entity[], radius: number, damage: number): Entity[] {
+  const hits: Entity[] = []
+  for (const e of enemies) {
+    if (!e.active) continue
+    if (distance(center, e.pos) <= radius) { e.hp -= damage; hits.push(e) }
+  }
+  return hits
+}

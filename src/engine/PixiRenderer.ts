@@ -7,7 +7,7 @@
  */
 import { Application, Container, Graphics } from 'pixi.js'
 import type { World } from './World'
-import type { Entity, CharacterKind } from './types'
+import type { Entity, CharacterKind, FxEvent } from './types'
 import {
   drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit, drawChest,
   drawMapBackground, drawGarlicAura,
@@ -169,6 +169,15 @@ export class PixiRenderer {
       this.app.renderer.width / 2 - world.player.pos.x + shake.shakeX,
       this.app.renderer.height / 2 - world.player.pos.y + shake.shakeY,
     )
+  }
+
+  /** 把本幀武器視覺事件交給特效層繪製。 */
+  applyFxEvents(events: FxEvent[]): void {
+    for (const ev of events) {
+      if (ev.kind === 'sweep') this.effects.spawnSweep(ev.x, ev.y, ev.angle, ev.radius, ev.halfAngle)
+      else if (ev.kind === 'chain') this.effects.spawnChain(ev.points)
+      else this.effects.spawnNova(ev.x, ev.y, ev.radius)
+    }
   }
 
   /** 依 entity 種類套用每幀動畫 transform（純視覺）。 */
