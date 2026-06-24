@@ -14,6 +14,7 @@ import {
 } from './sprites'
 import { EffectsLayer } from './effects'
 import { PostProcessing } from './postProcessing'
+import { NoiseBackground } from './noiseBackground'
 import { ENEMY_DEFS } from './systems/enemyDefs'
 
 /** 每個 entity 的顯示物件：body（造型）+ flash（命中閃白用的白色覆蓋圓）。 */
@@ -48,6 +49,8 @@ export class PixiRenderer {
   private effects!: EffectsLayer
   /** 全域後製（泛光/色調/暈影）。 */
   private post!: PostProcessing
+  /** 噪聲視差背景（懶初始化，需 world.mapKind）。 */
+  private noise?: NoiseBackground
   /** 上一幀玩家等級，用來偵測升級上升沿。 */
   private lastLevel = 1
   /** 上一幀畫面尺寸，用來偵測 resize 重畫紅暈。 */
@@ -124,6 +127,10 @@ export class PixiRenderer {
     this.clock += 1 / 60
     this.frameId += 1
 
+    // 噪聲視差背景：懶初始化（需 world.mapKind），每幀更新視差捲動。
+    if (!this.noise) this.noise = new NoiseBackground(this.app, world.mapKind)
+    this.noise.update(world.player.pos.x, world.player.pos.y)
+
     // 升級上升沿：玩家身上爆發光環。
     if (world.currentLevel > this.lastLevel) {
       this.effects.spawnLevelUp(world.player.pos.x, world.player.pos.y)
@@ -174,6 +181,7 @@ export class PixiRenderer {
       this.lastH = this.app.renderer.height
       this.effects.resize(this.lastW, this.lastH)
       this.post.resize()
+      this.noise?.resize()
     }
     // 推進特效並取得鏡頭震動偏移。
     const shake = this.effects.update()
@@ -253,6 +261,7 @@ export class PixiRenderer {
     this.destroyed = true
     this.effects.destroy()
     this.post.destroy() // 釋放暈影漸層紋理（避免重開累積）
+    this.noise?.destroy() // 釋放噪聲背景紋理
     this.app.destroy(true, { children: true })
     this.sprites.clear()
     this.lastHp.clear()

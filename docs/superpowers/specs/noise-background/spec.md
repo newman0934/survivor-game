@@ -14,11 +14,16 @@
 ## Functional Requirements
 
 ### FR-1 噪聲純函式（可測）
-- 新增 `src/engine/core/noise.ts`：value noise + fBm（多八度）純函式，給定座標與 seed **確定性可重現**、輸出在已知範圍（如 0..1）。
-- 例：`valueNoise(x, y, seed): number`、`fbm(x, y, seed, octaves): number`。
+- 新增 `src/engine/core/noise.ts`：value noise + fBm + **ridged fBm**（折痕）+ **cellular/Voronoi**（細胞）純函式，
+  給定座標與 seed **確定性可重現**、輸出在已知範圍（0..1）、支援 period 平鋪。
+- 例：`valueNoise`/`fbm`/`ridgedFbm`/`cellular`。
+- 用途：讓三場景採**不同性格的噪聲**（非僅換色）。
 
-### FR-2 噪聲紋理生成
-- 開機時以離屏 canvas 用 FR-1 噪聲畫一張**無縫平鋪**（wrap）灰階 `Texture`（如 256²）。
+### FR-2 噪聲紋理生成（依場景採不同性格）
+- 開機時以離屏 canvas 用 FR-1 噪聲畫一張**無縫平鋪**（wrap）灰階 `Texture`（如 256²），**依 MapKind 採不同噪聲**：
+  - 血管：domain-warp fBm（血漿流動渦流/大理石流紋）
+  - 胃：ridged fBm（黏膜皺褶折痕）
+  - 肺泡：cellular/Voronoi（肺泡蜂窩細胞）
 - 純呈現層，生成為一次性；可用 `Math.random` 取 seed（renderer 既有 `effects.ts` 鏡頭震動亦用 `Math.random`，本模組同屬視覺、不受「模擬無 Math.random」約束）。
 
 ### FR-3 視差層（TilingSprite）
