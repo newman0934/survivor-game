@@ -252,6 +252,7 @@ export class PixiRenderer {
     if (this.destroyed) return
     this.destroyed = true
     this.effects.destroy()
+    this.post.destroy() // 釋放暈影漸層紋理（避免重開累積）
     this.app.destroy(true, { children: true })
     this.sprites.clear()
     this.lastHp.clear()
