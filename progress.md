@@ -41,6 +41,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 
 ### 階段 4 — 後設系統
 - [x] 音效 — Web Audio 合成 SFX／背景音樂 + 靜音開關
+  - 音效優化：9 音多層合成質感提升 + master 限幅器防爆音 + kill 節流；取消寶石/擊中音；每地圖不同背景音樂主題（血管/胃/肺泡，以音域/波形/密度區隔）
 - [x] 美術（程式化繪製，引擎不動）— 角色/敵人/道具造型與精緻化、三地圖地貌背景、打擊反饋特效（`EffectsLayer`）、
   免疫主題化、HUD/UI 動畫 → specs/{immune-war-theme, sprite-polish-b, ui-animation-c, effects-feedback} 等
 - [x] 整體後製：全域泛光 + 色彩分級 + 暈影（行動裝置自動關 bloom）→ specs/post-processing/
