@@ -4,17 +4,16 @@
  * 查 registry 渲染內聯單色 SVG（描邊 currentColor，色取 IconDef.color）；查無對應安全不渲染。
  */
 import { computed } from 'vue'
-import { WEAPON_ICONS, PASSIVE_ICONS, type IconDef } from './icons/iconRegistry'
+import { WEAPON_ICONS, PASSIVE_ICONS, CHARACTER_ICONS, type IconDef } from './icons/iconRegistry'
 
 const props = withDefaults(defineProps<{
-  category: 'weapon' | 'passive'
+  category: 'weapon' | 'passive' | 'character'
   kind: string
   size?: number
 }>(), { size: 20 })
 
-const def = computed<IconDef | undefined>(() =>
-  (props.category === 'weapon' ? WEAPON_ICONS : PASSIVE_ICONS)[props.kind as never],
-)
+const REG = { weapon: WEAPON_ICONS, passive: PASSIVE_ICONS, character: CHARACTER_ICONS }
+const def = computed<IconDef | undefined>(() => REG[props.category][props.kind as never])
 </script>
 
 <template>

@@ -50,6 +50,7 @@ async function startGame(opts: { character: CharacterKind; map: MapKind } = sele
   selected = opts
   showLeaderboard.value = false // 開賽前收起排行榜，避免日後回主選單時殘留自動重開
   store.start()
+  store.setCharacter(opts.character)
   if (!canvasParent.value) return
   game = await Game.start(canvasParent.value, seed++, opts.character, opts.map)
 }
