@@ -536,7 +536,7 @@ export class World {
       if (distance(g.pos, this.player.pos) <= this.player.radius) {
         g.active = false
         this.grantXp(g.xp * this.stats.xpGain)
-        this.soundEventQueue.push('pickup')
+        // 寶石收取不發音（每顆都響太頻繁）；heal/vacuum 撿取物仍有音效
       }
     }
 

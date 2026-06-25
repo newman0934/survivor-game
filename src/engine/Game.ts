@@ -67,7 +67,7 @@ export class Game {
     game.input.attach()
     game.touch.attach(canvasParent)
     soundManager.resume()
-    soundManager.startMusic()
+    soundManager.startMusic(map)
     game.store.onUpgradePicked = (id: string) => {
       world.applyUpgrade(id)
       game.store.setLoadout(world.loadoutSnapshot()) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
