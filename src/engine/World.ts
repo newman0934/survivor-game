@@ -10,11 +10,11 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind, SoundEvent, FxEvent } from './types'
+import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind, SoundEvent, FxEvent, PickupKind } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
-import { createPlayer, createEnemy, createGem, createOrbit, createChest, createEnemyProjectile } from './entities/factory'
+import { createPlayer, createEnemy, createGem, createOrbit, createChest, createEnemyProjectile, createPickup } from './entities/factory'
 import { applyVelocity } from './systems/movement'
 import { spawnInterval, spawnPositionAround, pickEnemyKind } from './systems/spawn'
 import { steerEnemy, spitterTick } from './systems/enemyAI'
@@ -35,6 +35,12 @@ import type { Summary, LoadoutSnapshot } from '../stores/game'
 const SPAWN_RADIUS = 700
 /** 寶石進入感應範圍後，朝玩家飛行的吸取速度。 */
 const GEM_PULL_SPEED = 350
+const VACUUM_DURATION = 1.5      // 全場吸取持續秒數（期間不分距離吸引全部寶石）
+const VACUUM_PULL_SPEED = 1100   // 全場吸取期間寶石飛向玩家的速度（比一般快、手感俐落）
+const HEAL_FRAC = 0.3            // 回血回復 maxHp 比例
+const HEAL_DROP_HP_FRAC = 0.5    // 血量低於 maxHp 此比例才可能掉回血（mercy）
+const HEAL_DROP_CHANCE = 0.025   // 每次擊殺掉回血機率（低血時）
+const VACUUM_DROP_CHANCE = 0.012 // 每次擊殺掉全場吸取機率
 /** Boss 生成週期（秒）。 */
 const BOSS_INTERVAL = 60
 /** 敵人空間網格的方格邊長（碰撞鄰近查詢用）。 */
@@ -55,6 +61,8 @@ export class World {
   gemEntities: Entity[] = []
   /** 場上所有寶箱（Boss 掉落）。 */
   chestEntities: Entity[] = []
+  /** 場上所有撿取物（回血／全場吸取）。 */
+  pickupEntities: Entity[] = []
 
   /** 玩家數值（全域乘區），會被升級就地修改。 */
   stats: PlayerStats = {
@@ -108,6 +116,10 @@ export class World {
 
   /** 確定性亂數來源（seeded）；模擬內所有隨機都走這裡。 */
   private rng: Rng
+  /** 撿取物掉落專用 rng（自 seed 衍生，獨立於 spawn/combat 串流，避免擾動既有確定性）。 */
+  private pickupRng: Rng
+  /** 全場吸取剩餘秒數（>0 時寶石不分距離朝玩家飛）。 */
+  private vacuumTimer = 0
   /** 累積遊戲時間（秒）。 */
   private elapsed = 0
   /** 生怪倒數計時器（秒）；歸零即生怪並重置。 */
@@ -139,6 +151,7 @@ export class World {
    */
   constructor(seed: number, character: CharacterKind = 'macrophage', map: MapKind = 'vessel') {
     this.rng = createRng(seed)
+    this.pickupRng = createRng(seed ^ 0x5bd1e995)
     this.player = createPlayer({ x: 0, y: 0 })
     const def = CHARACTER_DEFS[character]
     this.playerColor = def.color
@@ -171,6 +184,10 @@ export class World {
   /** @returns 所有寶箱 entity（供 renderer 顯示）。 */
   chests(): Entity[] {
     return this.chestEntities
+  }
+  /** @returns 場上的撿取物 entity（供 renderer 顯示）。 */
+  pickups(): Entity[] {
+    return this.pickupEntities
   }
 
   /** 取走並清空本格累積的音效事件（供上層交給音訊層播放）。 */
@@ -508,9 +525,13 @@ export class World {
     }
 
     // 6) 寶石：進入感應半徑後朝玩家吸取並位移；碰到玩家本體即拾取並給經驗。
+    // 全場吸取（vacuum）啟動期間：不分距離吸引全部寶石、加速飛向玩家。
+    if (this.vacuumTimer > 0) this.vacuumTimer = Math.max(0, this.vacuumTimer - dt)
+    const gemRadius = this.vacuumTimer > 0 ? Infinity : this.stats.pickupRadius
+    const gemPull = this.vacuumTimer > 0 ? VACUUM_PULL_SPEED : GEM_PULL_SPEED
     for (const g of this.gemEntities) {
       if (!g.active) continue
-      attractGem(g, this.player.pos, this.stats.pickupRadius, GEM_PULL_SPEED)
+      attractGem(g, this.player.pos, gemRadius, gemPull)
       applyVelocity(g, dt)
       if (distance(g.pos, this.player.pos) <= this.player.radius) {
         g.active = false
@@ -528,6 +549,17 @@ export class World {
         c.active = false
         this.pendingLevelUps += 1
         this.soundEventQueue.push('chest')
+      }
+    }
+
+    // 6c) 撿取物：吸取並位移；碰玩家本體即拾取並套用效果。
+    for (const pk of this.pickupEntities) {
+      if (!pk.active) continue
+      attractGem(pk, this.player.pos, this.stats.pickupRadius, GEM_PULL_SPEED)
+      applyVelocity(pk, dt)
+      if (distance(pk.pos, this.player.pos) <= this.player.radius) {
+        pk.active = false
+        this.applyPickup(pk.pickupKind!)
       }
     }
 
@@ -557,6 +589,7 @@ export class World {
     this.enemyProjectiles = this.enemyProjectiles.filter((p) => p.active)
     this.gemEntities = this.gemEntities.filter((g) => g.active)
     this.chestEntities = this.chestEntities.filter((c) => c.active)
+    this.pickupEntities = this.pickupEntities.filter((p) => p.active)
   }
 
   /**
@@ -638,6 +671,7 @@ export class World {
     this.gemEntities.push(createGem(e.pos, e.xp))
     if (e.enemyKind === 'superbug') this.chestEntities.push(createChest(e.pos))
     this.soundEventQueue.push('kill')
+    this.maybeDropPickup(e.pos)
     const def = e.enemyKind ? ENEMY_DEFS[e.enemyKind] : undefined
     // 死亡分裂：在原地生 count 隻子體（小角度錯位，確定性）。
     if (def?.splitInto) {
@@ -656,6 +690,27 @@ export class World {
       }
       this.fxEventQueue.push({ kind: 'nova', x: e.pos.x, y: e.pos.y, radius })
     }
+  }
+
+  /** 撿取物掉落：獨立 seeded rng；一次擊殺最多一個（heal/vacuum 互斥）；heal 僅低血 mercy。 */
+  private maybeDropPickup(pos: Vec2): void {
+    const r = this.pickupRng.next()
+    if (this.player.hp < this.player.maxHp * HEAL_DROP_HP_FRAC && r < HEAL_DROP_CHANCE) {
+      this.pickupEntities.push(createPickup(pos, 'heal'))
+    } else if (r >= HEAL_DROP_CHANCE && r < HEAL_DROP_CHANCE + VACUUM_DROP_CHANCE) {
+      this.pickupEntities.push(createPickup(pos, 'vacuum'))
+    }
+  }
+
+  /** 套用撿取物效果：heal 回血（夾上限）；vacuum 收全場寶石轉經驗。 */
+  private applyPickup(kind: PickupKind): void {
+    if (kind === 'heal') {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * HEAL_FRAC)
+    } else {
+      // 全場吸取：啟動 vacuum 期間，寶石迴圈會把全部寶石加速吸向玩家、逐顆收取（保留飛行手感）。
+      this.vacuumTimer = VACUUM_DURATION
+    }
+    this.soundEventQueue.push('pickup')
   }
 
   /** @returns 玩家是否已死亡（hp <= 0）。 */

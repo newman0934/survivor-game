@@ -9,7 +9,7 @@ import { Application, Container, Graphics } from 'pixi.js'
 import type { World } from './World'
 import type { Entity, CharacterKind, FxEvent } from './types'
 import {
-  drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit, drawChest,
+  drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit, drawChest, drawPickup,
   drawMapBackground, drawGarlicAura,
 } from './sprites'
 import { EffectsLayer } from './effects'
@@ -101,6 +101,7 @@ export class PixiRenderer {
         case 'projectile': drawProjectile(body, e); break
         case 'orbit': drawOrbit(body, e); break
         case 'chest': drawChest(body, e); break
+        case 'pickup': drawPickup(body, e); break
       }
       // 命中閃白用的白色覆蓋圓（平時透明）
       const flash = new Graphics()
@@ -154,13 +155,14 @@ export class PixiRenderer {
 
     // 依序處理各來源並就地戳記本幀（免每幀配置合併陣列與 seen Set）。
     // 順序即首次建立時的 z-order：gems → enemies → projectiles → enemyProjectiles
-    // → orbits → chests → player（玩家最後建立，畫在最上層）。
+    // → orbits → chests → pickups → player（玩家最後建立，畫在最上層）。
     for (const g of world.gems()) if (g.active) this.syncSprite(g, world)
     for (const e of world.enemies) if (e.active) this.syncSprite(e, world)
     for (const p of world.projectiles) if (p.active) this.syncSprite(p, world)
     for (const p of world.enemyProjectiles) if (p.active) this.syncSprite(p, world)
     for (const o of world.orbits()) if (o.active) this.syncSprite(o, world)
     for (const c of world.chests()) if (c.active) this.syncSprite(c, world)
+    for (const pk of world.pickups()) if (pk.active) this.syncSprite(pk, world)
     this.syncSprite(world.player, world)
     // 回收：本幀未戳記者（已消失）銷毀並移出對照表，避免洩漏。
     for (const [e, s] of this.sprites) {

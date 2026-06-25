@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { World } from './World'
 import { xpForLevel } from './systems/leveling'
-import { createEnemyProjectile, createProjectile } from './entities/factory'
+import { createEnemyProjectile, createProjectile, createPickup, createGem } from './entities/factory'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 
 describe('World', () => {
@@ -489,5 +489,31 @@ describe('武器進化效果', () => {
     w.player.hp = 50
     w.step(1 / 60)
     expect(w.player.hp).toBeGreaterThan(50) // 場域回血
+  })
+})
+
+describe('撿取物效果', () => {
+  it('heal 回血並夾在 maxHp 上限', () => {
+    const w = new World(1)
+    w.player.hp = 10
+    w.pickups().push(createPickup({ x: w.player.pos.x, y: w.player.pos.y }, 'heal'))
+    w.step(1 / 60)
+    expect(w.player.hp).toBeGreaterThan(10)
+    expect(w.player.hp).toBeLessThanOrEqual(w.player.maxHp)
+  })
+
+  it('vacuum 啟動後全場寶石飛向玩家被收取並轉為經驗', () => {
+    const w = new World(1)
+    const xpBefore = w.summary().xp
+    // 放兩顆離玩家較遠的寶石（一般 pickupRadius 吸不到，須靠 vacuum 不分距離吸引）
+    const g1 = createGem({ x: w.player.pos.x + 500, y: w.player.pos.y }, 3)
+    const g2 = createGem({ x: w.player.pos.x - 500, y: w.player.pos.y }, 3)
+    w.gems().push(g1, g2)
+    w.pickups().push(createPickup({ x: w.player.pos.x, y: w.player.pos.y }, 'vacuum'))
+    // 飛行需要數十格才抵達；步進足夠時間讓兩顆都被收取
+    for (let i = 0; i < 90; i++) w.step(1 / 60)
+    expect(g1.active).toBe(false)
+    expect(g2.active).toBe(false)
+    expect(w.summary().xp).toBeGreaterThan(xpBefore)
   })
 })

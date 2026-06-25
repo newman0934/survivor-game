@@ -8,7 +8,10 @@
 import type { Vec2 } from './core/vector'
 
 /** entity 的種類標籤；renderer 依此決定顏色，system 依此決定行為。 */
-export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit' | 'chest'
+export type EntityKind = 'player' | 'enemy' | 'projectile' | 'gem' | 'orbit' | 'chest' | 'pickup'
+
+/** 撿取物子種類：回血 / 全場吸取。 */
+export type PickupKind = 'heal' | 'vacuum'
 
 /** 由 World 發射、供音訊層解讀的語意事件。 */
 export type SoundEvent = 'shoot' | 'hit' | 'kill' | 'pickup' | 'levelup' | 'hurt' | 'boss' | 'chest'
@@ -54,6 +57,8 @@ export interface Entity {
   xp: number
   /** 敵人子種類（僅敵人使用）；決定數值/顏色/行為。 */
   enemyKind?: EnemyKind
+  /** 撿取物子種類（僅 pickup 使用）；決定效果與顏色。 */
+  pickupKind?: PickupKind
   /** charger 行為相位時鐘（秒）；其他敵種忽略。 */
   behaviorTimer?: number
   /** projectile 造型來源（抗體＝Y 形；穿孔素＝尖刺；噴吐病原毒液＝綠毒球）；其他種類忽略。 */
