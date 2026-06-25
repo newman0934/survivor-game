@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { World } from './World'
 import { xpForLevel } from './systems/leveling'
-import { createEnemyProjectile, createProjectile } from './entities/factory'
+import { createEnemyProjectile, createProjectile, createPickup, createGem } from './entities/factory'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 
 describe('World', () => {
@@ -489,5 +489,28 @@ describe('武器進化效果', () => {
     w.player.hp = 50
     w.step(1 / 60)
     expect(w.player.hp).toBeGreaterThan(50) // 場域回血
+  })
+})
+
+describe('撿取物效果', () => {
+  it('heal 回血並夾在 maxHp 上限', () => {
+    const w = new World(1)
+    w.player.hp = 10
+    w.pickups().push(createPickup({ x: w.player.pos.x, y: w.player.pos.y }, 'heal'))
+    w.step(1 / 60)
+    expect(w.player.hp).toBeGreaterThan(10)
+    expect(w.player.hp).toBeLessThanOrEqual(w.player.maxHp)
+  })
+
+  it('vacuum 收取全場寶石並轉為經驗', () => {
+    const w = new World(1)
+    const xpBefore = w.summary().xp
+    // 放幾顆離玩家較遠的寶石（不會被一般寶石迴圈先撿走）
+    w.gems().push(createGem({ x: w.player.pos.x + 500, y: w.player.pos.y }, 3))
+    w.gems().push(createGem({ x: w.player.pos.x - 500, y: w.player.pos.y }, 3))
+    w.pickups().push(createPickup({ x: w.player.pos.x, y: w.player.pos.y }, 'vacuum'))
+    w.step(1 / 60)
+    expect(w.gems().every((g) => !g.active)).toBe(true)
+    expect(w.summary().xp).toBeGreaterThan(xpBefore)
   })
 })
