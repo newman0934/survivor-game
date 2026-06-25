@@ -167,20 +167,34 @@ class SoundManager {
     }
   }
 
-  /** 啟動合成背景音樂（低音量正弦琶音循環）。 */
+  /** 啟動合成背景音樂：小調環境和弦進行（Am–F–C–G），低音根音 + 分解和弦 + 微 detune 加暖。 */
   startMusic(): void {
     if (this.musicTimer !== null) return
-    const notes = [220, 277, 330, 277]
-    let i = 0
-    const beat = (): void => {
+    // 每個和弦：bass=低音根音，arp=三個分解和弦音。每和弦持續 beatsPerChord 拍。
+    const chords = [
+      { bass: 110.0, arp: [220.0, 261.63, 329.63] }, // Am
+      { bass: 87.31, arp: [174.61, 220.0, 261.63] }, // F
+      { bass: 130.81, arp: [261.63, 329.63, 392.0] }, // C
+      { bass: 98.0, arp: [196.0, 246.94, 293.66] }, // G
+    ]
+    const beatsPerChord = 4
+    let beat = 0
+    const tick = (): void => {
       const ctx = this.ensure()
       if (!ctx || !this.master) return
-      const f = notes[i % notes.length]
-      this.tone('triangle', f, f, 0.32, 0.06, ctx.currentTime)
-      i++
+      const at = ctx.currentTime
+      const chord = chords[Math.floor(beat / beatsPerChord) % chords.length]
+      const step = beat % beatsPerChord
+      // 低音：每和弦第一拍落根音（長、柔），鋪底。
+      if (step === 0) this.tone('sine', chord.bass, chord.bass, 1.0, 0.07, at)
+      // 分解和弦：每拍一個音 + 輕微 detune 雙三角波加暖（柔音量、不搶 SFX）。
+      const f = chord.arp[step % chord.arp.length]
+      this.tone('triangle', f, f, 0.45, 0.05, at)
+      this.tone('triangle', f * 1.005, f * 1.005, 0.45, 0.03, at)
+      beat = (beat + 1) % (chords.length * beatsPerChord)
     }
-    beat()
-    this.musicTimer = setInterval(beat, 360)
+    tick()
+    this.musicTimer = setInterval(tick, 340)
   }
 
   /** 停止背景音樂。 */
