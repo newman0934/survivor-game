@@ -16,14 +16,15 @@ import { PASSIVE_DEFS, PASSIVE_ORDER, PASSIVE_CAP } from './passiveDefs'
 /**
  * 經驗曲線：回傳從 (level-1) 升到 level 所需的經驗值總量。
  *
- * 設計意圖：採線性遞增，基礎 5 點、每級再 +5（即第 1 級 5、第 2 級 10、第 3 級 15…），
- * 讓前期升級頻繁、後期逐漸拉長，保持穩定的成長節奏。
+ * 設計意圖：輕二次遞增——第一級仍只要 5（快速上手），之後級距逐漸拉開
+ * （5 / 11 / 19 / 29 / 41…），消除前期升級連跳洗版、但中後期成長不至於太緩。
  *
  * @param level 目標等級。
  * @returns 升到該等級所需的經驗值。
  */
 export function xpForLevel(level: number): number {
-  return 5 + (level - 1) * 5
+  const n = level - 1
+  return 5 + n * 5 + n * n
 }
 
 /** 武器持有上限（共 7 種武器，可全數收齊）。 */
