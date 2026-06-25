@@ -13,7 +13,7 @@ import { defineStore } from 'pinia'
 import type { WeaponKind, PassiveKind, CharacterKind } from '../engine/types'
 
 /** 遊戲整體狀態階段；App.vue 依此切換要顯示的 UI overlay。 */
-export type Phase = 'menu' | 'playing' | 'upgrading' | 'over'
+export type Phase = 'menu' | 'playing' | 'upgrading' | 'over' | 'paused'
 
 /** 引擎每隔一段時間推給 UI 的精簡狀態快照（HUD 渲染所需的全部數值）。 */
 export interface Summary {
@@ -144,6 +144,14 @@ export const useGameStore = defineStore('game', {
     /** 回到主選單。 */
     toMenu() {
       this.phase = 'menu'
+    },
+    /** 遊戲中暫停（僅 playing 生效，切到 paused）。 */
+    pauseGame() {
+      if (this.phase === 'playing') this.phase = 'paused'
+    },
+    /** 從暫停恢復（僅 paused 生效，切回 playing）。 */
+    resumeGame() {
+      if (this.phase === 'paused') this.phase = 'playing'
     },
   },
 })

@@ -9,7 +9,7 @@
  * 升級暫停的握手由 watch(store.phase) 完成——phase 變成 upgrading 就暫停引擎、變回 playing 就恢復。
  * 注意：引擎是純 TS，本元件僅透過 Game 的公開 API（start/stop/pause/resume）操作它。
  */
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useGameStore } from './stores/game'
 import { Game } from './engine/Game'
 import type { CharacterKind, MapKind } from './engine/types'
@@ -21,6 +21,8 @@ import GameOver from './ui/GameOver.vue'
 import BossBar from './ui/BossBar.vue'
 import MuteButton from './ui/MuteButton.vue'
 import Leaderboard from './ui/Leaderboard.vue'
+import PauseMenu from './ui/PauseMenu.vue'
+import PauseButton from './ui/PauseButton.vue'
 
 const store = useGameStore()
 // PixiJS 畫布要掛載的 DOM 容器（由 template 中的 ref 綁定）。
@@ -75,7 +77,7 @@ watch(
   (phase, prev) => {
     // game 為 null 時略過引擎暫停/恢復，但下方 over 記錄邏輯仍須執行，故不在此 early-return。
     if (game) {
-      if (phase === 'upgrading') game.pause()
+      if (phase === 'upgrading' || phase === 'paused') game.pause()
       else if (phase === 'playing') game.resume()
     }
     // 進入結束畫面（上升沿）：以最終 summary + 當局角色/地圖記錄一場，並刷新統計與破紀錄旗標。
@@ -99,8 +101,19 @@ watch(
   },
 )
 
-// 元件卸載時停掉引擎，避免 raf 迴圈與 Pixi 資源外洩（Game.stop 冪等，重複呼叫安全）。
-onBeforeUnmount(() => game?.stop())
+// ESC 切換暫停：playing→暫停、paused→恢復；其餘 phase 忽略。
+function onKeydown(e: KeyboardEvent): void {
+  if (e.key !== 'Escape') return
+  if (store.phase === 'playing') store.pauseGame()
+  else if (store.phase === 'paused') store.resumeGame()
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+
+// 元件卸載時移除 ESC 監聽並停掉引擎（Game.stop 冪等，重複呼叫安全）。
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown)
+  game?.stop()
+})
 </script>
 
 <template>
@@ -112,11 +125,13 @@ onBeforeUnmount(() => game?.stop())
     <!-- Boss 血條：遊玩/升級暫停時，若場上有 Boss 則顯示 -->
     <BossBar v-if="store.phase === 'playing' || store.phase === 'upgrading'" />
     <MuteButton v-if="store.phase !== 'menu'" />
+    <PauseButton v-if="store.phase === 'playing'" />
     <!-- 以下三個 overlay 依 phase 互斥顯示 -->
     <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" :stats="stats" @start="startGame" @open-leaderboard="showLeaderboard = true" /></Transition>
     <Transition name="fade"><Leaderboard v-if="showLeaderboard && store.phase === 'menu'" :runs="runs" @close="showLeaderboard = false" /></Transition>
     <Transition name="fade"><UpgradeModal v-if="store.phase === 'upgrading'" /></Transition>
     <Transition name="fade"><GameOver v-if="store.phase === 'over'" :best-time="lastRun.bestTime" :is-new-best-time="lastRun.isNewBestTime" :is-new-best-kills="lastRun.isNewBestKills" @restart="restart" @menu="toMenu" /></Transition>
+    <Transition name="fade"><PauseMenu v-if="store.phase === 'paused'" @resume="store.resumeGame()" @restart="restart" @menu="toMenu" /></Transition>
   </div>
 </template>
 
