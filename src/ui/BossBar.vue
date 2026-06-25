@@ -25,10 +25,13 @@ const pct = computed(() => (store.bossMaxHp ? (store.bossHp / store.bossMaxHp) *
 .bossbar { position: absolute; top: 3rem; left: 50%; transform: translateX(-50%);
   width: min(80%, 640px); pointer-events: none; color: #fff; font-family: sans-serif;
   text-align: center; }
-.label { font-size: 0.9rem; font-weight: bold; letter-spacing: 0.2em;
-  text-shadow: 0 1px 2px #000; margin-bottom: 2px; }
-.bar { height: 14px; background: rgba(255, 255, 255, 0.15); border-radius: 7px; overflow: hidden; }
-.fill { background: #9c27b0; height: 100%; border-radius: 7px; transition: width 0.1s linear; }
+.label { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; letter-spacing: 0.25em;
+  text-shadow: 0 1px 2px #000; margin-bottom: 3px; }
+.bar { height: 16px; border-radius: 8px; overflow: hidden;
+  background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6); }
+.fill { height: 100%; border-radius: 8px; transition: width 0.1s linear; background-color: #9c27b0;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 55%);
+  box-shadow: 0 0 10px rgba(156, 39, 176, 0.6); }
 .boss-enter-active, .boss-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
 .boss-enter-from, .boss-leave-to { opacity: 0; transform: translate(-50%, -12px); }
 .fill.low { animation: bosslow 0.6s ease-in-out infinite; }
