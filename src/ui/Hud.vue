@@ -49,7 +49,8 @@ watch(() => store.hp, (n, o) => {
   font-size: 1.1rem; text-shadow: 0 1px 2px #000; }
 .time { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
 /* 擊殺絕對定位右上、避開靜音鈕（2.4rem + 右距 0.5rem） */
-.kills { position: absolute; right: 3.4rem; top: 0.6rem; font-family: var(--font-display); }
+/* right 需清過靜音鈕 + 暫停鈕兩顆（各 2.4rem + 間距） */
+.kills { position: absolute; right: 6.3rem; top: 0.6rem; font-family: var(--font-display); }
 .bar { position: relative; margin: 3px 1rem; border-radius: 6px; overflow: hidden;
   background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
   /* 分段刻度：每約 10% 一道細分隔 */
