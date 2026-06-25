@@ -6,7 +6,7 @@
  * 調整基礎手感／數值多半從這裡下手。
  */
 import type { Vec2 } from '../core/vector'
-import type { Entity, EnemyKind } from '../types'
+import type { Entity, EnemyKind, PickupKind } from '../types'
 import { ENEMY_DEFS } from '../systems/enemyDefs'
 
 /** 共用的 entity 基底；各工廠以此為底再覆寫專屬欄位（避免漏填欄位）。 */
@@ -110,6 +110,16 @@ export function createOrbit(pos: Vec2, damage: number): Entity {
  */
 export function createChest(pos: Vec2): Entity {
   return { ...base(), kind: 'chest', pos: { ...pos }, radius: 14 }
+}
+
+/**
+ * 建立撿取物 entity。
+ * @param pos 掉落位置（會被複製，不共用參照）。
+ * @param kind 撿取物子種類。
+ * @returns 新的 pickup entity。
+ */
+export function createPickup(pos: Vec2, kind: PickupKind): Entity {
+  return { ...base(), kind: 'pickup', pos: { ...pos }, radius: 9, pickupKind: kind }
 }
 
 /**
