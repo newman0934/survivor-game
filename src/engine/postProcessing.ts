@@ -4,7 +4,7 @@
  * 把泛光（AdvancedBloom）+ 色彩分級（ColorMatrix）+ 暈影（vignette 覆蓋物）套在 PixiJS
  * app.stage，一次拉升整體畫面質感。純呈現層——不碰模擬/確定性/store。
  *
- * 行動裝置（coarse pointer）自動關閉 bloom（保留 grade + vignette，兩者極輕）；
+ * bloom 由 constructor 收 bloomEnabled 決定、可 setBloom 運行時切換（grade + vignette 始終保留）；
  * 濾鏡建立以 try/catch 包住，任何失敗退回無濾鏡正常渲染，不影響可玩性。
  */
 import { Application, ColorMatrixFilter, Sprite, Texture, type Filter } from 'pixi.js'
@@ -25,14 +25,6 @@ const VIGNETTE = {
   innerStop: 0.5,
   /** 漸層外半徑佔紋理半邊比例（>0.7 讓四角最深）。 */
   outerR: 0.72,
-}
-
-/**
- * 是否走輕量路徑（行動/觸控裝置）→ 不建立 bloom。
- * 無 matchMedia 的環境視為非 coarse（桌機路徑）。
- */
-export function prefersLightweight(): boolean {
-  return typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
 }
 
 /** 產生徑向漸層暈影紋理（中央透明 → 邊緣暗）；連續、無帶狀。 */
@@ -58,11 +50,22 @@ export class PostProcessing {
   /** 螢幕空間暈影覆蓋物（直接掛在 stage、不隨鏡頭平移）。 */
   private vignette: Sprite
 
-  constructor(private app: Application) {
+  private bloomEnabled: boolean
+
+  constructor(private app: Application, bloomEnabled: boolean) {
+    this.bloomEnabled = bloomEnabled
+    this.buildFilters()
+    // vignette 疊在最上層（stage 子節點 = 螢幕空間，不隨 world 平移）。
+    this.vignette = new Sprite(makeVignetteTexture())
+    app.stage.addChild(this.vignette)
+    this.resize()
+  }
+
+  /** 依目前 bloomEnabled 重建濾鏡鏈（bloom?+grade）；grade 始終保留；失敗退回無濾鏡。 */
+  private buildFilters(): void {
     try {
       const filters: Filter[] = []
-      // 行動裝置略過 bloom（GPU 較弱）；桌機才加。
-      if (!prefersLightweight()) {
+      if (this.bloomEnabled) {
         filters.push(new AdvancedBloomFilter({
           threshold: BLOOM.threshold, bloomScale: BLOOM.bloomScale,
           brightness: BLOOM.brightness, blur: BLOOM.blur, quality: BLOOM.quality,
@@ -73,16 +76,19 @@ export class PostProcessing {
       grade.saturate(GRADE.saturate, true)
       grade.tint(GRADE.tint, true)
       filters.push(grade)
-      app.stage.filters = filters
+      this.app.stage.filters = filters
       // stage 被鏡頭平移，須固定濾鏡作用區為螢幕，否則 FilterSystem 取錯 bounds → 全黑。
-      app.stage.filterArea = app.screen
+      this.app.stage.filterArea = this.app.screen
     } catch {
       // 濾鏡建立失敗 → 退回無濾鏡正常渲染。
     }
-    // vignette 疊在最上層（stage 子節點 = 螢幕空間，不隨 world 平移）。
-    this.vignette = new Sprite(makeVignetteTexture())
-    app.stage.addChild(this.vignette)
-    this.resize()
+  }
+
+  /** 運行時切換 bloom：重建濾鏡鏈（grade/vignette 不受影響）。 */
+  setBloom(enabled: boolean): void {
+    if (this.bloomEnabled === enabled) return
+    this.bloomEnabled = enabled
+    this.buildFilters()
   }
 
   /** resize 時把暈影 Sprite 拉滿螢幕（紋理連續、不需重繪）。 */

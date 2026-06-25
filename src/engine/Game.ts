@@ -59,9 +59,9 @@ export class Game {
    * @param seed 本場亂數種子。
    * @returns 已啟動的 `Game` 實例。
    */
-  static async start(canvasParent: HTMLElement, seed: number, character: CharacterKind, map: MapKind): Promise<Game> {
+  static async start(canvasParent: HTMLElement, seed: number, character: CharacterKind, map: MapKind, bloomEnabled = true): Promise<Game> {
     const world = new World(seed, character, map)
-    const renderer = await PixiRenderer.create(canvasParent)
+    const renderer = await PixiRenderer.create(canvasParent, bloomEnabled)
     const game = new Game(world, renderer, seed)
     game.store.setLoadout(world.loadoutSnapshot()) // 開賽即把起始武器推進持有快照，供 HUD 持有列顯示
     game.input.attach()
@@ -75,6 +75,11 @@ export class Game {
     }
     game.loop(0)
     return game
+  }
+
+  /** 運行時切換 bloom（委派 renderer）。 */
+  setBloom(enabled: boolean): void {
+    this.renderer.setBloom(enabled)
   }
 
   /** 暫停模擬推進（渲染仍持續）。 */
