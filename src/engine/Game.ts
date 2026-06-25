@@ -70,6 +70,7 @@ export class Game {
     soundManager.startMusic()
     game.store.onUpgradePicked = (id: string) => {
       world.applyUpgrade(id)
+      game.store.setLoadout(world.loadoutSnapshot()) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
       game.paused = false
     }
     game.loop(0)
@@ -112,6 +113,7 @@ export class Game {
           this.store.offerUpgrades(opts.map((o) => ({ id: o.id, label: o.label })))
           this.store.onUpgradePicked = (id: string) => {
             this.world.applyUpgrade(id)
+            this.store.setLoadout(this.world.loadoutSnapshot()) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
             this.paused = false // 玩家選定後恢復
           }
           this.paused = true
