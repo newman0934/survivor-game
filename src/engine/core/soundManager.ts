@@ -125,9 +125,7 @@ class SoundManager {
         this.tone('triangle', 220, 130, 0.06, 0.05, t)
         this.noise(0.02, 0.05, 3200, t, 'highpass')
         break
-      case 'hit': // 俐落命中：高通噪聲 tick + 短 body
-        this.noise(0.04, 0.13, 2600, t, 'highpass')
-        this.tone('square', 340, 190, 0.05, 0.07, t)
+      case 'hit': // 擊中敵人不發音（依需求取消，避免高頻命中聲）
         break
       case 'kill': // 滿足爆破：下行方波 + sub thump + 低噪
         this.tone('square', 440, 110, 0.12, 0.16, t)
