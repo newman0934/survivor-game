@@ -37,8 +37,8 @@ watch(() => store.hp, (n, o) => {
       <span class="kills">擊殺 {{ store.kills }}</span>
     </div>
     <LoadoutBar />
-    <div class="bar xp"><div class="fill" :style="{ width: xpPct + '%' }" /></div>
-    <div class="bar hp" :class="{ hurt }" @animationend="hurt = false"><div class="fill" :style="{ width: hpPct + '%' }" /></div>
+    <div class="bar xp"><div class="fill" :style="{ width: xpPct + '%' }" /><span class="readout">XP {{ Math.floor(xpPct) }}%</span></div>
+    <div class="bar hp" :class="{ hurt }" @animationend="hurt = false"><div class="fill" :style="{ width: hpPct + '%' }" /><span class="readout">{{ Math.ceil(store.hp) }} / {{ store.maxHp }}</span></div>
   </div>
 </template>
 
@@ -50,12 +50,20 @@ watch(() => store.hp, (n, o) => {
 .time { font-family: var(--font-display); font-size: 1.5rem; font-weight: 700; }
 /* 擊殺絕對定位右上、避開靜音鈕（2.4rem + 右距 0.5rem） */
 .kills { position: absolute; right: 3.4rem; top: 0.6rem; font-family: var(--font-display); }
-.bar { height: 8px; margin: 2px 1rem; background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
-.bar.xp { order: 3; margin-top: auto; }
-.bar.hp { order: 4; margin-bottom: 0.6rem; height: 12px; }
-.xp .fill { background: var(--antigen); height: 100%; border-radius: 4px; }
-.hp .fill { background: #ff5252; height: 100%; border-radius: 4px; }
-.bar .fill { transition: width 0.25s ease-out; }
+.bar { position: relative; margin: 3px 1rem; border-radius: 6px; overflow: hidden;
+  background: rgba(0, 0, 0, 0.45); box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+  /* 分段刻度：每約 10% 一道細分隔 */
+  background-image: repeating-linear-gradient(90deg, transparent 0, transparent calc(10% - 1px), rgba(0, 0, 0, 0.5) calc(10% - 1px), rgba(0, 0, 0, 0.5) 10%); }
+.bar.xp { order: 3; margin-top: auto; height: 12px; }
+.bar.hp { order: 4; margin-bottom: 0.6rem; height: 18px; }
+.bar .fill { height: 100%; border-radius: 6px; transition: width 0.25s ease-out;
+  /* 頂部光澤 */
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 55%); }
+.xp .fill { background-color: var(--antigen); box-shadow: 0 0 8px rgba(255, 213, 74, 0.5); }
+.hp .fill { background-color: #ff5252; box-shadow: 0 0 8px rgba(255, 82, 82, 0.5); }
+.readout { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 0.72rem; font-weight: 700; color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9); letter-spacing: 0.03em; }
 .bar.hp.hurt { animation: hurtflash 0.3s ease-out; }
 @keyframes hurtflash {
   0% { box-shadow: 0 0 0 0 rgba(255, 40, 40, 0); }
