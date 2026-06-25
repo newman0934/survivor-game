@@ -61,7 +61,7 @@ export class PixiRenderer {
   /** 是否已銷毀，用來讓 destroy() 冪等。 */
   private destroyed = false
 
-  private constructor(app: Application) {
+  private constructor(app: Application, bloomEnabled: boolean) {
     this.app = app
     this.world = new Container()
     app.stage.addChild(this.world)
@@ -78,14 +78,19 @@ export class PixiRenderer {
     this.effects = new EffectsLayer(this.world, app.stage, app.renderer.width, app.renderer.height)
     this.lastW = app.renderer.width
     this.lastH = app.renderer.height
-    this.post = new PostProcessing(app)
+    this.post = new PostProcessing(app, bloomEnabled)
   }
 
-  static async create(canvasParent: HTMLElement): Promise<PixiRenderer> {
+  static async create(canvasParent: HTMLElement, bloomEnabled: boolean): Promise<PixiRenderer> {
     const app = new Application()
     await app.init({ resizeTo: canvasParent, background: 0x0c0c12, antialias: true })
     canvasParent.appendChild(app.canvas)
-    return new PixiRenderer(app)
+    return new PixiRenderer(app, bloomEnabled)
+  }
+
+  /** 運行時切換 bloom（委派後製）。 */
+  setBloom(enabled: boolean): void {
+    this.post.setBloom(enabled)
   }
 
   /** 取得（必要時建立）某 entity 的顯示物件；首次建立時依種類畫一次靜態造型。 */

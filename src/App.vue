@@ -14,6 +14,7 @@ import { useGameStore } from './stores/game'
 import { Game } from './engine/Game'
 import type { CharacterKind, MapKind } from './engine/types'
 import { loadSave, recordRun, type CumulativeStats, type RunRecord } from './persistence/saveStore'
+import { loadSettings, saveSettings } from './persistence/settingsStore'
 import MainMenu from './ui/MainMenu.vue'
 import Hud from './ui/Hud.vue'
 import UpgradeModal from './ui/UpgradeModal.vue'
@@ -47,6 +48,14 @@ const lastRun = ref<{ bestTime: number; isNewBestTime: boolean; isNewBestKills: 
   isNewBestKills: false,
 })
 
+// bloom 設定（持久化）；開機讀取、切換時存回並即時套到引擎。
+const bloomEnabled = ref(loadSettings().bloom)
+function toggleBloom(): void {
+  bloomEnabled.value = !bloomEnabled.value
+  saveSettings({ bloom: bloomEnabled.value })
+  game?.setBloom(bloomEnabled.value)
+}
+
 // 開始一場新遊戲：先把 store 重置為 playing，再非同步啟動引擎並掛上畫布。
 async function startGame(opts: { character: CharacterKind; map: MapKind } = selected) {
   selected = opts
@@ -54,7 +63,7 @@ async function startGame(opts: { character: CharacterKind; map: MapKind } = sele
   store.start()
   store.setCharacter(opts.character)
   if (!canvasParent.value) return
-  game = await Game.start(canvasParent.value, seed++, opts.character, opts.map)
+  game = await Game.start(canvasParent.value, seed++, opts.character, opts.map, bloomEnabled.value)
 }
 
 // 重新開始：先停掉舊引擎（Game.stop 為冪等）並清空參照，再以同角色+地圖開新的一場。
@@ -131,7 +140,7 @@ onBeforeUnmount(() => {
     <Transition name="fade"><Leaderboard v-if="showLeaderboard && store.phase === 'menu'" :runs="runs" @close="showLeaderboard = false" /></Transition>
     <Transition name="fade"><UpgradeModal v-if="store.phase === 'upgrading'" /></Transition>
     <Transition name="fade"><GameOver v-if="store.phase === 'over'" :best-time="lastRun.bestTime" :is-new-best-time="lastRun.isNewBestTime" :is-new-best-kills="lastRun.isNewBestKills" @restart="restart" @menu="toMenu" /></Transition>
-    <Transition name="fade"><PauseMenu v-if="store.phase === 'paused'" @resume="store.resumeGame()" @restart="restart" @menu="toMenu" /></Transition>
+    <Transition name="fade"><PauseMenu v-if="store.phase === 'paused'" :bloom="bloomEnabled" @resume="store.resumeGame()" @restart="restart" @menu="toMenu" @toggle-bloom="toggleBloom" /></Transition>
   </div>
 </template>
 
