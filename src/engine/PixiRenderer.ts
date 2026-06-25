@@ -207,7 +207,7 @@ export class PixiRenderer {
     for (const ev of events) {
       if (ev.kind === 'sweep') this.effects.spawnSweep(ev.x, ev.y, ev.angle, ev.radius, ev.halfAngle)
       else if (ev.kind === 'chain') this.effects.spawnChain(ev.points)
-      else { this.effects.spawnNova(ev.x, ev.y, ev.radius); this.effects.shake(4) }
+      else this.effects.spawnNova(ev.x, ev.y, ev.radius)
     }
   }
 
