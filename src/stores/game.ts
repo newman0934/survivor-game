@@ -10,7 +10,7 @@
  *  - store → 引擎：UI 透過 pickUpgrade 觸發引擎事先註冊的 onUpgradePicked callback。
  */
 import { defineStore } from 'pinia'
-import type { WeaponKind, PassiveKind } from '../engine/types'
+import type { WeaponKind, PassiveKind, CharacterKind } from '../engine/types'
 
 /** 遊戲整體狀態階段；App.vue 依此切換要顯示的 UI overlay。 */
 export type Phase = 'menu' | 'playing' | 'upgrading' | 'over'
@@ -57,6 +57,8 @@ interface State extends Summary {
   onUpgradePicked: ((id: string) => void) | null
   /** 目前持有的武器/被動快照；升級彈窗開啟時更新。 */
   loadout: LoadoutSnapshot
+  /** 目前角色（顯示用：HUD 頭像）。 */
+  character: CharacterKind
 }
 
 /** 取得遊戲橋接 store 的 composable（Pinia 自動生成）。 */
@@ -76,6 +78,7 @@ export const useGameStore = defineStore('game', {
     upgradeOptions: [],
     onUpgradePicked: null,
     loadout: { weapons: [], passives: [] },
+    character: 'macrophage',
   }),
   actions: {
     /** 開始新的一場：切到 playing 並把所有 summary/升級狀態歸零。由 App.vue 在啟動引擎前呼叫。 */
@@ -111,6 +114,10 @@ export const useGameStore = defineStore('game', {
     /** 引擎 → store：更新目前持有快照（升級彈窗顯示用）。 */
     setLoadout(l: LoadoutSnapshot) {
       this.loadout = l
+    },
+    /** 設定目前角色（App 開賽時呼叫，供 HUD 頭像顯示）。 */
+    setCharacter(kind: CharacterKind) {
+      this.character = kind
     },
     /**
      * 升級握手（步驟 1）：引擎升級時呼叫此 action 提供三選一選項並切到 upgrading 階段。

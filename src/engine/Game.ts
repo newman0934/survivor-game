@@ -63,6 +63,7 @@ export class Game {
     const world = new World(seed, character, map)
     const renderer = await PixiRenderer.create(canvasParent)
     const game = new Game(world, renderer, seed)
+    game.store.setLoadout(world.loadoutSnapshot()) // 開賽即把起始武器推進持有快照，供 HUD 持有列顯示
     game.input.attach()
     game.touch.attach(canvasParent)
     soundManager.resume()
