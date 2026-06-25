@@ -23,7 +23,8 @@
   不 `world.step()`、續渲染（真凍結、無事後追趕）。
 - **FR-4 震屏觸發分級**：`PixiRenderer` 既有偵測處接線——一般小怪死亡微震；nova/進化大招命中中震；
   大型死亡（自爆體/超級）中大震；Boss 受擊大震；Boss 死亡最大震。
-- **FR-5 頓挫觸發**：大型死亡（自爆體/超級）短頓挫；Boss 受擊短頓挫（受冷卻節流）；Boss 死亡稍長頓挫。
+- **FR-5 頓挫觸發**：**頓挫只在死亡瞬間**（收斂）——Boss(superbug) 死亡稍長頓挫、大型死亡（自爆體）短頓挫，受全域冷卻節流；
+  Boss 受擊只大震屏、**不頓挫**（避免 Boss 戰連續凍結感）。
 - **FR-6 可及性**：`prefers-reduced-motion: reduce` 時關閉震屏與頓挫（`EffectsLayer` 啟動查一次 media query）。
 
 ## Acceptance Criteria
