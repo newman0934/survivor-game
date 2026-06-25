@@ -4,6 +4,7 @@
  */
 import { Container, Graphics, Text } from 'pixi.js'
 import type { EnemyKind } from './types'
+import { HitStop } from './core/hitStop'
 
 const DT = 1 / 60
 const TAU = Math.PI * 2
@@ -49,6 +50,12 @@ export class EffectsLayer {
   private flashes: { g: Graphics; life: number; maxLife: number }[] = []
   private vignetteAlpha = 0
   private shakeIntensity = 0
+  private hitStopTimer = new HitStop()
+  // 暈動症友善：啟動時查一次系統偏好，reduced 時關閉震屏與頓挫。
+  private readonly reducedMotion =
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
   private screenW: number
   private screenH: number
   private destroyed = false
@@ -230,14 +237,32 @@ export class EffectsLayer {
     this.addExpand(x, y, 0x4dd0c0, 2, radius * 1.15, 2, 0.5)
   }
 
+  /** 觸發鏡頭震動（amount 直接加到震動強度，沿用既有上限；reduced-motion 時略過）。 */
+  shake(amount: number): void {
+    if (this.reducedMotion) return
+    this.shakeIntensity = Math.min(12, this.shakeIntensity + amount)
+  }
+
+  /** 觸發頓挫凍結（受全域冷卻節流；reduced-motion 時略過）。 */
+  hitStop(seconds: number): void {
+    if (this.reducedMotion) return
+    this.hitStopTimer.trigger(seconds)
+  }
+
+  /** 是否處於頓挫凍結（供 Game 迴圈決定是否暫停推進）。 */
+  isHitStopped(): boolean {
+    return this.hitStopTimer.stopped
+  }
+
   /** 受傷：拉高紅暈與震動強度（intensity 越大越強，boss 撞擊較大）。 */
   hurt(intensity: number): void {
     this.vignetteAlpha = Math.min(0.55, this.vignetteAlpha + 0.3 + intensity * 0.3)
-    this.shakeIntensity = Math.min(12, this.shakeIntensity + 4 + intensity * 8)
+    this.shake(4 + intensity * 8)
   }
 
   /** 每幀推進所有特效，回傳鏡頭震動偏移。 */
   update(): { shakeX: number; shakeY: number } {
+    this.hitStopTimer.advance(DT)
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i]
       p.life -= DT
