@@ -168,10 +168,9 @@ export class PixiRenderer {
         if (e.kind === 'enemy') {
           const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
           this.effects.spawnKill(e.pos.x, e.pos.y, color, e.enemyKind)
-          // 分級震屏 + 死亡頓挫（收斂：只在死亡瞬間、時長偏短）：superbug(Boss) 最大、exploder 大型死亡、其餘微震
+          // 死亡震屏 + 頓挫（只在大型死亡）：superbug(Boss) 最大、exploder 大型死亡；一般小怪死亡不震不頓
           if (e.enemyKind === 'superbug') { this.effects.shake(10); this.effects.hitStop(0.06) }
           else if (e.enemyKind === 'exploder') { this.effects.shake(6); this.effects.hitStop(0.04) }
-          else this.effects.shake(2)
         } else if (e.kind === 'gem') {
           this.effects.spawnPickup(e.pos.x, e.pos.y)
         }
