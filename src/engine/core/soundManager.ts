@@ -5,9 +5,48 @@
  * 所有音源接到單一 masterGain（靜音=0）。play 依事件型別節流避免高頻爆音。
  * 匯出單例 soundManager 供 Game 與 UI 共用。音訊為副作用，不影響模擬確定性。
  */
-import type { SoundEvent } from '../types'
+import type { SoundEvent, MapKind } from '../types'
 
 type Event = SoundEvent | 'gameover'
+
+/** 一個和弦：低音根音 + 三個分解和弦音。 */
+interface Chord { bass: number; arp: [number, number, number] }
+/** 一張地圖的背景音樂主題：和弦進行 + 每拍毫秒 + 分解和弦音色。 */
+interface MusicTheme { chords: Chord[]; beatMs: number; arpWave: OscillatorType }
+
+/** 各地圖背景音樂主題（程式合成；每和弦 4 拍）。 */
+const MUSIC_THEMES: Record<MapKind, MusicTheme> = {
+  // 血管：平緩小調（Am–F–C–G），溫暖三角波。
+  vessel: {
+    beatMs: 340, arpWave: 'triangle',
+    chords: [
+      { bass: 110.0, arp: [220.0, 261.63, 329.63] }, // Am
+      { bass: 87.31, arp: [174.61, 220.0, 261.63] }, // F
+      { bass: 130.81, arp: [261.63, 329.63, 392.0] }, // C
+      { bass: 98.0, arp: [196.0, 246.94, 293.66] }, // G
+    ],
+  },
+  // 胃：較暗、推進感（Dm–Gm–C–F），稍快。
+  stomach: {
+    beatMs: 300, arpWave: 'triangle',
+    chords: [
+      { bass: 146.83, arp: [220.0, 293.66, 349.23] }, // Dm
+      { bass: 98.0, arp: [196.0, 233.08, 293.66] }, // Gm
+      { bass: 130.81, arp: [261.63, 329.63, 392.0] }, // C
+      { bass: 87.31, arp: [174.61, 220.0, 261.63] }, // F
+    ],
+  },
+  // 肺泡：空靈明亮（C–G–Am–F），正弦、較慢。
+  lung: {
+    beatMs: 400, arpWave: 'sine',
+    chords: [
+      { bass: 130.81, arp: [261.63, 329.63, 392.0] }, // C
+      { bass: 98.0, arp: [196.0, 246.94, 293.66] }, // G
+      { bass: 110.0, arp: [220.0, 261.63, 329.63] }, // Am
+      { bass: 87.31, arp: [174.61, 220.0, 261.63] }, // F
+    ],
+  },
+}
 
 /** 各事件最小播放間隔（毫秒），避免高頻爆音／密集疊加糊成一片。 */
 const THROTTLE: Partial<Record<Event, number>> = { shoot: 60, hit: 50, hurt: 200, kill: 45 }
@@ -167,34 +206,28 @@ class SoundManager {
     }
   }
 
-  /** 啟動合成背景音樂：小調環境和弦進行（Am–F–C–G），低音根音 + 分解和弦 + 微 detune 加暖。 */
-  startMusic(): void {
+  /** 啟動合成背景音樂：依地圖選主題（和弦進行 + 節奏 + 音色），低音根音 + 分解和弦 + 微 detune 加暖。 */
+  startMusic(map: MapKind = 'vessel'): void {
     if (this.musicTimer !== null) return
-    // 每個和弦：bass=低音根音，arp=三個分解和弦音。每和弦持續 beatsPerChord 拍。
-    const chords = [
-      { bass: 110.0, arp: [220.0, 261.63, 329.63] }, // Am
-      { bass: 87.31, arp: [174.61, 220.0, 261.63] }, // F
-      { bass: 130.81, arp: [261.63, 329.63, 392.0] }, // C
-      { bass: 98.0, arp: [196.0, 246.94, 293.66] }, // G
-    ]
+    const theme = MUSIC_THEMES[map] ?? MUSIC_THEMES.vessel
     const beatsPerChord = 4
     let beat = 0
     const tick = (): void => {
       const ctx = this.ensure()
       if (!ctx || !this.master) return
       const at = ctx.currentTime
-      const chord = chords[Math.floor(beat / beatsPerChord) % chords.length]
+      const chord = theme.chords[Math.floor(beat / beatsPerChord) % theme.chords.length]
       const step = beat % beatsPerChord
       // 低音：每和弦第一拍落根音（長、柔），鋪底。
       if (step === 0) this.tone('sine', chord.bass, chord.bass, 1.0, 0.07, at)
-      // 分解和弦：每拍一個音 + 輕微 detune 雙三角波加暖（柔音量、不搶 SFX）。
+      // 分解和弦：每拍一個音 + 輕微 detune 雙振盪器加暖（柔音量、不搶 SFX）。
       const f = chord.arp[step % chord.arp.length]
-      this.tone('triangle', f, f, 0.45, 0.05, at)
-      this.tone('triangle', f * 1.005, f * 1.005, 0.45, 0.03, at)
-      beat = (beat + 1) % (chords.length * beatsPerChord)
+      this.tone(theme.arpWave, f, f, 0.45, 0.05, at)
+      this.tone(theme.arpWave, f * 1.005, f * 1.005, 0.45, 0.03, at)
+      beat = (beat + 1) % (theme.chords.length * beatsPerChord)
     }
     tick()
-    this.musicTimer = setInterval(tick, 340)
+    this.musicTimer = setInterval(tick, theme.beatMs)
   }
 
   /** 停止背景音樂。 */
