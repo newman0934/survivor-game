@@ -1,6 +1,6 @@
 /** 圖示系統 registry：單色主題色描邊 SVG 圖示資料 + 升級選項 id 解析器。
    武器/被動定義皆無 color 欄位，故色彩由本檔每個 IconDef 自帶。 */
-import type { WeaponKind, PassiveKind } from '../../engine/types'
+import type { WeaponKind, PassiveKind, CharacterKind } from '../../engine/types'
 
 /** 單個圖示：viewBox（預設 0 0 24 24）+ 描邊 path（stroke currentColor）+ 選填實心 path + 主題色。 */
 export interface IconDef {
@@ -74,4 +74,21 @@ export const PASSIVE_ICONS: Record<PassiveKind, IconDef> = {
   armor: { color: '#90caf9', paths: ['M12 3 L5 6 V12 C5 17 12 21 12 21 C12 21 19 17 19 12 V6 Z'] },
   // 記憶細胞（經驗）：冠
   crown: { color: '#ffd54a', paths: ['M4 18 H20', 'M4 18 L6 8 L10 13 L12 6 L14 13 L18 8 L20 18'] },
+}
+
+/** 角色圖示（4）。色用各角色主題色（對齊 CHARACTER_DEFS）。 */
+export const CHARACTER_ICONS: Record<CharacterKind, IconDef> = {
+  // 巨噬細胞：偽足變形蟲狀大細胞 + 核
+  macrophage: { color: '#ff6b6b',
+    paths: ['M12 4 C16 4 18 7 18 10 C20 11 21 14 19 15 C18 18 15 17 14 19 C12 21 9 20 8 18 C5 18 3 15 5 13 C4 10 6 7 9 6 C10 4 11 4 12 4 Z'],
+    fills: ['M12 12 a2.4 2.4 0 1 0 0.01 0'] },
+  // 嗜中性球：多葉核細胞（外圈 + 三葉）
+  neutrophil: { color: '#6bff8c', paths: ['M12 3 a9 9 0 1 0 0.01 0'],
+    fills: ['M10 10 a1.8 1.8 0 1 0 0.01 0', 'M14.5 11 a1.8 1.8 0 1 0 0.01 0', 'M11.5 14.5 a1.8 1.8 0 1 0 0.01 0'] },
+  // NK 細胞：細胞 + 標靶十字（殺傷）
+  nkcell: { color: '#b39ddb', paths: ['M12 3 a9 9 0 1 0 0.01 0', 'M9 12 H15', 'M12 9 V15'] },
+  // 樹突細胞：中心 + 放射樹突
+  dendritic: { color: '#ffd54a',
+    paths: ['M12 12 L12 4', 'M12 12 L19 8', 'M12 12 L20 15', 'M12 12 L14 20', 'M12 12 L6 19', 'M12 12 L4 13', 'M12 12 L7 6'],
+    fills: ['M12 12 a2 2 0 1 0 0.01 0'] },
 }
