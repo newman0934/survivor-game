@@ -29,6 +29,14 @@ describe('leveling', () => {
     expect(xpForLevel(2)).toBeGreaterThan(xpForLevel(1))
   })
 
+  it('第一級保持快速（5），且曲線為凸（級距隨等級拉開）', () => {
+    expect(xpForLevel(1)).toBe(5)
+    // 凸性：相鄰級距遞增，前期不連跳、之後逐漸拉開
+    const gap = (l: number) => xpForLevel(l + 1) - xpForLevel(l)
+    expect(gap(2)).toBeGreaterThan(gap(1))
+    expect(gap(3)).toBeGreaterThan(gap(2))
+  })
+
   it('只持有魔杖時候選含解鎖其他武器與升級魔杖', () => {
     const ctx = makeCtx([{ kind: 'antibody', level: 1, cooldownTimer: 0 }])
     const ids = buildCandidates(ctx).map((o) => o.id)
