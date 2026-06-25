@@ -24,7 +24,8 @@
 - **FR-4 World 拾取與效果**：新增 `pickupEntities` 陣列（+ getter + 末段 filter 清理）；
   仿寶石/寶箱以 `attractGem` + `pickupRadius` 吸取、碰玩家本體即拾取並呼叫 `applyPickup(kind)`：
   - `heal`：`hp = min(maxHp, hp + maxHp × HEAL_FRAC)`（夾上限）。
-  - `vacuum`：遍歷所有 active 寶石 → `grantXp(gem.xp × xpGain)` 並 deactivate（瞬間全收）。
+  - `vacuum`：啟動一段 `VACUUM_DURATION` 期間，寶石迴圈**不分距離**把全部寶石加速（`VACUUM_PULL_SPEED`）吸向玩家、
+    逐顆飛抵後由既有拾取收取（保留飛行收束手感，而非瞬間消失）。
   拾取推送 `'pickup'` 音效。
 - **FR-5 視覺**：`PixiRenderer` 加 `pickup` 顏色與既有 sync/z-order 接線；`sprites.ts` 加程式化造型
   （heal 綠、vacuum 紫，免疫主題、略大於寶石、微脈動）。

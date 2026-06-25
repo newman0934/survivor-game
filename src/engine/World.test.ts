@@ -502,15 +502,18 @@ describe('撿取物效果', () => {
     expect(w.player.hp).toBeLessThanOrEqual(w.player.maxHp)
   })
 
-  it('vacuum 收取全場寶石並轉為經驗', () => {
+  it('vacuum 啟動後全場寶石飛向玩家被收取並轉為經驗', () => {
     const w = new World(1)
     const xpBefore = w.summary().xp
-    // 放幾顆離玩家較遠的寶石（不會被一般寶石迴圈先撿走）
-    w.gems().push(createGem({ x: w.player.pos.x + 500, y: w.player.pos.y }, 3))
-    w.gems().push(createGem({ x: w.player.pos.x - 500, y: w.player.pos.y }, 3))
+    // 放兩顆離玩家較遠的寶石（一般 pickupRadius 吸不到，須靠 vacuum 不分距離吸引）
+    const g1 = createGem({ x: w.player.pos.x + 500, y: w.player.pos.y }, 3)
+    const g2 = createGem({ x: w.player.pos.x - 500, y: w.player.pos.y }, 3)
+    w.gems().push(g1, g2)
     w.pickups().push(createPickup({ x: w.player.pos.x, y: w.player.pos.y }, 'vacuum'))
-    w.step(1 / 60)
-    expect(w.gems().every((g) => !g.active)).toBe(true)
+    // 飛行需要數十格才抵達；步進足夠時間讓兩顆都被收取
+    for (let i = 0; i < 90; i++) w.step(1 / 60)
+    expect(g1.active).toBe(false)
+    expect(g2.active).toBe(false)
     expect(w.summary().xp).toBeGreaterThan(xpBefore)
   })
 })

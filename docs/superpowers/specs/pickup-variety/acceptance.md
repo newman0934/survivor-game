@@ -20,7 +20,7 @@ _驗證日期：2026-06-26_
 - [x] `pickupEntities` 陣列 + `pickups()` getter + 末段 filter 清理
 - [x] 仿寶石以 `attractGem` + `pickupRadius` 吸取、碰玩家即拾取並推 `'pickup'` 音效
 - [x] `applyPickup('heal')`：`hp = min(maxHp, hp + maxHp×0.3)`（夾上限，單元測試驗證）
-- [x] `applyPickup('vacuum')`：全場 active 寶石 `grantXp` 後 deactivate（單元測試驗證）；無寶石時安全
+- [x] `applyPickup('vacuum')`：啟動 vacuum 期間全場寶石不分距離加速飛向玩家、逐顆收取（飛行收束，單元測試驗證 ±500px 寶石飛抵收取）；無寶石時安全
 
 ## 視覺
 - [x] `PixiRenderer` 加 pickup build switch + sync/z-order 接線
