@@ -97,7 +97,7 @@ export class Game {
     const frameTime = Math.min(0.25, (time - this.lastTime) / 1000)
     this.lastTime = time
 
-    if (!this.paused) {
+    if (!this.paused && !this.renderer.isHitStopped()) {
       const tdir = this.touch.direction()
       this.world.moveInput = (tdir.x !== 0 || tdir.y !== 0) ? tdir : this.input.direction()
       // 固定步長累積器：把真實時間存進累積器，再以整數倍的 STEP 消化，確保每步皆為 1/60 秒。

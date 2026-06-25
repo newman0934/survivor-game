@@ -168,6 +168,9 @@ export class PixiRenderer {
         if (e.kind === 'enemy') {
           const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
           this.effects.spawnKill(e.pos.x, e.pos.y, color, e.enemyKind)
+          // 死亡震屏 + 頓挫（只在大型死亡）：superbug(Boss) 最大、exploder 大型死亡；一般小怪死亡不震不頓
+          if (e.enemyKind === 'superbug') { this.effects.shake(10); this.effects.hitStop(0.06) }
+          else if (e.enemyKind === 'exploder') { this.effects.shake(6); this.effects.hitStop(0.04) }
         } else if (e.kind === 'gem') {
           this.effects.spawnPickup(e.pos.x, e.pos.y)
         }
@@ -192,6 +195,11 @@ export class PixiRenderer {
       this.app.renderer.width / 2 - world.player.pos.x + shake.shakeX,
       this.app.renderer.height / 2 - world.player.pos.y + shake.shakeY,
     )
+  }
+
+  /** 是否處於頓挫凍結（供 Game 迴圈決定是否暫停推進）。 */
+  isHitStopped(): boolean {
+    return this.effects.isHitStopped()
   }
 
   /** 把本幀武器視覺事件交給特效層繪製。 */
