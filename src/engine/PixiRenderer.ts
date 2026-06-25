@@ -312,7 +312,6 @@ export class PixiRenderer {
         this.effects.spawnDamage(e.pos.x, e.pos.y, prev - e.hp)
         const col = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
         this.effects.spawnHit(e.pos.x, e.pos.y, col)
-        if (e.enemyKind === 'superbug') this.effects.shake(7) // Boss 受擊只大震屏、不頓挫（頓挫只留死亡瞬間）
       } else if (e.kind === 'player') {
         this.effects.hurt(Math.min(1, (prev - e.hp) / 15))
       }

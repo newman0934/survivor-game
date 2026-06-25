@@ -17,15 +17,15 @@ _驗證日期：2026-06-26_
 - [x] `PixiRenderer.isHitStopped()` 委派 effects 供 Game 讀取
 
 ## 震屏觸發分級（PixiRenderer 接線）
-- [x] 一般小怪死亡微震；nova/進化大招中震；大型死亡中大震；Boss 受擊大震；Boss 死亡最大震
-- [x] 玩家受傷沿用既有 `hurt()`（紅暈 + 震屏）
+- [x] 一般小怪死亡微震；nova/進化大招中震；大型死亡（自爆體）中大震；Boss 死亡最大震
+- [x] Boss 受擊不震不頓（只保留命中粒子）；玩家受傷沿用既有 `hurt()`（紅暈 + 震屏）
 
 ## 頓挫觸發（收斂：只在死亡瞬間）
 - [x] Boss(superbug) 死亡稍長頓挫（0.06s）、大型死亡（自爆體）短頓挫（0.04s），冷卻節流
-- [x] Boss 受擊只大震屏、不頓挫；一般小怪死亡不頓挫
+- [x] Boss 受擊不震不頓（只命中粒子）；一般小怪死亡不頓挫
 
 ## 邊界與可及性
-- [x] Boss 受擊不頓挫（只大震屏）；密集死亡時冷卻確保頓挫不連發、不卡頓（實機 Boss 戰擊殺 126→203 持續推進、不軟鎖）
+- [x] Boss 受擊不震不頓；密集死亡時冷卻確保頓挫不連發、不卡頓（實機 Boss 戰持續推進、不軟鎖）
 - [x] 同幀多大型死亡：頓挫不疊加、震屏不超上限（HitStop 冷卻 + shake ≤12 夾擠）
 - [x] reduced-motion：不震不頓（code-guarded：matchMedia 偵測 + shake/hitStop early-return）
 - [x] 頓挫不影響確定性（僅本地 wall-clock 暫停，模擬/RNG 不變）
