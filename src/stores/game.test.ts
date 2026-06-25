@@ -56,3 +56,36 @@ describe('game store', () => {
     expect(s.phase).toBe('menu')
   })
 })
+
+describe('暫停 phase 轉換', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+
+  it('pauseGame 僅在 playing 生效', () => {
+    const s = useGameStore()
+    s.start()
+    s.pauseGame()
+    expect(s.phase).toBe('paused')
+  })
+  it('pauseGame 在非 playing 不改變狀態', () => {
+    const s = useGameStore()
+    expect(s.phase).toBe('menu')
+    s.pauseGame()
+    expect(s.phase).toBe('menu')
+    s.gameOver()
+    s.pauseGame()
+    expect(s.phase).toBe('over')
+  })
+  it('resumeGame 僅在 paused 生效', () => {
+    const s = useGameStore()
+    s.start()
+    s.pauseGame()
+    s.resumeGame()
+    expect(s.phase).toBe('playing')
+  })
+  it('resumeGame 在非 paused 不改變狀態', () => {
+    const s = useGameStore()
+    s.start()
+    s.resumeGame()
+    expect(s.phase).toBe('playing')
+  })
+})
