@@ -11,14 +11,14 @@ type Event = SoundEvent | 'gameover'
 
 /** 一個和弦：低音根音 + 三個分解和弦音。 */
 interface Chord { bass: number; arp: [number, number, number] }
-/** 一張地圖的背景音樂主題：和弦進行 + 每拍毫秒 + 分解和弦音色。 */
-interface MusicTheme { chords: Chord[]; beatMs: number; arpWave: OscillatorType }
+/** 一張地圖的背景音樂主題：和弦進行 + 每拍毫秒 + 分解和弦音色/音量 + 是否稀疏（留白）。 */
+interface MusicTheme { chords: Chord[]; beatMs: number; arpWave: OscillatorType; arpVol: number; sparse?: boolean }
 
-/** 各地圖背景音樂主題（程式合成；每和弦 4 拍）。 */
+/** 各地圖背景音樂主題（程式合成；每和弦 4 拍）。三張刻意以「音域/波形/密度」區隔，不只節奏。 */
 const MUSIC_THEMES: Record<MapKind, MusicTheme> = {
-  // 血管：平緩小調（Am–F–C–G），溫暖三角波。
+  // 血管：中音域、三角波、平穩流動小調（Am–F–C–G）。
   vessel: {
-    beatMs: 340, arpWave: 'triangle',
+    beatMs: 340, arpWave: 'triangle', arpVol: 0.05,
     chords: [
       { bass: 110.0, arp: [220.0, 261.63, 329.63] }, // Am
       { bass: 87.31, arp: [174.61, 220.0, 261.63] }, // F
@@ -26,24 +26,24 @@ const MUSIC_THEMES: Record<MapKind, MusicTheme> = {
       { bass: 98.0, arp: [196.0, 246.94, 293.66] }, // G
     ],
   },
-  // 胃：較暗、推進感（Dm–Gm–C–F），稍快。
+  // 胃：低八度、鋸齒波、暗沉推進、較快較密（Dm–Bb–Gm–A，含 A 大調 V 張力）。
   stomach: {
-    beatMs: 300, arpWave: 'triangle',
+    beatMs: 270, arpWave: 'sawtooth', arpVol: 0.035,
     chords: [
-      { bass: 146.83, arp: [220.0, 293.66, 349.23] }, // Dm
-      { bass: 98.0, arp: [196.0, 233.08, 293.66] }, // Gm
-      { bass: 130.81, arp: [261.63, 329.63, 392.0] }, // C
-      { bass: 87.31, arp: [174.61, 220.0, 261.63] }, // F
+      { bass: 73.42, arp: [146.83, 174.61, 220.0] }, // Dm
+      { bass: 58.27, arp: [116.54, 174.61, 220.0] }, // Bb
+      { bass: 98.0, arp: [146.83, 196.0, 233.08] }, // Gm
+      { bass: 55.0, arp: [164.81, 220.0, 277.18] }, // A（C#→張力）
     ],
   },
-  // 肺泡：空靈明亮（C–G–Am–F），正弦、較慢。
+  // 肺泡：高八度、正弦波、稀疏留白、明亮空靈、較慢大調（C–G–Am–F）。
   lung: {
-    beatMs: 400, arpWave: 'sine',
+    beatMs: 460, arpWave: 'sine', arpVol: 0.045, sparse: true,
     chords: [
-      { bass: 130.81, arp: [261.63, 329.63, 392.0] }, // C
-      { bass: 98.0, arp: [196.0, 246.94, 293.66] }, // G
-      { bass: 110.0, arp: [220.0, 261.63, 329.63] }, // Am
-      { bass: 87.31, arp: [174.61, 220.0, 261.63] }, // F
+      { bass: 130.81, arp: [523.25, 659.25, 783.99] }, // C
+      { bass: 98.0, arp: [392.0, 493.88, 587.33] }, // G
+      { bass: 110.0, arp: [440.0, 523.25, 659.25] }, // Am
+      { bass: 87.31, arp: [349.23, 440.0, 523.25] }, // F
     ],
   },
 }
@@ -220,10 +220,12 @@ class SoundManager {
       const step = beat % beatsPerChord
       // 低音：每和弦第一拍落根音（長、柔），鋪底。
       if (step === 0) this.tone('sine', chord.bass, chord.bass, 1.0, 0.07, at)
-      // 分解和弦：每拍一個音 + 輕微 detune 雙振盪器加暖（柔音量、不搶 SFX）。
-      const f = chord.arp[step % chord.arp.length]
-      this.tone(theme.arpWave, f, f, 0.45, 0.05, at)
-      this.tone(theme.arpWave, f * 1.005, f * 1.005, 0.45, 0.03, at)
+      // 分解和弦：每拍一個音 + 輕微 detune 雙振盪器加暖；sparse 主題只在偶數拍出音、奇數拍留白（空靈）。
+      if (!theme.sparse || step % 2 === 0) {
+        const f = chord.arp[step % chord.arp.length]
+        this.tone(theme.arpWave, f, f, 0.45, theme.arpVol, at)
+        this.tone(theme.arpWave, f * 1.005, f * 1.005, 0.45, theme.arpVol * 0.6, at)
+      }
       beat = (beat + 1) % (theme.chords.length * beatsPerChord)
     }
     tick()
