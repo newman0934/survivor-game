@@ -7,6 +7,7 @@
 import { Graphics } from 'pixi.js'
 import type { Entity, MapKind, CharacterKind } from './types'
 import { ENEMY_DEFS } from './systems/enemyDefs'
+import { PICKUP_DEFS } from './systems/pickupDefs'
 
 /** 把顏色各通道乘上係數 f（<1 變暗），用來產生描邊/陰影色。 */
 function dim(color: number, f: number): number {
@@ -425,6 +426,22 @@ export function drawChest(g: Graphics, e: Entity): void {
   g.circle(0, 0, r * 0.28).fill({ color: 0xfff3c4, alpha: 0.95 })
   // 膜面高光點
   g.circle(-r * 0.35, -r * 0.4, r * 0.18).fill({ color: 0xffffff, alpha: 0.5 })
+}
+
+/** 撿取物：heal（綠＋白十字）/ vacuum（紫＋漩渦弧）；色取自 PICKUP_DEFS、略大於寶石、外發光暈。 */
+export function drawPickup(g: Graphics, e: Entity): void {
+  const r = e.radius
+  const base = e.pickupKind ? PICKUP_DEFS[e.pickupKind].color : 0xffffff
+  g.circle(0, 0, r * 1.5).fill({ color: base, alpha: 0.2 }) // 光暈
+  g.circle(0, 0, r).fill(base)
+  g.circle(0, 0, r).stroke({ width: 1.2, color: lighten(base, 0.5) })
+  if (e.pickupKind === 'heal') {
+    const t = r * 0.3
+    g.rect(-t, -r * 0.62, t * 2, r * 1.24).fill(0xffffff)
+    g.rect(-r * 0.62, -t, r * 1.24, t * 2).fill(0xffffff)
+  } else {
+    g.arc(0, 0, r * 0.55, 0, Math.PI * 1.5).stroke({ width: 2, color: 0xffffff })
+  }
 }
 
 /** 背景網格：在世界座標、玩家可視範圍內畫間距 64 的細線（無限捲動）；顏色/透明度由地圖決定。 */
