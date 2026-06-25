@@ -168,6 +168,10 @@ export class PixiRenderer {
         if (e.kind === 'enemy') {
           const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
           this.effects.spawnKill(e.pos.x, e.pos.y, color, e.enemyKind)
+          // 分級震屏/頓挫：superbug(Boss) 最大、exploder 大型死亡、其餘微震
+          if (e.enemyKind === 'superbug') { this.effects.shake(10); this.effects.hitStop(0.09) }
+          else if (e.enemyKind === 'exploder') { this.effects.shake(6); this.effects.hitStop(0.05) }
+          else this.effects.shake(2)
         } else if (e.kind === 'gem') {
           this.effects.spawnPickup(e.pos.x, e.pos.y)
         }
@@ -194,12 +198,17 @@ export class PixiRenderer {
     )
   }
 
+  /** 是否處於頓挫凍結（供 Game 迴圈決定是否暫停推進）。 */
+  isHitStopped(): boolean {
+    return this.effects.isHitStopped()
+  }
+
   /** 把本幀武器視覺事件交給特效層繪製。 */
   applyFxEvents(events: FxEvent[]): void {
     for (const ev of events) {
       if (ev.kind === 'sweep') this.effects.spawnSweep(ev.x, ev.y, ev.angle, ev.radius, ev.halfAngle)
       else if (ev.kind === 'chain') this.effects.spawnChain(ev.points)
-      else this.effects.spawnNova(ev.x, ev.y, ev.radius)
+      else { this.effects.spawnNova(ev.x, ev.y, ev.radius); this.effects.shake(4) }
     }
   }
 
@@ -303,6 +312,7 @@ export class PixiRenderer {
         this.effects.spawnDamage(e.pos.x, e.pos.y, prev - e.hp)
         const col = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
         this.effects.spawnHit(e.pos.x, e.pos.y, col)
+        if (e.enemyKind === 'superbug') { this.effects.shake(7); this.effects.hitStop(0.05) }
       } else if (e.kind === 'player') {
         this.effects.hurt(Math.min(1, (prev - e.hp) / 15))
       }

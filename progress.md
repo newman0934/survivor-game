@@ -10,7 +10,7 @@ _最後更新：2026-06-26_
 
 「**免疫大戰**」主題（免疫細胞 vs 病原體，場景在血管／胃／肺泡）：7 武器（各有進化層）、8 病原（含遠程／分裂／自爆）、
 Boss、10 被動、4 角色、3 地圖；進度存檔記錄戰績與累積統計，主選單顯示統計與排行榜，結算可「再玩一次」或
-「回主選單」重選。**193 測試全綠、型別檢查乾淨、production build 乾淨、無功能相關 console error。**
+「回主選單」重選。**197 測試全綠、型別檢查乾淨、production build 乾淨、無功能相關 console error。**
 
 > 規畫中（未實作）：多人合作連線設計文件 → `specs/2026-06-26-multiplayer-coop-design.md`
 
@@ -49,6 +49,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 隊伍造型材質+發光（B1）：共用 rim/內陰影/高光/膜/發光核 helper 套全隊伍（角色細胞核冷光、病原毒核發光、接 bloom）→ specs/cast-material-polish/
 - [x] 隊伍動態生命感（B2）：待機呼吸/搖擺/擠壓/抖動微動畫（純 transform、相位錯開，各病原性格）→ specs/cast-idle-animation/
 - [x] 打擊反饋強化（B3）：命中火花+主題色體液濺紅 + 逐病原差異化死亡特效（細菌濺射/病毒碎片/孢子爆孢/自爆大爆/超級加大）→ specs/hit-feedback/
+- [x] 打擊頓挫 + 震屏：震屏分級（擊殺/Boss/nova）+ hit-stop 頓挫（Boss/大型死亡，全域冷卻節流，reduced-motion 關閉）→ specs/hit-stop-shake/
 - [x] UI 精修地基（D1）：免疫膜質 Overlay/Panel 共用元件 + Chakra Petch 展示字體 + 設計 token，套用主選單/升級/結算/排行榜 → specs/ui-polish-foundation/
 - [x] 主題圖示系統（D2）：17 武器/被動單色主題色 SVG 圖示 + GameIcon 元件 + resolveOptionIcon 解析器（registry 完整性測試），套用升級彈窗 loadout 與選項卡 → specs/icon-system/
 - [x] HUD/戰鬥內 UI 精修（D3）：血條/經驗條光澤分段數值 + 玩家頭像框（4 角色圖示）+ 持有圖示列 + BossBar/靜音鈕質感統一 → specs/hud-polish/（D 系列 A/B/C/D 全完成）
@@ -69,7 +70,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 
 | 項目 | 結果 |
 |---------|------|
-| 單元測試（Vitest） | 193 通過 |
+| 單元測試（Vitest） | 197 通過 |
 | 型別檢查（vue-tsc） | 乾淨 |
 | Production build | 乾淨 |
 | 瀏覽器煙霧測試 | 階段 1–3 + 美術 + 特效 + 新武器/敵種 + 武器進化 + 進度存檔 + 排行榜 + 手機 + 音效 驗收通過（偶見既有 favicon 404，與功能無關） |
