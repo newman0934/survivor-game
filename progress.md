@@ -10,7 +10,7 @@ _最後更新：2026-06-26_
 
 「**免疫大戰**」主題（免疫細胞 vs 病原體，場景在血管／胃／肺泡）：7 武器（各有進化層）、8 病原（含遠程／分裂／自爆）、
 Boss、10 被動、4 角色、3 地圖；進度存檔記錄戰績與累積統計，主選單顯示統計與排行榜，結算可「再玩一次」或
-「回主選單」重選。**200 測試全綠、型別檢查乾淨、production build 乾淨、無功能相關 console error。**
+「回主選單」重選。**203 測試全綠、型別檢查乾淨、production build 乾淨、無功能相關 console error。**
 
 > 規畫中（未實作）：多人合作連線設計文件 → `specs/2026-06-26-multiplayer-coop-design.md`
 
@@ -44,7 +44,8 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
   - 音效優化：9 音多層合成質感提升 + master 限幅器防爆音 + kill 節流；取消寶石/擊中音；每地圖不同背景音樂主題（血管/胃/肺泡，以音域/波形/密度區隔）
 - [x] 美術（程式化繪製，引擎不動）— 角色/敵人/道具造型與精緻化、三地圖地貌背景、打擊反饋特效（`EffectsLayer`）、
   免疫主題化、HUD/UI 動畫 → specs/{immune-war-theme, sprite-polish-b, ui-animation-c, effects-feedback} 等
-- [x] 整體後製：全域泛光 + 色彩分級 + 暈影（行動裝置自動關 bloom）→ specs/post-processing/
+- [x] 整體後製：全域泛光 + 色彩分級 + 暈影 → specs/post-processing/
+  - bloom 開關（D）：兩平台預設開 + 暫停選單可即時切換 + localStorage 記住（取代原本手機強制關）→ specs/bloom-toggle/
 - [x] 地圖背景精修：結構深度層（血管流紋/壁、胃皺褶脊、肺泡囊）+ 暖核漸層 + 細節變體 + 背景緩動 → specs/map-background-polish/
 - [x] 噪聲紋理視差背景：程序噪聲(fBm) + 2 視差 TilingSprite 取代向量調性底（保留特徵/粒子），連續有機組織質感 → specs/noise-background/
 - [x] 隊伍造型材質+發光（B1）：共用 rim/內陰影/高光/膜/發光核 helper 套全隊伍（角色細胞核冷光、病原毒核發光、接 bloom）→ specs/cast-material-polish/
@@ -72,7 +73,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 
 | 項目 | 結果 |
 |---------|------|
-| 單元測試（Vitest） | 200 通過 |
+| 單元測試（Vitest） | 203 通過 |
 | 型別檢查（vue-tsc） | 乾淨 |
 | Production build | 乾淨 |
 | 瀏覽器煙霧測試 | 階段 1–3 + 美術 + 特效 + 新武器/敵種 + 武器進化 + 進度存檔 + 排行榜 + 手機 + 音效 驗收通過（偶見既有 favicon 404，與功能無關） |
