@@ -32,7 +32,7 @@ export interface Summary {
   bossMaxHp: number
   /** 目前 Boss 是否為終局 Boss（HUD 標示用）。 */
   isFinalBoss: boolean
-  /** 目前地圖事件預警字串（無則 undefined）；HUD 顯示橫幣用。 */
+  /** 目前地圖事件預警字串（無則 undefined）；HUD 顯示橫幅用。 */
   eventWarning?: string
 }
 
