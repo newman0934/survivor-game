@@ -20,7 +20,8 @@ const MAP_TINT: Record<MapKind, { deep: number; mid: number; core: number }> = {
 
 /**
  * 生成無縫平鋪灰階噪聲紋理（period 週期環繞），依場景採不同性格的噪聲：
- * 血管＝domain-warp fBm（血漿流動渦流）、胃＝ridged（黏膜皺褶折痕）、肺＝cellular（肺泡蜂窩）。
+ * 血管＝domain-warp fBm（血漿流動渦流）、胃＝ridged（黏膜皺褶折痕）、肺＝cellular（肺泡蜂窩）、
+ * 腸＝輕度 domain-warp ridged（絨毛皺褶流向）、腦＝cellular + fBm 混合（神經迴路網狀）。
  */
 function makeNoiseTexture(kind: MapKind, seed: number): Texture {
   const T = 256, P = 8
