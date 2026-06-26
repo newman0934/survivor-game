@@ -599,10 +599,11 @@ describe('撿取物效果', () => {
   it('爆裂精英死亡對近距玩家造成爆炸傷害', () => {
     const w = new World(1)
     const e = w.spawnEnemyAt({ x: w.player.pos.x, y: w.player.pos.y }, 'virus', 'volatile')
+    w.stats.armor = 5
     const hpBefore = w.player.hp
     e.hp = 0
     w.step(1 / 60) // 觸發死亡結算
     expect(e.active).toBe(false)
-    expect(w.player.hp).toBeLessThan(hpBefore)
+    expect(hpBefore - w.player.hp).toBeCloseTo(Math.max(0, 18 - 5), 5) // 爆炸 18 套護甲 5
   })
 })
