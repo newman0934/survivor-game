@@ -26,6 +26,40 @@ export type FxEvent =
 export type EnemyKind = 'virus' | 'bacteria' | 'spore' | 'spiral' | 'superbug'
   | 'spitter' | 'splitter' | 'exploder'
 
+/** 精英詞綴；附加在敵人上強化其數值/行為。 */
+export type EliteAffix = 'giant' | 'frenzy' | 'regen' | 'volatile'
+
+/** 單個詞綴的定義（純資料）。 */
+export interface EliteAffixDef {
+  affix: EliteAffix
+  name: string
+  /** 光環顏色（呈現層用）。 */
+  auraColor: number
+  hpMult: number
+  radiusMult: number
+  speedMult: number
+  damageMult: number
+  /** 每秒回復 maxHp 的比例（regen 用，其餘為 0）。 */
+  regenPerSec: number
+  /** 死亡時是否觸發範圍爆炸（volatile 用）。 */
+  explodeOnDeath: boolean
+  /** 死亡爆炸半徑（volatile 用；其餘為 0）。 */
+  explodeRadius: number
+  /** 死亡爆炸傷害（volatile 用；其餘為 0）。 */
+  explodeDamage: number
+}
+
+/** 地圖事件種類。 */
+export type GameEventKind = 'swarm-rush' | 'elite-pack' | 'encircle'
+
+/** 單個地圖事件的定義（純資料）。 */
+export interface GameEventDef {
+  kind: GameEventKind
+  name: string
+  /** 觸發前 HUD 顯示的預警字串。 */
+  warning: string
+}
+
 /**
  * ECS 中的單一 entity（純資料）。
  *
@@ -57,6 +91,8 @@ export interface Entity {
   xp: number
   /** 敵人子種類（僅敵人使用）；決定數值/顏色/行為。 */
   enemyKind?: EnemyKind
+  /** 精英詞綴（僅精英敵人使用）；決定額外數值/行為與光環。 */
+  affix?: EliteAffix
   /** 撿取物子種類（僅 pickup 使用）；決定效果與顏色。 */
   pickupKind?: PickupKind
   /** charger 行為相位時鐘（秒）；其他敵種忽略。 */

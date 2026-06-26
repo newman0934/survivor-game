@@ -30,6 +30,8 @@ export interface Summary {
   bossHp: number
   /** Boss 最大 hp；無 Boss 時為 0。 */
   bossMaxHp: number
+  /** 目前地圖事件預警字串（無則 undefined）；HUD 顯示橫幅用。 */
+  eventWarning?: string
 }
 
 /** 玩家目前持有的武器與被動快照（升級彈窗顯示用，純資料）。 */
@@ -94,6 +96,7 @@ export const useGameStore = defineStore('game', {
       this.bossActive = false
       this.bossHp = 0
       this.bossMaxHp = 0
+      this.eventWarning = undefined
       this.upgradeOptions = []
       this.onUpgradePicked = null
       this.loadout = { weapons: [], passives: [] }
@@ -110,6 +113,7 @@ export const useGameStore = defineStore('game', {
       this.bossActive = s.bossActive
       this.bossHp = s.bossHp
       this.bossMaxHp = s.bossMaxHp
+      this.eventWarning = s.eventWarning
     },
     /** 引擎 → store：更新目前持有快照（升級彈窗顯示用）。 */
     setLoadout(l: LoadoutSnapshot) {

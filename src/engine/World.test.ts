@@ -3,6 +3,7 @@ import { World } from './World'
 import { xpForLevel } from './systems/leveling'
 import { createEnemyProjectile, createProjectile, createPickup, createGem } from './entities/factory'
 import { WEAPON_DEFS } from './systems/weaponDefs'
+import { GAME_EVENT_DEFS } from './systems/eventDefs'
 
 describe('World', () => {
   it('starts with one player and no enemies', () => {
@@ -102,6 +103,30 @@ describe('World', () => {
     const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
     expect(e.hp).toBe(10)
     expect(w.mapBgColor).toBe(0x0c0c12)
+  })
+
+  it('巨大化精英：hp×3×3、半徑×1.6、速度×0.8、xp×5', () => {
+    const w = new World(1, 'macrophage', 'vessel')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus', 'giant')
+    expect(e.affix).toBe('giant')
+    expect(e.maxHp).toBeCloseTo(10 * 3 * 3.0, 5) // virus hp 10 × 精英3 × giant 3.0
+    expect(e.radius).toBeCloseTo(12 * 1.6, 5)    // virus radius 12
+    expect(e.speed).toBeCloseTo(60 * 0.8, 5)     // virus speed 60
+    expect(e.xp).toBe(1 * 5)                       // virus xp 1 × 5
+  })
+
+  it('狂暴精英：速度×1.5、接觸傷害×1.3', () => {
+    const w = new World(1)
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus', 'frenzy')
+    expect(e.speed).toBeCloseTo(60 * 1.5, 5)
+    expect(e.damage).toBeCloseTo(5 * 1.3, 5) // virus damage 5
+  })
+
+  it('省略 affix 行為與現況一致（無精英）', () => {
+    const w = new World(1)
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
+    expect(e.affix).toBeUndefined()
+    expect(e.maxHp).toBe(10)
   })
 
   it('腸道地圖：生怪快 0.7、敵人脆 ×0.8、視覺欄位正確', () => {
@@ -522,6 +547,45 @@ describe('武器進化效果', () => {
   })
 })
 
+describe('地圖事件系統', () => {
+  it('triggerEvent elite-pack 一次生成 3 隻精英', () => {
+    const w = new World(1)
+    const before = w.enemies.length
+    w.triggerEvent('elite-pack')
+    const added = w.enemies.slice(before)
+    expect(added.length).toBe(3)
+    expect(added.every((e) => e.affix !== undefined)).toBe(true)
+  })
+
+  it('triggerEvent encircle 整圈生成多隻', () => {
+    const w = new World(1)
+    const before = w.enemies.length
+    w.triggerEvent('encircle')
+    expect(w.enemies.length - before).toBe(16)
+  })
+
+  it('事件於 150 秒觸發、前 5 秒預警，開始後清空', () => {
+    const w = new World(1)
+    for (let i = 0; i < 146 * 60; i++) w.step(1 / 60) // 146 秒：已進預警窗
+
+    // 進預警窗後 warning 非空，且能從 GAME_EVENT_DEFS 反查到對應的合法事件種類
+    const warning = w.summary().eventWarning
+    expect(warning).toBeTruthy()
+    const matchedKind = Object.values(GAME_EVENT_DEFS).find((d) => d.warning === warning)?.kind
+    expect(matchedKind).toBeDefined()
+
+    // 記下觸發前的敵人數量（Boss 週期對齊問題：只抓活的存活敵）
+    const enemiesBefore = w.activeEnemies().length
+
+    for (let i = 0; i < 6 * 60; i++) w.step(1 / 60) // 越過 150 秒，事件已觸發
+
+    // 觸發後預警清空
+    expect(w.summary().eventWarning).toBeFalsy()
+    // 事件確實生了怪（增量 ≥ 3，即最小批次 elite-pack 的 3 隻）
+    expect(w.activeEnemies().length - enemiesBefore).toBeGreaterThanOrEqual(3)
+  })
+})
+
 describe('撿取物效果', () => {
   it('heal 回血並夾在 maxHp 上限', () => {
     const w = new World(1)
@@ -545,5 +609,41 @@ describe('撿取物效果', () => {
     expect(g1.active).toBe(false)
     expect(g2.active).toBe(false)
     expect(w.summary().xp).toBeGreaterThan(xpBefore)
+  })
+
+  it('精英死亡掉寶箱且經驗為基礎×5', () => {
+    const w = new World(1)
+    w.stats.pickupRadius = 0 // 避免寶石被吸走
+    const e = w.spawnEnemyAt({ x: w.player.pos.x + 40, y: w.player.pos.y }, 'virus', 'frenzy')
+    e.hp = 1
+    w.forceFire()
+    for (let i = 0; i < 20; i++) w.step(1 / 60)
+    expect(e.active).toBe(false)
+    expect(w.chests().length).toBeGreaterThan(0)
+    expect(w.gems().some((g) => g.xp === 5)).toBe(true)
+  })
+
+  it('再生精英隨時間回血、不超過 maxHp', () => {
+    const w = new World(1)
+    const e = w.spawnEnemyAt({ x: 9999, y: 9999 }, 'spore', 'regen') // 遠離玩家不受傷
+    e.hp = 1
+    const before = e.hp
+    for (let i = 0; i < 60; i++) w.step(1 / 60) // 1 秒
+    expect(e.hp).toBeGreaterThan(before)
+    expect(e.hp).toBeLessThanOrEqual(e.maxHp)
+    e.hp = e.maxHp
+    for (let i = 0; i < 60; i++) w.step(1 / 60)
+    expect(e.hp).toBeCloseTo(e.maxHp, 5) // 滿血不溢出
+  })
+
+  it('爆裂精英死亡對近距玩家造成爆炸傷害', () => {
+    const w = new World(1)
+    const e = w.spawnEnemyAt({ x: w.player.pos.x, y: w.player.pos.y }, 'virus', 'volatile')
+    w.stats.armor = 5
+    const hpBefore = w.player.hp
+    e.hp = 0
+    w.step(1 / 60) // 觸發死亡結算
+    expect(e.active).toBe(false)
+    expect(hpBefore - w.player.hp).toBeCloseTo(Math.max(0, 18 - 5), 5) // 爆炸 18 套護甲 5
   })
 })

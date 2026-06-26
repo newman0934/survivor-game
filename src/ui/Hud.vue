@@ -32,6 +32,7 @@ watch(() => store.hp, (n, o) => {
 <template>
   <div class="hud">
     <PlayerAvatar />
+    <div v-if="store.eventWarning" class="event-warning">{{ store.eventWarning }}</div>
     <div class="topbar">
       <span class="time">{{ mmss }}</span>
       <span class="kills">擊殺 {{ store.kills }}</span>
@@ -71,8 +72,25 @@ watch(() => store.hp, (n, o) => {
   30% { box-shadow: 0 0 10px 3px rgba(255, 40, 40, 0.8); }
   100% { box-shadow: 0 0 0 0 rgba(255, 40, 40, 0); }
 }
+.event-warning {
+  position: absolute;
+  top: 3.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.3rem 1rem;
+  font-family: var(--font-display, sans-serif);
+  letter-spacing: 0.08em;
+  color: #ffd54a;
+  background: rgba(20, 6, 6, 0.6);
+  border: 1px solid rgba(255, 213, 74, 0.6);
+  border-radius: 6px;
+  pointer-events: none;
+  animation: warn-pulse 0.8s ease-in-out infinite alternate;
+}
+@keyframes warn-pulse { from { opacity: 0.6; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .bar .fill { transition: none; }
   .bar.hp.hurt { animation: none; }
+  .event-warning { animation: none; }
 }
 </style>
