@@ -5,7 +5,7 @@
 import type { CharacterDef, CharacterKind } from '../types'
 
 /** 選單呈現順序（預設選第一個）。 */
-export const CHARACTER_ORDER: CharacterKind[] = ['macrophage', 'neutrophil', 'nkcell', 'dendritic']
+export const CHARACTER_ORDER: CharacterKind[] = ['macrophage', 'neutrophil', 'nkcell', 'dendritic', 'mastcell']
 
 /** 全部可選角色的定義表。 */
 export const CHARACTER_DEFS: Record<CharacterKind, CharacterDef> = {
@@ -24,5 +24,9 @@ export const CHARACTER_DEFS: Record<CharacterKind, CharacterDef> = {
   dendritic: {
     kind: 'dendritic', name: '樹突細胞', description: '高吸取、起始帶記憶細胞（經驗加成）', color: 0xffd54a,
     maxHp: 100, startWeapon: 'inflammation', statMods: { pickupRadius: 180 }, startPassives: ['crown'],
+  },
+  mastcell: {
+    kind: 'mastcell', name: '肥大細胞', description: '釋放發炎介質範圍清場', color: 0xf06292,
+    maxHp: 100, startWeapon: 'inflammation', statMods: { areaMult: 1.3, cooldownMult: 0.9 }, startPassives: [],
   },
 }

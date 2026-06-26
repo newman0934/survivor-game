@@ -222,7 +222,7 @@ export interface PassiveDef {
 }
 
 /** 可選的起始角色種類。 */
-export type CharacterKind = 'macrophage' | 'neutrophil' | 'nkcell' | 'dendritic'
+export type CharacterKind = 'macrophage' | 'neutrophil' | 'nkcell' | 'dendritic' | 'mastcell'
 
 /**
  * 一個可選角色的定義（純資料）：決定起始武器、起始數值、起始被動與顏色。
@@ -245,7 +245,7 @@ export interface CharacterDef {
 }
 
 /** 可選的地圖種類。 */
-export type MapKind = 'vessel' | 'stomach' | 'lung'
+export type MapKind = 'vessel' | 'stomach' | 'lung' | 'gut' | 'brain'
 
 /**
  * 一張地圖的定義（純資料）：背景視覺與難度修正。

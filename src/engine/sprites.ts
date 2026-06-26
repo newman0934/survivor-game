@@ -149,6 +149,26 @@ export function drawPlayer(g: Graphics, e: Entity, color: number, character: Cha
       membrane(g, r * 0.72, color)
       break
     }
+    case 'mastcell': {
+      // 肥大細胞（範圍清場）：圓潤膜身 + 一圈短鈍偽足 + 密布組織胺顆粒
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2
+        g.circle(Math.cos(a) * r * 1.02, Math.sin(a) * r * 1.02, r * 0.16).fill({ color, alpha: 0.8 })
+      }
+      g.circle(0, 0, r).fill({ color, alpha: 0.85 })
+      g.circle(0, 0, r).stroke({ width: 2, color: stroke })
+      g.circle(-r * 0.28, -r * 0.28, r * 0.34).fill({ color: lighten(color, 0.5), alpha: 0.3 })
+      g.circle(0, 0, r * 0.34).fill(dim(color, 0.4)) // 核
+      for (const [px, py] of [[r * 0.3, -r * 0.2], [-r * 0.34, r * 0.26], [r * 0.12, r * 0.4], [-r * 0.1, -r * 0.42], [r * 0.44, r * 0.12], [-r * 0.44, -r * 0.06]] as const) {
+        g.circle(px, py, r * 0.1).fill({ color: lighten(color, 0.6), alpha: 0.8 })
+      }
+      innerShade(g, r, color)
+      rimLight(g, r, color)
+      specular(g, r)
+      emissiveCore(g, 0, 0, r * 0.22, CELL_CORE)
+      membrane(g, r, color)
+      break
+    }
     default: {
       // macrophage 巨噬細胞（戰士）：大型變形蟲，周身一圈短偽足（吞噬）+ 大核
       for (let i = 0; i < 9; i++) {

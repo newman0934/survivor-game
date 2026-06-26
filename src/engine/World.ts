@@ -94,9 +94,9 @@ export class World {
   /** 背景網格線透明度（取自所選地圖）。 */
   mapGridAlpha = 0.04
   /** 生怪間隔倍率（取自所選地圖）。 */
-  private mapSpawnIntervalMult = 1
+  mapSpawnIntervalMult = 1
   /** 敵人 hp 倍率（取自所選地圖）。 */
-  private mapEnemyHpMult = 1
+  mapEnemyHpMult = 1
   /** 玩家最後一次非零移動方向（飛刀發射方向用）；預設朝右。 */
   lastMoveDir: Vec2 = { x: 1, y: 0 }
   /** 聖經環繞基準角（每格隨角速度累加）。 */
