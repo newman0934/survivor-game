@@ -16,6 +16,8 @@ const props = defineProps<{
   isNewBestTime: boolean
   /** 本場是否刷新擊殺紀錄。 */
   isNewBestKills: boolean
+  /** 是否為通關（勝利）結局；true 顯示通關標題。 */
+  won?: boolean
 }>()
 const store = useGameStore()
 // 把秒數格式化為 m:ss（與 Hud 一致）。
@@ -33,7 +35,7 @@ const emit = defineEmits<{ restart: []; menu: [] }>()
 <template>
   <Overlay>
     <Panel class="go-panel">
-      <h1>你倒下了</h1>
+      <h1>{{ won ? '通關！' : '你倒下了' }}</h1>
       <p>存活時間 {{ mmss }}</p>
       <p>擊殺 {{ store.kills }} · 等級 {{ store.level }}</p>
       <p v-if="isNewBestTime" class="record">🏆 存活新紀錄！</p>

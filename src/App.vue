@@ -140,7 +140,7 @@ onBeforeUnmount(() => {
     <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" :stats="stats" @start="startGame" @open-leaderboard="showLeaderboard = true" /></Transition>
     <Transition name="fade"><Leaderboard v-if="showLeaderboard && store.phase === 'menu'" :runs="runs" @close="showLeaderboard = false" /></Transition>
     <Transition name="fade"><UpgradeModal v-if="store.phase === 'upgrading'" /></Transition>
-    <Transition name="fade"><GameOver v-if="store.phase === 'over'" :best-time="lastRun.bestTime" :is-new-best-time="lastRun.isNewBestTime" :is-new-best-kills="lastRun.isNewBestKills" @restart="restart" @menu="toMenu" /></Transition>
+    <Transition name="fade"><GameOver v-if="store.phase === 'over' || store.phase === 'won'" :won="store.phase === 'won'" :best-time="lastRun.bestTime" :is-new-best-time="lastRun.isNewBestTime" :is-new-best-kills="lastRun.isNewBestKills" @restart="restart" @menu="toMenu" /></Transition>
     <Transition name="fade"><PauseMenu v-if="store.phase === 'paused'" :bloom="bloomEnabled" @resume="store.resumeGame()" @restart="restart" @menu="toMenu" @toggle-bloom="toggleBloom" /></Transition>
   </div>
 </template>

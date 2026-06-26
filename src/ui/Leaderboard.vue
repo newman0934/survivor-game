@@ -56,7 +56,7 @@ function mapName(kind: MapKind): string {
           <tbody>
             <tr v-for="(r, i) in runs" :key="i">
               <td class="rank">{{ i + 1 }}</td>
-              <td>{{ fmtTime(r.time) }}</td>
+              <td>{{ fmtTime(r.time) }}<span v-if="r.cleared" class="cleared-mark"> ★</span></td>
               <td>{{ r.kills }}</td>
               <td>{{ r.level }}</td>
               <td :style="{ color: charColor(r.character) }">{{ charName(r.character) }}</td>
@@ -84,6 +84,7 @@ h1 { font-family: var(--font-display); margin: 0; letter-spacing: 0.08em; }
 .board tbody tr:nth-child(odd) { background: rgba(255, 255, 255, 0.05); }
 .board .rank { color: var(--immune-accent-strong); font-weight: bold; }
 .board .date { opacity: 0.75; }
+.cleared-mark { color: #ffd54a; }
 .lb-panel > .ui-btn { font-size: 1.2rem; padding: 0.5rem 1.6rem; }
 @media (max-width: 600px) {
   .board { font-size: 0.82rem; }
