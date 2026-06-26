@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, EliteAffix, Passive, CharacterKind, MapKind, SoundEvent, FxEvent, PickupKind, GameEventKind } from './types'
+import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, EliteAffix, Passive, CharacterKind, MapKind, SoundEvent, FxEvent, PickupKind, GameEventKind, PlayerState } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -64,8 +64,35 @@ const CELL_SIZE = 100
 const MAX_ENEMY_RADIUS = Math.max(...ENEMY_ORDER.map((k) => ENEMY_DEFS[k].radius))
 
 export class World {
-  /** 玩家 entity（永遠存在，不會被篩除）。 */
-  player: Entity
+  /** 全部玩家（index 0 為單人/本地玩家）。 */
+  players: PlayerState[] = []
+
+  // ── 相容存取器：一律作用於 players[0]，使既有單人呼叫端/測試零改動 ──
+  get player(): Entity { return this.players[0].entity }
+  get stats(): PlayerStats { return this.players[0].stats }
+  get weapons(): Weapon[] { return this.players[0].weapons }
+  set weapons(v: Weapon[]) { this.players[0].weapons = v }
+  get passives(): Passive[] { return this.players[0].passives }
+  get playerColor(): number { return this.players[0].color }
+  get playerCharacter(): CharacterKind { return this.players[0].character }
+  get moveInput(): Vec2 { return this.players[0].moveInput }
+  set moveInput(v: Vec2) { this.players[0].moveInput = v }
+  get lastMoveDir(): Vec2 { return this.players[0].lastMoveDir }
+  set lastMoveDir(v: Vec2) { this.players[0].lastMoveDir = v }
+  private get vacuumTimer(): number { return this.players[0].vacuumTimer }
+  private set vacuumTimer(v: number) { this.players[0].vacuumTimer = v }
+  private get bibleAngle(): number { return this.players[0].bibleAngle }
+  private set bibleAngle(v: number) { this.players[0].bibleAngle = v }
+  private get orbitEntities(): Entity[] { return this.players[0].orbitEntities }
+  private set orbitEntities(v: Entity[]) { this.players[0].orbitEntities = v }
+  private get bibleHitTimers(): Map<Entity, number> { return this.players[0].bibleHitTimers }
+  private get level(): number { return this.players[0].level }
+  private set level(v: number) { this.players[0].level = v }
+  private get xp(): number { return this.players[0].xp }
+  private set xp(v: number) { this.players[0].xp = v }
+  private get pendingLevelUps(): number { return this.players[0].pendingLevelUps }
+  private set pendingLevelUps(v: number) { this.players[0].pendingLevelUps = v }
+
   /** 場上所有敵人（含本格剛死、待篩除者）。 */
   enemies: Entity[] = []
   /** 場上所有 projectile（含本格剛失效、待篩除者）。 */
@@ -79,27 +106,6 @@ export class World {
   /** 場上所有撿取物（回血／全場吸取）。 */
   pickupEntities: Entity[] = []
 
-  /** 玩家數值（全域乘區），會被升級就地修改。 */
-  stats: PlayerStats = {
-    moveSpeed: 200,
-    pickupRadius: 120,
-    damageMult: 1,
-    cooldownMult: 1,
-    projectileSpeedMult: 1,
-    areaMult: 1,
-    regen: 0,
-    armor: 0,
-    xpGain: 1,
-  }
-
-  /** 玩家持有的武器（起始只有魔杖）；各自獨立計時與升級、共存開火。 */
-  weapons: Weapon[] = [{ kind: 'antibody', level: 1, cooldownTimer: 0 }]
-  /** 玩家持有的被動道具（起始為空）。 */
-  passives: Passive[] = []
-  /** 玩家圓顏色（取自所選角色）；供 renderer 取用。 */
-  playerColor = 0x4aa3ff
-  /** 所選角色種類（供 renderer 決定免疫細胞造型）。 */
-  playerCharacter: CharacterKind = 'macrophage'
   /** 所選地圖種類（供 renderer 決定背景地貌）。 */
   mapKind: MapKind = 'vessel'
   /** 背景底色（取自所選地圖）；供 renderer 取用。 */
@@ -112,17 +118,6 @@ export class World {
   mapSpawnIntervalMult = 1
   /** 敵人 hp 倍率（取自所選地圖）。 */
   mapEnemyHpMult = 1
-  /** 玩家最後一次非零移動方向（飛刀發射方向用）；預設朝右。 */
-  lastMoveDir: Vec2 = { x: 1, y: 0 }
-  /** 聖經環繞基準角（每格隨角速度累加）。 */
-  private bibleAngle = 0
-  /** 聖經環繞物 entity（每格依等級重建/更新位置）。 */
-  private orbitEntities: Entity[] = []
-  /** 聖經 per-enemy 命中冷卻（秒）；避免每幀重複扣血。 */
-  private bibleHitTimers = new Map<Entity, number>()
-
-  /** 由上層每格寫入的玩家移動方向（已正規化的 -1..1 向量）。 */
-  moveInput: Vec2 = { x: 0, y: 0 }
 
   /** 本格累積的語意音效事件；由上層每幀 consumeSoundEvents 排空。 */
   private soundEventQueue: SoundEvent[] = []
@@ -133,8 +128,6 @@ export class World {
   private rng: Rng
   /** 撿取物掉落專用 rng（自 seed 衍生，獨立於 spawn/combat 串流，避免擾動既有確定性）。 */
   private pickupRng: Rng
-  /** 全場吸取剩餘秒數（>0 時寶石不分距離朝玩家飛）。 */
-  private vacuumTimer = 0
   /** 累積遊戲時間（秒）。 */
   private elapsed = 0
   /** 生怪倒數計時器（秒）；歸零即生怪並重置。 */
@@ -157,20 +150,33 @@ export class World {
   private eventWarning?: string
   /** 敵人空間網格；每格在敵人移動後重建，供碰撞鄰近查詢。 */
   private enemyGrid = new SpatialGrid<Entity>(CELL_SIZE)
-  /** 目前等級。 */
-  private level = 1
+  /** 累計擊殺數。 */
+  private kills = 0
 
   /** 目前玩家等級（唯讀，供 renderer 偵測升級上升沿）。 */
   get currentLevel(): number {
     return this.level
   }
 
-  /** 目前等級內已累積的經驗值。 */
-  private xp = 0
-  /** 累計擊殺數。 */
-  private kills = 0
-  /** 尚未處理的升級次數；由上層逐一 `consumeLevelUp()` 取走以觸發升級握手。 */
-  private pendingLevelUps = 0
+  /** 依角色建立一位玩家的初始 PlayerState（起始武器/數值/血/被動/顏色）。 */
+  private static makePlayerState(character: CharacterKind): PlayerState {
+    const def = CHARACTER_DEFS[character]
+    const entity = createPlayer({ x: 0, y: 0 })
+    entity.maxHp = def.maxHp
+    entity.hp = def.maxHp
+    const stats: PlayerStats = {
+      moveSpeed: 200, pickupRadius: 120, damageMult: 1, cooldownMult: 1,
+      projectileSpeedMult: 1, areaMult: 1, regen: 0, armor: 0, xpGain: 1,
+    }
+    Object.assign(stats, def.statMods)
+    return {
+      entity, character, color: def.color, stats,
+      weapons: [{ kind: def.startWeapon, level: 1, cooldownTimer: 0 }],
+      passives: [], level: 1, xp: 0, pendingLevelUps: 0,
+      lastMoveDir: { x: 1, y: 0 }, moveInput: { x: 0, y: 0 }, vacuumTimer: 0, alive: true,
+      bibleAngle: 0, orbitEntities: [], bibleHitTimers: new Map(),
+    }
+  }
 
   /**
    * @param seed      本場的亂數種子，決定生怪位置等隨機序列（可重現）。
@@ -180,16 +186,11 @@ export class World {
     this.rng = createRng(seed)
     this.finalBossTime = finalBossTime
     this.pickupRng = createRng(seed ^ 0x5bd1e995)
-    this.player = createPlayer({ x: 0, y: 0 })
-    const def = CHARACTER_DEFS[character]
-    this.playerColor = def.color
-    this.playerCharacter = character
-    this.player.maxHp = def.maxHp
-    this.player.hp = def.maxHp
-    Object.assign(this.stats, def.statMods)
-    this.weapons = [{ kind: def.startWeapon, level: 1, cooldownTimer: 0 }]
-    for (const pk of def.startPassives) {
-      this.passives.push({ kind: pk, level: 1 })
+    this.players = [World.makePlayerState(character)]
+    // 起始被動套用
+    const p0 = this.players[0]
+    for (const pk of CHARACTER_DEFS[character].startPassives) {
+      p0.passives.push({ kind: pk, level: 1 })
       PASSIVE_DEFS[pk].apply(this.upgradeContext())
     }
     const m = MAP_DEFS[map]
