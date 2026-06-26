@@ -472,6 +472,7 @@ export class World {
       this.spawnFinalBossAt(pos)
       this.finalBossSpawned = true
       this.eventWarning = undefined // 清掉殘留預警
+      this.pendingEvent = undefined // 終局 Boss 起，事件排程閘住，清掉殘留挑選
     }
 
     // 3) 敵人 AI：每隻朝玩家轉向後位移。

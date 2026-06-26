@@ -32,6 +32,12 @@ describe('game store', () => {
     expect(s.time).toBe(42)
     expect(s.kills).toBe(99)
   })
+  it('victory() sets phase to won', () => {
+    const s = useGameStore()
+    s.start()
+    s.victory()
+    expect(s.phase).toBe('won')
+  })
   it('start() clears onUpgradePicked to null', () => {
     const s = useGameStore()
     s.onUpgradePicked = (_id) => {}
