@@ -104,6 +104,26 @@ describe('World', () => {
     expect(w.mapBgColor).toBe(0x0c0c12)
   })
 
+  it('腸道地圖：生怪快 0.7、敵人脆 ×0.8、視覺欄位正確', () => {
+    const w = new World(1, 'macrophage', 'gut')
+    expect(w.mapSpawnIntervalMult).toBeCloseTo(0.7, 5)
+    expect(w.mapEnemyHpMult).toBeCloseTo(0.8, 5)
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
+    expect(e.hp).toBeCloseTo(10 * 0.8, 5) // basic 基礎 hp 10
+    expect(w.mapBgColor).toBe(0x140e08)
+    expect(w.mapGridColor).toBe(0xffb74d)
+  })
+
+  it('腦地圖：生怪慢 1.2、敵人硬 ×1.4、視覺欄位正確', () => {
+    const w = new World(1, 'macrophage', 'brain')
+    expect(w.mapSpawnIntervalMult).toBeCloseTo(1.2, 5)
+    expect(w.mapEnemyHpMult).toBeCloseTo(1.4, 5)
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
+    expect(e.hp).toBeCloseTo(10 * 1.4, 5)
+    expect(w.mapBgColor).toBe(0x0a0a18)
+    expect(w.mapGridColor).toBe(0x9fa8ff)
+  })
+
   it('預設角色為巨噬細胞（macrophage）起始狀態', () => {
     const w = new World(1)
     expect(w.weapons[0].kind).toBe('antibody')

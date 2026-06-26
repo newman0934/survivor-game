@@ -14,6 +14,8 @@ const MAP_TINT: Record<MapKind, { deep: number; mid: number; core: number }> = {
   vessel:  { deep: 0x4a1119, mid: 0x8a2230, core: 0x6e1822 },
   stomach: { deep: 0x3a2208, mid: 0x7a4416, core: 0x6e3c12 },
   lung:    { deep: 0x123440, mid: 0x276079, core: 0x1d5066 },
+  gut:     { deep: 0x3a1e08, mid: 0x8a5016, core: 0x7a3e10 },
+  brain:   { deep: 0x141233, mid: 0x3a3a8a, core: 0x2a2a66 },
 }
 
 /**
@@ -38,6 +40,13 @@ function makeNoiseTexture(kind: MapKind, seed: number): Texture {
       } else if (kind === 'stomach') {
         // ridged → 黏膜皺褶折痕
         v = ridgedFbm(wx, wy, seed, 4, P)
+      } else if (kind === 'gut') {
+        // 腸道：輕度 domain-warp 的 ridged → 絨毛皺褶流向
+        const wu = wx + 1.0 * fbm(wx, wy, seed + 7, 2, P)
+        v = ridgedFbm(wu, wy, seed, 3, P)
+      } else if (kind === 'brain') {
+        // 腦：cellular + fbm 混合 → 神經迴路網狀
+        v = 0.5 * (1 - cellular(wx, wy, seed, P)) + 0.5 * fbm(wx, wy, seed + 5, 4, P)
       } else {
         // cellular → 肺泡蜂窩（反相：細胞中心亮、邊界暗）
         v = 1 - cellular(wx, wy, seed, P)
