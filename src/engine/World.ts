@@ -493,19 +493,20 @@ export class World {
       this.pendingEvent = undefined // 終局 Boss 起，事件排程閘住，清掉殘留挑選
     }
 
-    // 3) 敵人 AI：每隻朝玩家轉向後位移。
+    // 3) 敵人 AI：每隻朝最近的存活玩家轉向後位移。
     for (const e of this.enemies) {
       if (!e.active) continue
       if (e.affix === 'regen') {
         e.hp = Math.min(e.maxHp, e.hp + e.maxHp * ELITE_AFFIX_DEFS.regen.regenPerSec * dt)
       }
-      steerEnemy(e, this.player.pos, dt)
+      const target = this.nearestLivingPlayer(e.pos).entity
+      steerEnemy(e, target.pos, dt)
       applyVelocity(e, dt)
-      // 噴吐病原：固定間隔朝玩家當前位置吐一發毒液彈。
+      // 噴吐病原：固定間隔朝最近存活玩家當前位置吐一發毒液彈。
       if (e.enemyKind === 'spitter') {
         const spit = ENEMY_DEFS.spitter.spit!
         if (spitterTick(e, dt, spit.interval)) {
-          const dx = this.player.pos.x - e.pos.x, dy = this.player.pos.y - e.pos.y
+          const dx = target.pos.x - e.pos.x, dy = target.pos.y - e.pos.y
           const len = Math.hypot(dx, dy) || 1
           this.enemyProjectiles.push(
             createEnemyProjectile(e.pos, { x: dx / len, y: dy / len }, spit.projSpeed, spit.projDamage),
@@ -642,16 +643,19 @@ export class World {
       }
     }
 
-    // 5b) 敵方投射物：飛行 + 壽命；與玩家重疊即扣血（套護甲）後消耗。
-    for (const p of this.enemyProjectiles) {
-      if (!p.active) continue
-      applyVelocity(p, dt)
-      p.life -= dt
-      if (p.life <= 0) { p.active = false; continue }
-      if (circlesOverlap(p, this.player)) {
-        this.player.hp -= Math.max(0, p.damage - this.stats.armor)
-        this.soundEventQueue.push('hurt')
-        p.active = false
+    // 5b) 敵方投射物：飛行 + 壽命；與存活玩家重疊即扣血（套該玩家護甲）後消耗。
+    for (const proj of this.enemyProjectiles) {
+      if (!proj.active) continue
+      applyVelocity(proj, dt)
+      proj.life -= dt
+      if (proj.life <= 0) { proj.active = false; continue }
+      for (const p of this.livingPlayers()) {
+        if (circlesOverlap(proj, p.entity)) {
+          p.entity.hp -= Math.max(0, proj.damage - p.stats.armor)
+          this.soundEventQueue.push('hurt')
+          proj.active = false
+          break
+        }
       }
     }
 
@@ -694,21 +698,23 @@ export class World {
       }
     }
 
-    // 7) 敵人接觸傷害：與玩家重疊時持續扣血（乘 dt*10 換算成每秒傷害）；armor 固定減傷。
-    const contactCands = this.enemyGrid.queryRadius(
-      this.player.pos.x, this.player.pos.y, this.player.radius + MAX_ENEMY_RADIUS,
-    )
-    for (const e of contactCands) {
-      if (!e.active) continue
-      if (circlesOverlap(e, this.player)) {
-        this.player.hp -= Math.max(0, e.damage - this.stats.armor) * dt * 10
-        this.soundEventQueue.push('hurt')
+    // 7) 敵人接觸傷害：對每位存活玩家，與其重疊的敵人持續扣血（套該玩家護甲）。
+    for (const p of this.livingPlayers()) {
+      const contactCands = this.enemyGrid.queryRadius(p.entity.pos.x, p.entity.pos.y, p.entity.radius + MAX_ENEMY_RADIUS)
+      for (const e of contactCands) {
+        if (!e.active) continue
+        if (circlesOverlap(e, p.entity)) {
+          p.entity.hp -= Math.max(0, e.damage - p.stats.armor) * dt * 10
+          this.soundEventQueue.push('hurt')
+        }
       }
     }
 
-    // 7b) 回復：每格依 regen 回血（僅存活時，夾 maxHp）。
-    if (this.player.hp > 0 && this.stats.regen > 0) {
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.stats.regen * dt)
+    // 7b) 回復：逐玩家依 regen 回血（僅存活時，夾 maxHp）。
+    for (const p of this.livingPlayers()) {
+      if (p.stats.regen > 0) {
+        p.entity.hp = Math.min(p.entity.maxHp, p.entity.hp + p.stats.regen * dt)
+      }
     }
 
     // 7c) 補漏殺：掃描所有 hp<=0 但尚未結算的敵人（含外部設值、接觸傷害等非武器路徑）。

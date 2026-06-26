@@ -753,4 +753,25 @@ describe('多玩家建構', () => {
     const w = new World(1, ['macrophage', 'neutrophil'])
     expect(w.hasLost()).toBe(false)
   })
+
+  it('敵人追最近的存活玩家', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.pos = { x: -500, y: 0 }
+    w.players[1].entity.pos = { x: 500, y: 0 }
+    const e = w.spawnEnemyAt({ x: 480, y: 0 }) // 靠近玩家 1
+    const dBefore = Math.abs(e.pos.x - 500)
+    for (let i = 0; i < 30; i++) w.step(1 / 60)
+    expect(Math.abs(e.pos.x - 500)).toBeLessThan(dBefore) // 朝玩家 1 靠近
+  })
+
+  it('接觸傷害只打到重疊的玩家', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.pos = { x: -500, y: 0 }
+    w.players[1].entity.pos = { x: 500, y: 0 }
+    const hp0 = w.players[0].entity.hp, hp1 = w.players[1].entity.hp
+    w.spawnEnemyAt({ x: 500, y: 0 }) // 與玩家 1 重疊
+    w.step(1 / 60)
+    expect(w.players[1].entity.hp).toBeLessThan(hp1)
+    expect(w.players[0].entity.hp).toBe(hp0)
+  })
 })
