@@ -1,67 +1,124 @@
-# Survivor Game
+# Survivor Game —《免疫大戰》
 
-A Vampire-Survivors-style web game (bullet-heaven / survivor-like) built with Vue 3 + PixiJS.
+一款《吸血鬼倖存者》風格的網頁遊戲（survivor-like / bullet-heaven），以 **Vue 3 + PixiJS** 打造。
 
-Move to dodge swarming enemies, your weapon auto-fires at the nearest one, collect XP gems
-to level up, pick an upgrade, and survive as long as you can.
+玩家操控免疫細胞在血管／胃／肺泡中移動、閃避成群病原體；武器自動朝最近的敵人開火，
+擊殺掉落經驗寶石，升級時三選一強化，目標是盡可能存活久一點。
 
-## Tech stack
+## 這是什麼
 
-- **Vue 3** (`<script setup>` + TypeScript) — menu / HUD / upgrade modal / game-over UI
-- **PixiJS (WebGL)** — game-world rendering
-- **Pinia** — bridge between the pure-TS engine and the Vue UI
-- **Vite** — dev server & build
-- **Vitest** — unit tests for the engine
+- **主題**：免疫細胞 vs 病原體。角色是免疫細胞（巨噬／嗜中性球／NK／樹突），敵人是病毒、細菌、孢子、
+  螺旋菌、噴吐／分裂／自爆病原與超級病原（Boss）。
+- **核心循環**：移動閃避 → 自動攻擊 → 撿經驗升級 → 三選一強化 → 變強 → 撐更久 → 結算重來。
+- **武器進化**：7 把武器各有進化層（滿級 + 指定被動 → 進化卡，獲得招牌行為）。
 
-The game engine under `src/engine/` is pure TypeScript with no Vue/Pinia runtime dependency:
-a fixed-timestep loop drives an ECS-style `World` of entities and systems; Vue only renders the
-surrounding UI and reads summary state from the store.
+## 功能總覽
 
-## Controls
+- 7 武器（各有進化）、8 病原、Boss（每 60 秒、隨次數變強）、10 被動、4 角色、3 地圖
+- 撿取物：經驗寶石、寶箱（Boss 掉，免費升級）、回血（低血才掉）、全場吸取（寶石飛向角色）
+- 升級彈窗顯示持有武器/被動與進化提示；HUD 含玩家頭像、持有圖示列、血條/經驗條
+- 遊戲中暫停選單（繼續／重新開始／回主選單）＋ 泛光（bloom）開關
+- 進度存檔（localStorage）：戰績紀錄 + 跨場累積統計；排行榜（前 10 場）
+- 美術：程式化繪製造型、噪聲視差背景、整體後製（泛光 + 色彩分級 + 暈影）、打擊反饋特效、頓挫 + 震屏
+- 音效：Web Audio 程式合成 SFX + 每地圖不同背景音樂 + 限幅防爆音 + 靜音開關
+- 手機支援：浮動虛擬搖桿、窄螢幕 RWD 適配
 
-- **WASD / Arrow keys** — move
-- Weapon fires automatically at the nearest enemy
+## 操作
 
-## Run it
+- **WASD／方向鍵**：移動（手機為觸控搖桿）
+- 武器自動朝最近敵人開火
+- **ESC** 或畫面暫停鈕：暫停
+
+## 技術棧
+
+- **Vue 3**（`<script setup>` + TypeScript）— 選單／HUD／升級彈窗／結算等 DOM UI
+- **PixiJS（WebGL）** — 遊戲世界渲染
+- **Pinia** — 純 TS 引擎與 Vue UI 之間的橋接（只傳 summary 資料）
+- **Vite** — 開發伺服器與打包
+- **Vitest** — 引擎單元測試
+
+## 架構
+
+引擎（`src/engine/`）是**純 TypeScript，執行期不依賴 Vue/Pinia**：
+
+```
+Vue (DOM UI)  ──讀 summary / 送升級選擇──►  Pinia store  ◄──推 summary──  引擎 (純 TS)
+src/ui/*, App.vue                            src/stores/game.ts          src/engine/**
+```
+
+- **固定步長**（1/60 秒）迴圈驅動 ECS 風格的 `World`（純資料 entity + 無狀態 system 函式），與 FPS 解耦。
+- **確定性**：所有隨機都走 seeded RNG（mulberry32），模擬中不呼叫 `Math.random()`，可重現。
+- 引擎只在必要時把一小包 summary（hp/time/level/kills/xp…）推給 store；Vue 依此渲染 UI。
+
+## 執行
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:5173/survivor-game/
 ```
 
-## Scripts
+## 指令
 
 ```bash
-npm test           # run unit tests (Vitest)
-npm run typecheck  # vue-tsc type check
-npm run build      # production build
+npm test           # 單元測試（Vitest）
+npm run typecheck  # vue-tsc 型別檢查
+npm run build      # 型別檢查 + production build
 npm run lint       # eslint --fix
 ```
 
-## Project structure
+## 專案結構
 
 ```
 src/
-├─ main.ts                 # Vue entry
-├─ App.vue                 # state-machine root: menu / playing / upgrading / over
-├─ stores/game.ts          # Pinia bridge (summary state + upgrade handshake)
-├─ ui/                     # MainMenu, Hud, UpgradeModal, GameOver
-└─ engine/                 # pure TS — no Vue
-   ├─ core/                # vector, rng, objectPool, spatialGrid, input
-   ├─ systems/             # movement, spawn, combat, collision, pickup, leveling
-   ├─ entities/factory.ts  # player / enemy / projectile / gem
-   ├─ World.ts             # simulation: holds entities, runs systems each step
-   ├─ PixiRenderer.ts      # entity → PixiJS display + player-follow camera
-   └─ Game.ts              # fixed-timestep loop wiring World + renderer + store
+├─ main.ts                 # Vue 進入點（匯入字體 + 全域樣式）
+├─ App.vue                 # 狀態機根：menu / playing / upgrading / paused / over；掛載引擎
+├─ stores/game.ts          # Pinia 橋接（summary + 升級握手 + 暫停 + 角色）
+├─ persistence/            # saveStore（戰績/統計）、settingsStore（bloom 設定）
+├─ styles/ui.css           # 設計 token + 共用按鈕 + 展示字體
+├─ ui/                     # MainMenu, Hud, UpgradeModal, GameOver, Leaderboard,
+│                          #   PauseMenu, PlayerAvatar, LoadoutBar, GameIcon, Overlay, Panel…
+└─ engine/                 # 純 TS — 無 Vue
+   ├─ core/                # vector, rng, objectPool, spatialGrid, input, touchInput,
+   │                       #   noise, hitStop, soundManager
+   ├─ systems/             # movement, spawn, combat, collision, pickup, leveling,
+   │                       #   weapons, weaponDefs, enemyDefs, passiveDefs, characterDefs,
+   │                       #   mapDefs, pickupDefs, loadout…
+   ├─ entities/factory.ts  # player / enemy / projectile / gem / chest / pickup
+   ├─ World.ts             # 核心模擬：持有 entity，每 step 依序跑 systems
+   ├─ PixiRenderer.ts      # entity → PixiJS 顯示 + 跟隨鏡頭
+   ├─ postProcessing.ts    # 泛光 + 色彩分級 + 暈影（bloom 可開關）
+   ├─ effects.ts           # 特效層（粒子/環波/震屏/頓挫）
+   ├─ sprites.ts           # 程式化造型繪製
+   └─ Game.ts              # 固定步長 raf 迴圈，串接 World + renderer + input + store
 ```
 
-## Status
+## 測試與品質
 
-This is **phase 0 + 1**: the engine foundation plus a complete, playable core loop
-(one weapon, one enemy type, leveling, upgrades, game-over/restart). Later phases add more
-weapons/enemies, bosses, multiple characters/maps, and persistence. The `objectPool` and
-`spatialGrid` modules are built and tested in preparation for the higher entity counts of
-those phases.
+- **203 單元測試全綠**（引擎核心邏輯走 TDD：core/、systems/、World、持久化等）。
+- 型別檢查（vue-tsc）乾淨、production build 乾淨。
+- 呈現/整合層（renderer、UI、音效）以瀏覽器實機驗證，不寫單元測試。
 
-Design and implementation plan live in
-`../docs/superpowers/specs/` and `../docs/superpowers/plans/`.
+## 開發流程（SDD）
+
+新功能皆遵循 SDD：Spec → BDD → Acceptance → Plan → Tasks → 實作 → 驗證。
+各功能的五件套文件位於 `docs/superpowers/specs/<feature>/`；最新狀態與路線圖見 `progress.md`。
+
+## 部署
+
+靜態站，托管於 **GitHub Pages**（base path `/survivor-game/`）。`npm run build` 後部署 `dist/`。
+
+## 狀態與路線圖
+
+階段 0–4 大致完成：完整核心循環 + 內容（武器/敵人/Boss/角色/地圖）+ 美術 + UI 精修 +
+音效 + 暫停 + 手感調校 + 撿取物 + 存檔 + 排行榜 + 手機支援。
+
+**尚未做**：
+
+- 解鎖系統（用累積統計鎖/解角色與地圖）
+- 多人合作連線（已有設計藍圖 `docs/superpowers/specs/2026-06-26-multiplayer-coop-design.md`，未實作）
+
+## 慣例
+
+- Vue 一律 Composition API + `<script setup lang="ts">`。
+- 引擎邏輯走 TDD、system 保持無狀態、隨機一律走 seeded `core/rng`、遊戲迴圈固定步長。
+- 文件/說明預設繁體中文；程式碼/型別/API 用英文。
