@@ -14,8 +14,8 @@ const pct = computed(() => (store.bossMaxHp ? (store.bossHp / store.bossMaxHp) *
 
 <template>
   <Transition name="boss">
-    <div v-if="store.bossActive" class="bossbar">
-      <div class="label">BOSS</div>
+    <div v-if="store.bossActive" class="bossbar" :class="{ final: store.isFinalBoss }">
+      <div class="label">{{ store.isFinalBoss ? '終局 BOSS' : 'BOSS' }}</div>
       <div class="bar"><div class="fill" :class="{ low: pct < 25 }" :style="{ width: pct + '%' }" /></div>
     </div>
   </Transition>
@@ -32,6 +32,10 @@ const pct = computed(() => (store.bossMaxHp ? (store.bossHp / store.bossMaxHp) *
 .fill { height: 100%; border-radius: 8px; transition: width 0.1s linear; background-color: #9c27b0;
   background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 55%);
   box-shadow: 0 0 10px rgba(156, 39, 176, 0.6); }
+/* 終局 Boss：紅色強調，與一般紫色 Boss 區隔（呼應 finalboss 0xff1744）。 */
+.bossbar.final .label { color: #ff5470; text-shadow: 0 0 8px rgba(255, 23, 68, 0.7), 0 1px 2px #000; }
+.bossbar.final .fill { background-color: #ff1744;
+  box-shadow: 0 0 12px rgba(255, 23, 68, 0.75); }
 .boss-enter-active, .boss-leave-active { transition: opacity 0.3s ease, transform 0.3s ease; }
 .boss-enter-from, .boss-leave-to { opacity: 0; transform: translate(-50%, -12px); }
 .fill.low { animation: bosslow 0.6s ease-in-out infinite; }
