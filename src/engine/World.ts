@@ -855,7 +855,7 @@ export class World {
    * @returns 經四捨五入／取整的 `Summary`，由上層轉交給 store。
    */
   summary(): Summary {
-    const boss = this.enemies.find((e) => e.active && e.enemyKind === 'superbug')
+    const boss = this.enemies.find((e) => e.active && (e.enemyKind === 'superbug' || e.enemyKind === 'finalboss'))
     return {
       hp: Math.max(0, Math.round(this.player.hp)),
       maxHp: this.player.maxHp,
@@ -867,6 +867,7 @@ export class World {
       bossActive: !!boss,
       bossHp: boss ? Math.round(boss.hp) : 0,
       bossMaxHp: boss ? boss.maxHp : 0,
+      isFinalBoss: boss?.enemyKind === 'finalboss',
       eventWarning: this.eventWarning,
     }
   }

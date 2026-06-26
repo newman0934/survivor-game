@@ -235,6 +235,16 @@ describe('World', () => {
     expect(s.bossMaxHp).toBe(b.maxHp)
   })
 
+  it('summary 偵測終局 Boss：bossActive + isFinalBoss', () => {
+    const w = new World(1)
+    expect(w.summary().isFinalBoss).toBe(false)
+    const b = w.spawnFinalBossAt({ x: 100, y: 0 })
+    const s = w.summary()
+    expect(s.bossActive).toBe(true)
+    expect(s.isFinalBoss).toBe(true)
+    expect(s.bossMaxHp).toBe(b.maxHp)
+  })
+
   it('spawns enemies over time', () => {
     const w = new World(1)
     for (let i = 0; i < 180; i++) w.step(1 / 60)

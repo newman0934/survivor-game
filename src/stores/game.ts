@@ -13,7 +13,7 @@ import { defineStore } from 'pinia'
 import type { WeaponKind, PassiveKind, CharacterKind } from '../engine/types'
 
 /** 遊戲整體狀態階段；App.vue 依此切換要顯示的 UI overlay。 */
-export type Phase = 'menu' | 'playing' | 'upgrading' | 'over' | 'paused'
+export type Phase = 'menu' | 'playing' | 'upgrading' | 'over' | 'paused' | 'won'
 
 /** 引擎每隔一段時間推給 UI 的精簡狀態快照（HUD 渲染所需的全部數值）。 */
 export interface Summary {
@@ -30,7 +30,9 @@ export interface Summary {
   bossHp: number
   /** Boss 最大 hp；無 Boss 時為 0。 */
   bossMaxHp: number
-  /** 目前地圖事件預警字串（無則 undefined）；HUD 顯示橫幅用。 */
+  /** 目前 Boss 是否為終局 Boss（HUD 標示用）。 */
+  isFinalBoss: boolean
+  /** 目前地圖事件預警字串（無則 undefined）；HUD 顯示橫幣用。 */
   eventWarning?: string
 }
 
@@ -77,6 +79,7 @@ export const useGameStore = defineStore('game', {
     bossActive: false,
     bossHp: 0,
     bossMaxHp: 0,
+    isFinalBoss: false,
     upgradeOptions: [],
     onUpgradePicked: null,
     loadout: { weapons: [], passives: [] },
@@ -96,6 +99,7 @@ export const useGameStore = defineStore('game', {
       this.bossActive = false
       this.bossHp = 0
       this.bossMaxHp = 0
+      this.isFinalBoss = false
       this.eventWarning = undefined
       this.upgradeOptions = []
       this.onUpgradePicked = null
@@ -113,6 +117,7 @@ export const useGameStore = defineStore('game', {
       this.bossActive = s.bossActive
       this.bossHp = s.bossHp
       this.bossMaxHp = s.bossMaxHp
+      this.isFinalBoss = s.isFinalBoss
       this.eventWarning = s.eventWarning
     },
     /** 引擎 → store：更新目前持有快照（升級彈窗顯示用）。 */
@@ -144,6 +149,10 @@ export const useGameStore = defineStore('game', {
     /** 引擎 → store：玩家死亡，切到結束畫面。 */
     gameOver() {
       this.phase = 'over'
+    },
+    /** 引擎 → store：擊敗終局 Boss，切到勝利畫面。 */
+    victory() {
+      this.phase = 'won'
     },
     /** 回到主選單。 */
     toMenu() {

@@ -124,6 +124,14 @@ export class Game {
           this.paused = true
           break // 暫停期間停止繼續消化累積器
         }
+        // 通關（擊敗終局 Boss）：勝利優先於死亡；推送最終 summary、播勝利音效、切勝利畫面並停迴圈。
+        if (this.world.hasWon()) {
+          this.store.updateSummary(this.world.summary())
+          soundManager.play('chest')
+          this.store.victory()
+          this.stop()
+          return
+        }
         // 死亡即推送最終 summary、通知 store 遊戲結束並停掉迴圈。
         if (this.world.isPlayerDead()) {
           this.store.updateSummary(this.world.summary())
