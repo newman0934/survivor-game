@@ -657,11 +657,11 @@ describe('撿取物效果', () => {
     expect(hpBefore - w.player.hp).toBeCloseTo(Math.max(0, 18 - 5), 5) // 爆炸 18 套護甲 5
   })
 
-  it('15:00 生成終局 Boss 且只生一隻', () => {
-    const w = new World(1)
-    for (let i = 0; i < 900 * 60; i++) {
+  it('終局 Boss 於設定時間生成且只生一隻', () => {
+    const w = new World(1, 'macrophage', 'vessel', 2) // 注入 2 秒終局時間加速
+    for (let i = 0; i < 2 * 60 + 5; i++) {
       w.step(1 / 60)
-      if (i % 1000 === 0) w.consumeSoundEvents() // 定期清空隊列
+      if (i % 1000 === 0) w.consumeSoundEvents()
     }
     const finals = w.enemies.filter((e) => e.enemyKind === 'finalboss')
     expect(finals.length).toBe(1)
@@ -670,18 +670,26 @@ describe('撿取物效果', () => {
   })
 
   it('終局 Boss 出現後不再生 60s Boss', () => {
-    const w = new World(1)
-    for (let i = 0; i < 905 * 60; i++) {
+    // 注入 65 秒終局時間：讓第一隻 60s Boss（@60s）先生成，再驗證終局後不再生 Boss。
+    const w = new World(1, 'macrophage', 'vessel', 65)
+    for (let i = 0; i < 65 * 60; i++) {
       w.step(1 / 60)
-      if (i % 1000 === 0) w.consumeSoundEvents() // 定期清空隊列
+      if (i % 1000 === 0) w.consumeSoundEvents()
     }
+    expect(w.enemies.some((e) => e.enemyKind === 'finalboss')).toBe(true)
     const superbugsBefore = w.enemies.filter((e) => e.enemyKind === 'superbug').length
     for (let i = 0; i < 70 * 60; i++) {
       w.step(1 / 60)
-      if (i % 1000 === 0) w.consumeSoundEvents() // 定期清空隊列
+      if (i % 1000 === 0) w.consumeSoundEvents()
     }
     const superbugsAfter = w.enemies.filter((e) => e.enemyKind === 'superbug').length
-    expect(superbugsAfter).toBeLessThanOrEqual(superbugsBefore) // 無新增 boss
+    expect(superbugsAfter).toBeLessThanOrEqual(superbugsBefore) // 終局後無新增 60s Boss
+  })
+
+  it('省略 finalBossTime 預設 900 秒', () => {
+    const w = new World(1, 'macrophage', 'vessel', 1)
+    for (let i = 0; i < 1 * 60 + 5; i++) w.step(1 / 60)
+    expect(w.enemies.some((e) => e.enemyKind === 'finalboss')).toBe(true) // 注入值生效
   })
 
   it('擊敗終局 Boss 觸發 hasWon', () => {
