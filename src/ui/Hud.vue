@@ -75,7 +75,7 @@ watch(() => store.hp, (n, o) => {
 .event-warning {
   position: absolute;
   /* 移到 Boss 血條（top:3rem，約佔 3~4.6rem）下方，避免被血條蓋住。 */
-  top: 5rem;
+  top: 6rem;
   left: 50%;
   transform: translateX(-50%);
   padding: 0.3rem 1rem;
