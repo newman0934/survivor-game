@@ -570,4 +570,39 @@ describe('撿取物效果', () => {
     expect(g2.active).toBe(false)
     expect(w.summary().xp).toBeGreaterThan(xpBefore)
   })
+
+  it('精英死亡掉寶箱且經驗為基礎×5', () => {
+    const w = new World(1)
+    w.stats.pickupRadius = 0 // 避免寶石被吸走
+    const e = w.spawnEnemyAt({ x: w.player.pos.x + 40, y: w.player.pos.y }, 'virus', 'frenzy')
+    e.hp = 1
+    w.forceFire()
+    for (let i = 0; i < 20; i++) w.step(1 / 60)
+    expect(e.active).toBe(false)
+    expect(w.chests().length).toBeGreaterThan(0)
+    expect(w.gems().some((g) => g.xp === 5)).toBe(true)
+  })
+
+  it('再生精英隨時間回血、不超過 maxHp', () => {
+    const w = new World(1)
+    const e = w.spawnEnemyAt({ x: 9999, y: 9999 }, 'spore', 'regen') // 遠離玩家不受傷
+    e.hp = 1
+    const before = e.hp
+    for (let i = 0; i < 60; i++) w.step(1 / 60) // 1 秒
+    expect(e.hp).toBeGreaterThan(before)
+    expect(e.hp).toBeLessThanOrEqual(e.maxHp)
+    e.hp = e.maxHp
+    for (let i = 0; i < 60; i++) w.step(1 / 60)
+    expect(e.hp).toBeCloseTo(e.maxHp, 5) // 滿血不溢出
+  })
+
+  it('爆裂精英死亡對近距玩家造成爆炸傷害', () => {
+    const w = new World(1)
+    const e = w.spawnEnemyAt({ x: w.player.pos.x, y: w.player.pos.y }, 'virus', 'volatile')
+    const hpBefore = w.player.hp
+    e.hp = 0
+    w.step(1 / 60) // 觸發死亡結算
+    expect(e.active).toBe(false)
+    expect(w.player.hp).toBeLessThan(hpBefore)
+  })
 })

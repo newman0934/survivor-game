@@ -382,6 +382,9 @@ export class World {
     // 3) 敵人 AI：每隻朝玩家轉向後位移。
     for (const e of this.enemies) {
       if (!e.active) continue
+      if (e.affix === 'regen') {
+        e.hp = Math.min(e.maxHp, e.hp + e.maxHp * ELITE_AFFIX_DEFS.regen.regenPerSec * dt)
+      }
       steerEnemy(e, this.player.pos, dt)
       applyVelocity(e, dt)
       // 噴吐病原：固定間隔朝玩家當前位置吐一發毒液彈。
@@ -681,7 +684,7 @@ export class World {
     e.active = false
     this.kills += 1
     this.gemEntities.push(createGem(e.pos, e.xp))
-    if (e.enemyKind === 'superbug') this.chestEntities.push(createChest(e.pos))
+    if (e.enemyKind === 'superbug' || e.affix) this.chestEntities.push(createChest(e.pos))
     this.soundEventQueue.push('kill')
     this.maybeDropPickup(e.pos)
     const def = e.enemyKind ? ENEMY_DEFS[e.enemyKind] : undefined
@@ -693,9 +696,10 @@ export class World {
         this.spawnEnemyAt({ x: e.pos.x + Math.cos(a) * 14, y: e.pos.y + Math.sin(a) * 14 }, kind)
       }
     }
-    // 死亡爆炸：玩家在半徑內扣血（套護甲）+ 推爆裂視覺與音效。
-    if (def?.explode) {
-      const { radius, damage } = def.explode
+    // 死亡爆炸：exploder 敵種或 volatile 精英；玩家在半徑內扣血（套護甲）+ 推爆裂視覺。
+    const explode = def?.explode ?? (e.affix === 'volatile' ? { radius: 90, damage: 18 } : undefined)
+    if (explode) {
+      const { radius, damage } = explode
       if (distance(e.pos, this.player.pos) <= radius) {
         this.player.hp -= Math.max(0, damage - this.stats.armor)
         this.soundEventQueue.push('hit')
