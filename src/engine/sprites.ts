@@ -8,6 +8,7 @@ import { Graphics } from 'pixi.js'
 import type { Entity, MapKind, CharacterKind } from './types'
 import { ENEMY_DEFS } from './systems/enemyDefs'
 import { PICKUP_DEFS } from './systems/pickupDefs'
+import { ELITE_AFFIX_DEFS } from './systems/eliteDefs'
 
 /** 把顏色各通道乘上係數 f（<1 變暗），用來產生描邊/陰影色。 */
 function dim(color: number, f: number): number {
@@ -193,6 +194,12 @@ export function drawPlayer(g: Graphics, e: Entity, color: number, character: Cha
 export function drawEnemy(g: Graphics, e: Entity): void {
   const r = e.radius
   const color = e.enemyKind ? ENEMY_DEFS[e.enemyKind].color : 0xff5252
+  // 精英光環（若敵人帶詞綴則在造型之前先畫）
+  if (e.affix) {
+    const aura = ELITE_AFFIX_DEFS[e.affix].auraColor
+    g.circle(0, 0, r * 1.45).fill({ color: aura, alpha: 0.18 })
+    g.circle(0, 0, r * 1.2).stroke({ width: 3, color: aura, alpha: 0.9 })
+  }
   switch (e.enemyKind) {
     case 'bacteria': {
       // 桿菌：膠囊身（兩圓覆蓋橢圓）+ 鞭毛尾曲線 + 細胞壁描邊 + 微高光
