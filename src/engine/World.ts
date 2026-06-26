@@ -143,6 +143,8 @@ export class World {
   private bossTimer = BOSS_INTERVAL
   /** 已生成的 Boss 數量；用來讓每隻 Boss 比前一隻硬。 */
   private bossCount = 0
+  /** 終局 Boss 出現時間（秒）；預設 FINAL_BOSS_TIME，可由建構子注入（測試加速用）。 */
+  private finalBossTime = FINAL_BOSS_TIME
   /** 終局 Boss 是否已生成（確保只生一隻、並閘住 60s Boss 與事件）。 */
   private finalBossSpawned = false
   /** 是否已通關（擊敗終局 Boss）。 */
@@ -174,8 +176,9 @@ export class World {
    * @param seed      本場的亂數種子，決定生怪位置等隨機序列（可重現）。
    * @param character 起始角色（預設巨噬細胞）；決定起始武器/數值/血/被動/顏色/造型。
    */
-  constructor(seed: number, character: CharacterKind = 'macrophage', map: MapKind = 'vessel') {
+  constructor(seed: number, character: CharacterKind = 'macrophage', map: MapKind = 'vessel', finalBossTime: number = FINAL_BOSS_TIME) {
     this.rng = createRng(seed)
+    this.finalBossTime = finalBossTime
     this.pickupRng = createRng(seed ^ 0x5bd1e995)
     this.player = createPlayer({ x: 0, y: 0 })
     const def = CHARACTER_DEFS[character]
@@ -466,8 +469,8 @@ export class World {
       }
     }
 
-    // 2d) 終局 Boss：到 FINAL_BOSS_TIME 生成一隻（只生一次），之後閘住上方 Boss/事件。
-    if (this.elapsed > FINAL_BOSS_TIME - dt && !this.finalBossSpawned) {
+    // 2d) 終局 Boss：到 finalBossTime 生成一隻（只生一次），之後閘住上方 Boss/事件。
+    if (this.elapsed > this.finalBossTime - dt && !this.finalBossSpawned) {
       const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
       this.spawnFinalBossAt(pos)
       this.finalBossSpawned = true
