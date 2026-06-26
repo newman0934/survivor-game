@@ -81,11 +81,6 @@ export class World {
   set lastMoveDir(v: Vec2) { this.players[0].lastMoveDir = v }
   private get vacuumTimer(): number { return this.players[0].vacuumTimer }
   private set vacuumTimer(v: number) { this.players[0].vacuumTimer = v }
-  private get bibleAngle(): number { return this.players[0].bibleAngle }
-  private set bibleAngle(v: number) { this.players[0].bibleAngle = v }
-  private get orbitEntities(): Entity[] { return this.players[0].orbitEntities }
-  private set orbitEntities(v: Entity[]) { this.players[0].orbitEntities = v }
-  private get bibleHitTimers(): Map<Entity, number> { return this.players[0].bibleHitTimers }
   private get level(): number { return this.players[0].level }
   private set level(v: number) { this.players[0].level = v }
   private get xp(): number { return this.players[0].xp }
@@ -336,15 +331,11 @@ export class World {
     }
   }
 
-  /** 強制下一格立即開火（重置所有武器的開火計時器）。 */
-  forceFire(): void {
-    for (const w of this.weapons) w.cooldownTimer = 0
-  }
+  /** 強制下一格立即開火（重置所有玩家所有武器計時）。 */
+  forceFire(): void { for (const p of this.players) for (const w of p.weapons) w.cooldownTimer = 0 }
 
-  /** @returns 目前的聖經環繞物（供 renderer 顯示）。 */
-  orbits(): Entity[] {
-    return this.orbitEntities
-  }
+  /** 全部玩家的聖經環繞物（供 renderer）。 */
+  orbits(): Entity[] { return this.players.flatMap((p) => p.orbitEntities) }
 
   /** 指定玩家的升級上下文（leveling/passive 就地修改）。 */
   upgradeContextFor(p: PlayerState): UpgradeContext {
@@ -527,101 +518,103 @@ export class World {
     // 3b) 重建敵人空間網格（敵人移動後、碰撞查詢前），供本格鄰近查詢使用。
     this.rebuildEnemyGrid()
 
-    // 4) 武器：遍歷每把武器，各自倒數冷卻並結算行為（生效值 = 等級值 × 全域乘區）。
-    for (const weapon of this.weapons) {
-      const def = WEAPON_DEFS[weapon.kind]
-      const lvl = this.effectiveLevel(weapon)
-      const evo = weapon.evolved ? def.evolution : undefined
-      const damage = lvl.damage * this.stats.damageMult
+    // 4) 武器：每位存活玩家各自的武器，瞄準離自己最近的敵人、用自己 stats 開火。
+    for (const p of this.livingPlayers()) {
+      for (const weapon of p.weapons) {
+        const def = WEAPON_DEFS[weapon.kind]
+        const lvl = this.effectiveLevel(weapon)
+        const evo = weapon.evolved ? def.evolution : undefined
+        const damage = lvl.damage * p.stats.damageMult
 
-      if (weapon.kind === 'antibody' || weapon.kind === 'perforin') {
-        weapon.cooldownTimer -= dt
-        if (weapon.cooldownTimer <= 0) {
-          weapon.cooldownTimer = (lvl.cooldown ?? 0.5) * this.stats.cooldownMult
-          const speed = (lvl.projectileSpeed ?? 400) * this.stats.projectileSpeedMult
-          const count = lvl.count ?? 1
-          const projs =
-            weapon.kind === 'antibody'
-              ? fireWand(this.player.pos, this.enemies, count, damage, speed)
-              : fireKnife(this.player.pos, this.lastMoveDir, count, damage, speed)
-          if (evo) {
-            for (const p of projs) {
-              p.evolved = true
-              if (evo.pierce) { p.pierce = evo.pierce; p.hitEnemies = [] }
+        if (weapon.kind === 'antibody' || weapon.kind === 'perforin') {
+          weapon.cooldownTimer -= dt
+          if (weapon.cooldownTimer <= 0) {
+            weapon.cooldownTimer = (lvl.cooldown ?? 0.5) * p.stats.cooldownMult
+            const speed = (lvl.projectileSpeed ?? 400) * p.stats.projectileSpeedMult
+            const count = lvl.count ?? 1
+            const projs =
+              weapon.kind === 'antibody'
+                ? fireWand(p.entity.pos, this.enemies, count, damage, speed)
+                : fireKnife(p.entity.pos, p.lastMoveDir, count, damage, speed)
+            if (evo) {
+              for (const proj of projs) {
+                proj.evolved = true
+                if (evo.pierce) { proj.pierce = evo.pierce; proj.hitEnemies = [] }
+              }
+            }
+            this.projectiles.push(...projs)
+            if (projs.length > 0) this.soundEventQueue.push('shoot')
+          }
+        } else if (weapon.kind === 'inflammation') {
+          // 大蒜：每格對範圍內敵人連續扣血（dmg*dt），命中後結算死亡。
+          const radius = (lvl.radius ?? 70) * p.stats.areaMult
+          const cands = this.enemyGrid.queryRadius(
+            p.entity.pos.x, p.entity.pos.y, radius + MAX_ENEMY_RADIUS,
+          )
+          garlicTick(p.entity.pos, cands, radius, damage, dt)
+          if (evo?.fieldRegen && p.entity.hp > 0) {
+            p.entity.hp = Math.min(p.entity.maxHp, p.entity.hp + evo.fieldRegen * dt)
+          }
+          this.checkKills()
+        } else if (weapon.kind === 'phagocyte') {
+          weapon.cooldownTimer -= dt
+          if (weapon.cooldownTimer <= 0) {
+            weapon.cooldownTimer = (lvl.cooldown ?? 0.7) * p.stats.cooldownMult
+            const radius = (lvl.radius ?? 70) * p.stats.areaMult
+            const cands = this.enemyGrid.queryRadius(
+              p.entity.pos.x, p.entity.pos.y, radius + MAX_ENEMY_RADIUS,
+            )
+            const halfAngle = evo?.halfAngle ?? PHAGOCYTE_HALF_ANGLE
+            const hits = phagocyteSweep(p.entity.pos, p.lastMoveDir, cands, radius, halfAngle, damage)
+            if (hits.length > 0) {
+              this.checkKills()
+              this.soundEventQueue.push('hit')
+              this.fxEventQueue.push({
+                kind: 'sweep', x: p.entity.pos.x, y: p.entity.pos.y,
+                angle: Math.atan2(p.lastMoveDir.y, p.lastMoveDir.x), radius, halfAngle,
+              })
             }
           }
-          this.projectiles.push(...projs)
-          if (projs.length > 0) this.soundEventQueue.push('shoot')
-        }
-      } else if (weapon.kind === 'inflammation') {
-        // 大蒜：每格對範圍內敵人連續扣血（dmg*dt），命中後結算死亡。
-        const radius = (lvl.radius ?? 70) * this.stats.areaMult
-        const cands = this.enemyGrid.queryRadius(
-          this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
-        )
-        garlicTick(this.player.pos, cands, radius, damage, dt)
-        if (evo?.fieldRegen && this.player.hp > 0) {
-          this.player.hp = Math.min(this.player.maxHp, this.player.hp + evo.fieldRegen * dt)
-        }
-        this.checkKills()
-      } else if (weapon.kind === 'phagocyte') {
-        weapon.cooldownTimer -= dt
-        if (weapon.cooldownTimer <= 0) {
-          weapon.cooldownTimer = (lvl.cooldown ?? 0.7) * this.stats.cooldownMult
-          const radius = (lvl.radius ?? 70) * this.stats.areaMult
-          const cands = this.enemyGrid.queryRadius(
-            this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
-          )
-          const halfAngle = evo?.halfAngle ?? PHAGOCYTE_HALF_ANGLE
-          const hits = phagocyteSweep(this.player.pos, this.lastMoveDir, cands, radius, halfAngle, damage)
-          if (hits.length > 0) {
-            this.checkKills()
-            this.soundEventQueue.push('hit')
-            this.fxEventQueue.push({
-              kind: 'sweep', x: this.player.pos.x, y: this.player.pos.y,
-              angle: Math.atan2(this.lastMoveDir.y, this.lastMoveDir.x), radius, halfAngle,
-            })
+        } else if (weapon.kind === 'cascade') {
+          weapon.cooldownTimer -= dt
+          if (weapon.cooldownTimer <= 0) {
+            weapon.cooldownTimer = (lvl.cooldown ?? 1.0) * p.stats.cooldownMult
+            const jumps = lvl.count ?? 3
+            const range = (lvl.radius ?? 160) * p.stats.areaMult
+            const targets = chainTargets(p.entity.pos, this.enemies, jumps, range)
+            if (targets.length > 0) {
+              const falloff = evo?.noFalloff ? 1 : CASCADE_FALLOFF
+              for (let k = 0; k < targets.length; k++) targets[k].hp -= damage * Math.pow(falloff, k)
+              this.checkKills()
+              this.soundEventQueue.push('hit')
+              this.fxEventQueue.push({
+                kind: 'chain',
+                points: [{ x: p.entity.pos.x, y: p.entity.pos.y }, ...targets.map((t) => ({ x: t.pos.x, y: t.pos.y }))],
+              })
+            }
+          }
+        } else if (weapon.kind === 'nova') {
+          weapon.cooldownTimer -= dt
+          if (weapon.cooldownTimer <= 0) {
+            weapon.cooldownTimer = (lvl.cooldown ?? 1.6) * p.stats.cooldownMult
+            const radius = (lvl.radius ?? 120) * p.stats.areaMult
+            const cands = this.enemyGrid.queryRadius(
+              p.entity.pos.x, p.entity.pos.y, radius + MAX_ENEMY_RADIUS,
+            )
+            const hits = novaBurst(p.entity.pos, cands, radius, damage)
+            if (hits.length > 0) {
+              this.checkKills()
+              this.soundEventQueue.push('hit')
+              this.fxEventQueue.push({ kind: 'nova', x: p.entity.pos.x, y: p.entity.pos.y, radius })
+            }
           }
         }
-      } else if (weapon.kind === 'cascade') {
-        weapon.cooldownTimer -= dt
-        if (weapon.cooldownTimer <= 0) {
-          weapon.cooldownTimer = (lvl.cooldown ?? 1.0) * this.stats.cooldownMult
-          const jumps = lvl.count ?? 3
-          const range = (lvl.radius ?? 160) * this.stats.areaMult
-          const targets = chainTargets(this.player.pos, this.enemies, jumps, range)
-          if (targets.length > 0) {
-            const falloff = evo?.noFalloff ? 1 : CASCADE_FALLOFF
-            for (let k = 0; k < targets.length; k++) targets[k].hp -= damage * Math.pow(falloff, k)
-            this.checkKills()
-            this.soundEventQueue.push('hit')
-            this.fxEventQueue.push({
-              kind: 'chain',
-              points: [{ x: this.player.pos.x, y: this.player.pos.y }, ...targets.map((t) => ({ x: t.pos.x, y: t.pos.y }))],
-            })
-          }
-        }
-      } else if (weapon.kind === 'nova') {
-        weapon.cooldownTimer -= dt
-        if (weapon.cooldownTimer <= 0) {
-          weapon.cooldownTimer = (lvl.cooldown ?? 1.6) * this.stats.cooldownMult
-          const radius = (lvl.radius ?? 120) * this.stats.areaMult
-          const cands = this.enemyGrid.queryRadius(
-            this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
-          )
-          const hits = novaBurst(this.player.pos, cands, radius, damage)
-          if (hits.length > 0) {
-            this.checkKills()
-            this.soundEventQueue.push('hit')
-            this.fxEventQueue.push({ kind: 'nova', x: this.player.pos.x, y: this.player.pos.y, radius })
-          }
-        }
+        // bible 的位置與命中於下方步驟 4b 統一處理
       }
-      // bible 的位置與命中於下方步驟 4b 統一處理
     }
 
-    // 4b) 聖經：依目前持有的聖經（若有）重建環繞物、更新位置並結算命中。
-    this.updateBible(dt)
+    // 4b) 聖經：每位存活玩家各自的環繞物。
+    for (const p of this.livingPlayers()) this.updateBibleFor(p, dt)
 
     // 5) 子彈飛行與命中：先位移、再倒數壽命；命中第一隻敵人即扣血並讓子彈失效，
     //    敵人血量歸零則記擊殺並在原地掉落經驗寶石。
@@ -731,52 +724,53 @@ export class World {
   }
 
   /**
-   * 聖經：依目前持有的聖經重建/更新環繞物位置，並結算對敵人的命中（含 per-enemy 命中冷卻）。
-   * 未持有聖經時清空環繞物。
+   * 聖經（逐玩家）：依指定玩家持有的聖經重建/更新環繞物位置，並結算對敵人的命中（含 per-enemy 命中冷卻）。
+   * 未持有聖經時清空該玩家的環繞物。
+   * @param p  目標玩家狀態。
    * @param dt 固定步長秒數。
    */
-  private updateBible(dt: number): void {
-    const bible = this.weapons.find((w) => w.kind === 'complement')
+  private updateBibleFor(p: PlayerState, dt: number): void {
+    const bible = p.weapons.find((w) => w.kind === 'complement')
     if (!bible) {
-      this.orbitEntities = []
+      p.orbitEntities = []
       return
     }
     const evo = bible.evolved ? WEAPON_DEFS.complement.evolution : undefined
     const lvl = evo ? evo.level : WEAPON_DEFS.complement.levels[bible.level - 1]
     const hitCooldown = evo?.hitCooldown ?? 0.5
     const count = lvl.count ?? 1
-    const radius = (lvl.radius ?? 90) * this.stats.areaMult
-    const damage = lvl.damage * this.stats.damageMult
-    this.bibleAngle += (lvl.angularSpeed ?? 2.5) * dt
+    const radius = (lvl.radius ?? 90) * p.stats.areaMult
+    const damage = lvl.damage * p.stats.damageMult
+    p.bibleAngle += (lvl.angularSpeed ?? 2.5) * dt
 
     // 重建環繞物數量以對齊 count，並更新位置與傷害。
-    const pts = orbitPositions(this.player.pos, count, radius, this.bibleAngle)
-    if (this.orbitEntities.length !== count) {
-      this.orbitEntities = pts.map((p) => createOrbit(p, damage))
+    const pts = orbitPositions(p.entity.pos, count, radius, p.bibleAngle)
+    if (p.orbitEntities.length !== count) {
+      p.orbitEntities = pts.map((orb) => createOrbit(orb, damage))
     } else {
       for (let i = 0; i < count; i++) {
-        this.orbitEntities[i].pos = pts[i]
-        this.orbitEntities[i].damage = damage
+        p.orbitEntities[i].pos = pts[i]
+        p.orbitEntities[i].damage = damage
       }
     }
 
     // 命中冷卻倒數（過期或敵人失效即移除）。
-    for (const [e, t] of this.bibleHitTimers) {
+    for (const [e, t] of p.bibleHitTimers) {
       const nt = t - dt
-      if (nt <= 0 || !e.active) this.bibleHitTimers.delete(e)
-      else this.bibleHitTimers.set(e, nt)
+      if (nt <= 0 || !e.active) p.bibleHitTimers.delete(e)
+      else p.bibleHitTimers.set(e, nt)
     }
     // 環繞物對重疊敵人扣血（冷卻外才扣）。
-    for (const orb of this.orbitEntities) {
+    for (const orb of p.orbitEntities) {
       const cands = this.enemyGrid.queryRadius(orb.pos.x, orb.pos.y, orb.radius + MAX_ENEMY_RADIUS)
       for (const e of cands) {
         if (!e.active) continue
-        if (this.bibleHitTimers.has(e)) continue
+        if (p.bibleHitTimers.has(e)) continue
         const dx = orb.pos.x - e.pos.x
         const dy = orb.pos.y - e.pos.y
         if (Math.hypot(dx, dy) <= orb.radius + e.radius) {
           e.hp -= orb.damage
-          this.bibleHitTimers.set(e, hitCooldown) // 進化縮短命中冷卻
+          p.bibleHitTimers.set(e, hitCooldown) // 進化縮短命中冷卻
         }
       }
     }

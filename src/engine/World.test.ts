@@ -719,6 +719,22 @@ describe('撿取物效果', () => {
   })
 })
 
+describe('多玩家武器', () => {
+  it('各玩家武器各自開火（兩玩家分處兩地各自產生子彈）', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[1].entity.pos = { x: 2000, y: 0 }
+    // 在兩玩家附近各放一隻敵人，讓 antibody 有目標
+    w.spawnEnemyAt({ x: w.players[0].entity.pos.x + 40, y: 0 })
+    w.spawnEnemyAt({ x: 2040, y: 0 })
+    w.forceFire()
+    w.step(1 / 60)
+    const near0 = w.projectiles.some((p) => Math.abs(p.pos.x - w.players[0].entity.pos.x) < 60)
+    const near1 = w.projectiles.some((p) => Math.abs(p.pos.x - 2000) < 60)
+    expect(near0).toBe(true)
+    expect(near1).toBe(true)
+  })
+})
+
 describe('多玩家建構', () => {
   it('陣列角色建立多名玩家、各自起始武器', () => {
     const w = new World(1, ['macrophage', 'neutrophil'])
