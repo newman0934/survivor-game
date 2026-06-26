@@ -90,7 +90,7 @@ watch(
       else if (phase === 'playing') game.resume()
     }
     // 進入結束畫面（上升沿）：以最終 summary + 當局角色/地圖記錄一場，並刷新統計與破紀錄旗標。
-    if (phase === 'over' && prev !== 'over') {
+    if ((phase === 'over' || phase === 'won') && prev !== 'over' && prev !== 'won') {
       const res = recordRun({
         time: store.time,
         kills: store.kills,
@@ -98,6 +98,7 @@ watch(
         character: selected.character,
         map: selected.map,
         date: Date.now(),
+        cleared: phase === 'won',
       })
       stats.value = res.save.stats
       runs.value = res.save.runs
