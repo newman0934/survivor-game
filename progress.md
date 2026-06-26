@@ -60,6 +60,8 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 計分 / 排行榜 — 排行榜彈窗（前 10 場依存活時間），重用既有 runs → specs/leaderboard/
 - [x] 暫停選單 — ESC/暫停鈕 → 繼續/重新開始/回主選單（`paused` phase，重用膜質 UI，放棄不計戰績）→ specs/pause-menu/
 - [x] 內容擴充 — 肥大細胞角色（範圍清場：發炎場 + areaMult/cooldownMult）+ 腸道/腦兩地圖（難度修正 + 地貌 + 背景音樂），純資料/呈現層擴充，選單自動帶出 → specs/content-mastcell-maps/
+- [x] 精英怪 + 地圖事件 — 精英詞綴（巨大化/狂暴/再生/爆裂，發光光環、掉寶箱）+ 開局 60s 後 2% 隨機混入；每 150s 地圖事件（怪潮/精英來襲/包圍，5s 預警橫幅）→ specs/elites-and-events/
+- [ ] 終局 Boss / 勝利條件（Spec B） — run 改有限關卡（撐到終點 → 終局 Boss → 通關），事件時間軸已先以有限節奏設計（尚未開始）
 - [ ] 解鎖 — 用 `CumulativeStats` 鎖/解角色與地圖（尚未開始）
 
 ### 平台支援 ✅
@@ -74,7 +76,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 
 | 項目 | 結果 |
 |---------|------|
-| 單元測試（Vitest） | 206 通過 |
+| 單元測試（Vitest） | 217 通過 |
 | 型別檢查（vue-tsc） | 乾淨 |
 | Production build | 乾淨 |
 | 瀏覽器煙霧測試 | 階段 1–3 + 美術 + 特效 + 新武器/敵種 + 武器進化 + 進度存檔 + 排行榜 + 手機 + 音效 驗收通過（偶見既有 favicon 404，與功能無關） |
