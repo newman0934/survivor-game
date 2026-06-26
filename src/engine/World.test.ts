@@ -546,6 +546,32 @@ describe('武器進化效果', () => {
   })
 })
 
+describe('地圖事件系統', () => {
+  it('triggerEvent elite-pack 一次生成 3 隻精英', () => {
+    const w = new World(1)
+    const before = w.enemies.length
+    w.triggerEvent('elite-pack')
+    const added = w.enemies.slice(before)
+    expect(added.length).toBe(3)
+    expect(added.every((e) => e.affix !== undefined)).toBe(true)
+  })
+
+  it('triggerEvent encircle 整圈生成多隻', () => {
+    const w = new World(1)
+    const before = w.enemies.length
+    w.triggerEvent('encircle')
+    expect(w.enemies.length - before).toBe(16)
+  })
+
+  it('事件於 150 秒觸發、前 5 秒預警，開始後清空', () => {
+    const w = new World(1)
+    for (let i = 0; i < 146 * 60; i++) w.step(1 / 60) // 146 秒：已進預警窗
+    expect(w.summary().eventWarning).toBeTruthy()
+    for (let i = 0; i < 6 * 60; i++) w.step(1 / 60) // 越過 150 秒
+    expect(w.summary().eventWarning).toBeFalsy()
+  })
+})
+
 describe('撿取物效果', () => {
   it('heal 回血並夾在 maxHp 上限', () => {
     const w = new World(1)

@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, EliteAffix, Passive, CharacterKind, MapKind, SoundEvent, FxEvent, PickupKind } from './types'
+import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, EliteAffix, Passive, CharacterKind, MapKind, SoundEvent, FxEvent, PickupKind, GameEventKind } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -27,6 +27,8 @@ import { fireWand, fireKnife, orbitPositions, garlicTick,
   phagocyteSweep, chainTargets, novaBurst, PHAGOCYTE_HALF_ANGLE, CASCADE_FALLOFF } from './systems/weapons'
 import { WEAPON_DEFS } from './systems/weaponDefs'
 import { ELITE_AFFIX_DEFS } from './systems/eliteDefs'
+import { pickEvent, pickAffix } from './systems/events'
+import { GAME_EVENT_DEFS } from './systems/eventDefs'
 import { circlesOverlap } from './systems/collision'
 import { attractGem } from './systems/pickup'
 import { xpForLevel, applyUpgradeById } from './systems/leveling'
@@ -44,6 +46,16 @@ const HEAL_DROP_CHANCE = 0.025   // 每次擊殺掉回血機率（低血時）
 const VACUUM_DROP_CHANCE = 0.012 // 每次擊殺掉全場吸取機率
 /** Boss 生成週期（秒）。 */
 const BOSS_INTERVAL = 60
+/** 地圖事件週期（秒）與觸發前預警時間（秒）。 */
+const EVENT_INTERVAL = 150
+const EVENT_WARNING_LEAD = 5
+/** 隨機精英：開局多少秒後啟用，以及每次一般生怪變精英的機率。 */
+const ELITE_MIN_TIME = 60
+const ELITE_RANDOM_CHANCE = 0.02
+/** 事件生怪數量。 */
+const ELITE_PACK_COUNT = 3
+const SWARM_RUSH_COUNT = 12
+const ENCIRCLE_COUNT = 16
 /** 敵人空間網格的方格邊長（碰撞鄰近查詢用）。 */
 const CELL_SIZE = 100
 /** 最大敵人半徑（由 ENEMY_DEFS 推得）；查詢半徑須加上它以免漏接重疊敵人。 */
@@ -129,6 +141,12 @@ export class World {
   private bossTimer = BOSS_INTERVAL
   /** 已生成的 Boss 數量；用來讓每隻 Boss 比前一隻硬。 */
   private bossCount = 0
+  /** 地圖事件倒數（秒）。 */
+  private eventTimer = EVENT_INTERVAL
+  /** 已挑定、預警中即將觸發的事件（在預警窗鎖定，確保預警文字與觸發事件一致）。 */
+  private pendingEvent?: GameEventKind
+  /** 目前 HUD 預警字串（無則 undefined）。 */
+  private eventWarning?: string
   /** 敵人空間網格；每格在敵人移動後重建，供碰撞鄰近查詢。 */
   private enemyGrid = new SpatialGrid<Entity>(CELL_SIZE)
   /** 目前等級。 */
@@ -265,6 +283,30 @@ export class World {
     return b
   }
 
+  /**
+   * 觸發一個地圖事件：依種類生成對應的一波敵人（全走 seeded rng）。
+   * @param kind 事件種類。
+   */
+  triggerEvent(kind: GameEventKind): void {
+    if (kind === 'swarm-rush') {
+      const baseT = this.rng.next()
+      for (let i = 0; i < SWARM_RUSH_COUNT; i++) {
+        const t = baseT + (i - SWARM_RUSH_COUNT / 2) * 0.02
+        this.spawnEnemyAt(spawnPositionAround(this.player.pos, SPAWN_RADIUS, t), 'virus')
+      }
+    } else if (kind === 'elite-pack') {
+      for (let i = 0; i < ELITE_PACK_COUNT; i++) {
+        const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
+        this.spawnEnemyAt(pos, pickEnemyKind(this.elapsed, this.rng), pickAffix(this.rng))
+      }
+    } else {
+      for (let i = 0; i < ENCIRCLE_COUNT; i++) {
+        const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, i / ENCIRCLE_COUNT)
+        this.spawnEnemyAt(pos, pickEnemyKind(this.elapsed, this.rng))
+      }
+    }
+  }
+
   /** 強制下一格立即開火（重置所有武器的開火計時器）。 */
   forceFire(): void {
     for (const w of this.weapons) w.cooldownTimer = 0
@@ -368,7 +410,11 @@ export class World {
       const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
       const kind = pickEnemyKind(this.elapsed, this.rng)
       if (kind === 'bacteria') this.spawnSwarmAt(pos)
-      else this.spawnEnemyAt(pos, kind)
+      else {
+        const affix = (this.elapsed >= ELITE_MIN_TIME && this.rng.next() < ELITE_RANDOM_CHANCE)
+          ? pickAffix(this.rng) : undefined
+        this.spawnEnemyAt(pos, kind, affix)
+      }
     }
 
     // 2b) Boss：獨立計時器，到點在環上生成一隻（隨次數變強）。
@@ -377,6 +423,20 @@ export class World {
       this.bossTimer = BOSS_INTERVAL
       const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
       this.spawnBossAt(pos)
+    }
+
+    // 2c) 地圖事件：到預警窗鎖定事件並顯示警告；倒數歸零時觸發、重置計時。
+    this.eventTimer -= dt
+    if (this.eventTimer <= EVENT_WARNING_LEAD && this.eventTimer > 0) {
+      if (!this.pendingEvent) this.pendingEvent = pickEvent(this.rng)
+      this.eventWarning = GAME_EVENT_DEFS[this.pendingEvent].warning
+    }
+    if (this.eventTimer <= 0) {
+      const kind = this.pendingEvent ?? pickEvent(this.rng)
+      this.triggerEvent(kind)
+      this.pendingEvent = undefined
+      this.eventWarning = undefined
+      this.eventTimer = EVENT_INTERVAL
     }
 
     // 3) 敵人 AI：每隻朝玩家轉向後位移。
@@ -763,6 +823,7 @@ export class World {
       bossActive: !!boss,
       bossHp: boss ? Math.round(boss.hp) : 0,
       bossMaxHp: boss ? boss.maxHp : 0,
+      eventWarning: this.eventWarning,
     }
   }
 }

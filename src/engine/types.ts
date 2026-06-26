@@ -45,6 +45,17 @@ export interface EliteAffixDef {
   explodeOnDeath: boolean
 }
 
+/** 地圖事件種類。 */
+export type GameEventKind = 'swarm-rush' | 'elite-pack' | 'encircle'
+
+/** 單個地圖事件的定義（純資料）。 */
+export interface GameEventDef {
+  kind: GameEventKind
+  name: string
+  /** 觸發前 HUD 顯示的預警字串。 */
+  warning: string
+}
+
 /**
  * ECS 中的單一 entity（純資料）。
  *
