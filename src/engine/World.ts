@@ -281,6 +281,8 @@ export class World {
     b.hp = ENEMY_DEFS.superbug.hp * scale
     b.maxHp = b.hp
     this.scaleEnemyHp(b)
+    b.hp *= this.playerCount
+    b.maxHp *= this.playerCount
     this.bossCount += 1
     this.enemies.push(b)
     this.soundEventQueue.push('boss')
@@ -295,8 +297,8 @@ export class World {
   spawnFinalBossAt(pos: Vec2): Entity {
     const b = createEnemy(pos, 'finalboss')
     // 確保 hp 未被套用地圖倍率（createEnemy 從 ENEMY_DEFS 直接讀取）
-    b.hp = ENEMY_DEFS.finalboss.hp
-    b.maxHp = ENEMY_DEFS.finalboss.hp
+    b.hp = ENEMY_DEFS.finalboss.hp * this.playerCount
+    b.maxHp = b.hp
     this.enemies.push(b)
     this.soundEventQueue.push('boss')
     return b
@@ -457,7 +459,7 @@ export class World {
     // 2) 生怪：計時器歸零時，依目前時間決定下次間隔（難度曲線），並在玩家周圍隨機生一隻。
     this.spawnTimer -= dt
     if (this.spawnTimer <= 0) {
-      this.spawnTimer = spawnInterval(this.elapsed) * this.mapSpawnIntervalMult
+      this.spawnTimer = (spawnInterval(this.elapsed) * this.mapSpawnIntervalMult) / this.playerCount
       const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
       const kind = pickEnemyKind(this.elapsed, this.rng)
       if (kind === 'bacteria') this.spawnSwarmAt(pos)

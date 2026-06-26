@@ -789,4 +789,25 @@ describe('多玩家建構', () => {
     expect(w.players[0].xp).toBe(0)
     expect(w.players[0].level).toBe(1)
   })
+
+  it('生怪間隔依人數縮短（2 人為一半）', () => {
+    let c1 = 0, c2 = 0
+    const w1b = new World(2)
+    const w2b = new World(2, ['macrophage', 'macrophage'])
+    for (let i = 0; i < 10 * 60; i++) { w1b.step(1 / 60); w2b.step(1 / 60) }
+    c1 = w1b.enemies.length
+    c2 = w2b.enemies.length
+    expect(c2).toBeGreaterThan(c1) // 2 人生怪更多
+  })
+
+  it('Boss 與終局 Boss hp 依人數放大', () => {
+    const w1 = new World(1)
+    const w2 = new World(1, ['macrophage', 'macrophage'])
+    const b1 = w1.spawnBossAt({ x: 100, y: 0 })
+    const b2 = w2.spawnBossAt({ x: 100, y: 0 })
+    expect(b2.maxHp).toBeCloseTo(b1.maxHp * 2, 5)
+    const f1 = w1.spawnFinalBossAt({ x: 100, y: 0 })
+    const f2 = w2.spawnFinalBossAt({ x: 100, y: 0 })
+    expect(f2.maxHp).toBe(f1.maxHp * 2)
+  })
 })
