@@ -357,11 +357,11 @@ export class World {
     if (p) p.moveInput = dir
   }
 
-  /** 全部玩家皆不存活（hp<=0）＝本局失敗。 */
-  hasLost(): boolean { return this.players.every((p) => p.entity.hp <= 0) }
+  /** 全部玩家皆不存活（alive 旗標全為 false）＝本局失敗。 */
+  hasLost(): boolean { return this.players.every((p) => !p.alive) }
 
-  /** 目前存活玩家（hp>0），固定 index 升冪。 */
-  private livingPlayers(): PlayerState[] { return this.players.filter((p) => p.entity.hp > 0) }
+  /** 目前存活玩家（alive 旗標為 true），固定 index 升冪。 */
+  private livingPlayers(): PlayerState[] { return this.players.filter((p) => p.alive) }
 
   /** 離指定座標最近的存活玩家（無存活玩家時回 players[0]）。 */
   nearestLivingPlayer(pos: Vec2): PlayerState {
@@ -735,6 +735,9 @@ export class World {
     // 7c) 補漏殺：掃描所有 hp<=0 但尚未結算的敵人（含外部設值、接觸傷害等非武器路徑）。
     this.checkKills()
 
+    // 7d) 同步玩家存活旗標（hp<=0 即觀戰，不再參與 living 計算）。
+    for (const p of this.players) p.alive = p.entity.hp > 0
+
     // 8) 清理：本格結束後一次篩除所有死亡／失效的 entity。
     this.enemies = this.enemies.filter((e) => e.active)
     this.projectiles = this.projectiles.filter((p) => p.active)
@@ -873,9 +876,9 @@ export class World {
     this.soundEventQueue.push('pickup')
   }
 
-  /** @returns 玩家是否已死亡（hp <= 0）。 */
+  /** @returns 玩家是否已死亡（players[0] hp <= 0）；N=1 行為與現況一致。 */
   isPlayerDead(): boolean {
-    return this.player.hp <= 0
+    return this.players[0].entity.hp <= 0
   }
 
   /** @returns 是否已通關（擊敗終局 Boss）。 */

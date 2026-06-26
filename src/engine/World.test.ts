@@ -735,6 +735,45 @@ describe('多玩家武器', () => {
   })
 })
 
+describe('死亡/觀戰 + hasLost + 確定性', () => {
+  it('一名玩家死亡仍續跑、敵人改追存活者', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.pos = { x: -500, y: 0 }
+    w.players[1].entity.pos = { x: 500, y: 0 }
+    w.players[0].entity.hp = 0
+    w.step(1 / 60)
+    expect(w.players[0].alive).toBe(false)
+    expect(w.hasLost()).toBe(false)
+    const e = w.spawnEnemyAt({ x: 0, y: 0 })
+    for (let i = 0; i < 30; i++) w.step(1 / 60)
+    expect(e.pos.x).toBeGreaterThan(0) // 朝存活的玩家 1（+500）移動
+  })
+
+  it('全員死亡 hasLost 為 true；N=1 與 isPlayerDead 等價', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.hp = 0; w.players[1].entity.hp = 0
+    w.step(1 / 60)
+    expect(w.hasLost()).toBe(true)
+    const s = new World(1)
+    s.player.hp = 0
+    s.step(1 / 60)
+    expect(s.isPlayerDead()).toBe(true)
+    expect(s.hasLost()).toBe(true)
+  })
+
+  it('相同 seed + 相同角色陣列 + 相同輸入 → 兩局一致', () => {
+    const run = () => {
+      const w = new World(42, ['macrophage', 'neutrophil'])
+      for (let i = 0; i < 300; i++) {
+        w.setMoveInput(0, { x: 1, y: 0 }); w.setMoveInput(1, { x: 0, y: 1 })
+        w.step(1 / 60)
+      }
+      return [w.enemies.length, Math.round(w.players[0].entity.pos.x), Math.round(w.players[1].entity.pos.y), w.players[0].level]
+    }
+    expect(run()).toEqual(run())
+  })
+})
+
 describe('多玩家建構', () => {
   it('陣列角色建立多名玩家、各自起始武器', () => {
     const w = new World(1, ['macrophage', 'neutrophil'])
