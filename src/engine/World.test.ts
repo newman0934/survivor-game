@@ -133,6 +133,16 @@ describe('World', () => {
     expect(w.stats.xpGain).toBeGreaterThan(1)
   })
 
+  it('肥大細胞起始：發炎場、範圍/冷卻強化、洋紅色', () => {
+    const w = new World(1, 'mastcell')
+    expect(w.weapons[0].kind).toBe('inflammation')
+    expect(w.player.maxHp).toBe(100)
+    expect(w.player.hp).toBe(100)
+    expect(w.stats.areaMult).toBeCloseTo(1.3, 5)
+    expect(w.stats.cooldownMult).toBeCloseTo(0.9, 5)
+    expect(w.playerColor).toBe(0xf06292)
+  })
+
   it('生怪會帶 enemyKind', () => {
     const w = new World(1)
     for (let i = 0; i < 180; i++) w.step(1 / 60)

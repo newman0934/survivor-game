@@ -91,4 +91,7 @@ export const CHARACTER_ICONS: Record<CharacterKind, IconDef> = {
   dendritic: { color: '#ffd54a',
     paths: ['M12 12 L12 4', 'M12 12 L19 8', 'M12 12 L20 15', 'M12 12 L14 20', 'M12 12 L6 19', 'M12 12 L4 13', 'M12 12 L7 6'],
     fills: ['M12 12 a2 2 0 1 0 0.01 0'] },
+  // 肥大細胞：圓細胞 + 密布顆粒點（組織胺顆粒）
+  mastcell: { color: '#f06292', paths: ['M12 3 a9 9 0 1 0 0.01 0'],
+    fills: ['M8.5 9 a1 1 0 1 0 0.01 0', 'M14 8.5 a1 1 0 1 0 0.01 0', 'M15.5 13 a1 1 0 1 0 0.01 0', 'M9 14.5 a1 1 0 1 0 0.01 0', 'M12 12 a1.2 1.2 0 1 0 0.01 0'] },
 }
