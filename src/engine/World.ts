@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, Passive, CharacterKind, MapKind, SoundEvent, FxEvent, PickupKind } from './types'
+import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, EliteAffix, Passive, CharacterKind, MapKind, SoundEvent, FxEvent, PickupKind } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -26,6 +26,7 @@ import { MAP_DEFS } from './systems/mapDefs'
 import { fireWand, fireKnife, orbitPositions, garlicTick,
   phagocyteSweep, chainTargets, novaBurst, PHAGOCYTE_HALF_ANGLE, CASCADE_FALLOFF } from './systems/weapons'
 import { WEAPON_DEFS } from './systems/weaponDefs'
+import { ELITE_AFFIX_DEFS } from './systems/eliteDefs'
 import { circlesOverlap } from './systems/collision'
 import { attractGem } from './systems/pickup'
 import { xpForLevel, applyUpgradeById } from './systems/leveling'
@@ -205,13 +206,24 @@ export class World {
   }
 
   /**
-   * 在指定位置生成一隻敵人並加入場上。
+   * 在指定位置生成一隻敵人並加入場上；可選 affix 使其成為精英。
    * @param pos 生成位置。
+   * @param kind 敵種。
+   * @param affix 選填精英詞綴；提供時額外套 hp×3/xp×5 與詞綴乘區。
    * @returns 新建立的敵人 entity。
    */
-  spawnEnemyAt(pos: Vec2, kind: EnemyKind = 'virus'): Entity {
+  spawnEnemyAt(pos: Vec2, kind: EnemyKind = 'virus', affix?: EliteAffix): Entity {
     const e = createEnemy(pos, kind)
     this.scaleEnemyHp(e)
+    if (affix) {
+      const a = ELITE_AFFIX_DEFS[affix]
+      e.affix = affix
+      e.hp = e.maxHp = e.maxHp * 3 * a.hpMult
+      e.radius *= a.radiusMult
+      e.speed *= a.speedMult
+      e.damage *= a.damageMult
+      e.xp *= 5
+    }
     this.enemies.push(e)
     return e
   }

@@ -104,6 +104,30 @@ describe('World', () => {
     expect(w.mapBgColor).toBe(0x0c0c12)
   })
 
+  it('巨大化精英：hp×3×3、半徑×1.6、速度×0.8、xp×5', () => {
+    const w = new World(1, 'macrophage', 'vessel')
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus', 'giant')
+    expect(e.affix).toBe('giant')
+    expect(e.maxHp).toBeCloseTo(10 * 3 * 3.0, 5) // virus hp 10 × 精英3 × giant 3.0
+    expect(e.radius).toBeCloseTo(12 * 1.6, 5)    // virus radius 12
+    expect(e.speed).toBeCloseTo(60 * 0.8, 5)     // virus speed 60
+    expect(e.xp).toBe(1 * 5)                       // virus xp 1 × 5
+  })
+
+  it('狂暴精英：速度×1.5、接觸傷害×1.3', () => {
+    const w = new World(1)
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus', 'frenzy')
+    expect(e.speed).toBeCloseTo(60 * 1.5, 5)
+    expect(e.damage).toBeCloseTo(5 * 1.3, 5) // virus damage 5
+  })
+
+  it('省略 affix 行為與現況一致（無精英）', () => {
+    const w = new World(1)
+    const e = w.spawnEnemyAt({ x: 100, y: 0 }, 'virus')
+    expect(e.affix).toBeUndefined()
+    expect(e.maxHp).toBe(10)
+  })
+
   it('腸道地圖：生怪快 0.7、敵人脆 ×0.8、視覺欄位正確', () => {
     const w = new World(1, 'macrophage', 'gut')
     expect(w.mapSpawnIntervalMult).toBeCloseTo(0.7, 5)
