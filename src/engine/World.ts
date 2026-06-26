@@ -180,18 +180,19 @@ export class World {
 
   /**
    * @param seed      本場的亂數種子，決定生怪位置等隨機序列（可重現）。
-   * @param character 起始角色（預設巨噬細胞）；決定起始武器/數值/血/被動/顏色/造型。
+   * @param character 起始角色（預設巨噬細胞）；可傳陣列以啟用多玩家模式。
    */
-  constructor(seed: number, character: CharacterKind = 'macrophage', map: MapKind = 'vessel', finalBossTime: number = FINAL_BOSS_TIME) {
+  constructor(seed: number, character: CharacterKind | CharacterKind[] = 'macrophage', map: MapKind = 'vessel', finalBossTime: number = FINAL_BOSS_TIME) {
     this.rng = createRng(seed)
     this.finalBossTime = finalBossTime
     this.pickupRng = createRng(seed ^ 0x5bd1e995)
-    this.players = [World.makePlayerState(character)]
-    // 起始被動套用
-    const p0 = this.players[0]
-    for (const pk of CHARACTER_DEFS[character].startPassives) {
-      p0.passives.push({ kind: pk, level: 1 })
-      PASSIVE_DEFS[pk].apply(this.upgradeContext())
+    const characters = Array.isArray(character) ? character : [character]
+    this.players = characters.map((c) => World.makePlayerState(c))
+    for (const p of this.players) {
+      for (const pk of CHARACTER_DEFS[p.character].startPassives) {
+        p.passives.push({ kind: pk, level: 1 })
+        PASSIVE_DEFS[pk].apply(this.upgradeContextFor(p))
+      }
     }
     const m = MAP_DEFS[map]
     this.mapKind = map
@@ -345,20 +346,42 @@ export class World {
     return this.orbitEntities
   }
 
-  /**
-   * 建立升級套用所需的上下文（stats + weapons + heal）。
-   * @returns 指向 World 內部狀態的上下文，供 leveling 就地修改。
-   */
-  upgradeContext(): UpgradeContext {
+  /** 指定玩家的升級上下文（leveling/passive 就地修改）。 */
+  upgradeContextFor(p: PlayerState): UpgradeContext {
     return {
-      stats: this.stats,
-      weapons: this.weapons,
-      passives: this.passives,
-      player: this.player,
-      heal: (amount: number) => {
-        this.player.hp = Math.min(this.player.maxHp, this.player.hp + amount)
-      },
+      stats: p.stats, weapons: p.weapons, passives: p.passives, player: p.entity,
+      heal: (amount: number) => { p.entity.hp = Math.min(p.entity.maxHp, p.entity.hp + amount) },
     }
+  }
+
+  /** 相容：players[0] 的升級上下文。 */
+  upgradeContext(): UpgradeContext { return this.upgradeContextFor(this.players[0]) }
+
+  /** 玩家數。 */
+  get playerCount(): number { return this.players.length }
+
+  /** 設定指定玩家的移動輸入方向。 */
+  setMoveInput(playerIndex: number, dir: Vec2): void {
+    const p = this.players[playerIndex]
+    if (p) p.moveInput = dir
+  }
+
+  /** 全部玩家皆不存活（hp<=0）＝本局失敗。 */
+  hasLost(): boolean { return this.players.every((p) => p.entity.hp <= 0) }
+
+  /** 目前存活玩家（hp>0），固定 index 升冪。 */
+  private livingPlayers(): PlayerState[] { return this.players.filter((p) => p.entity.hp > 0) }
+
+  /** 離指定座標最近的存活玩家（無存活玩家時回 players[0]）。 */
+  nearestLivingPlayer(pos: Vec2): PlayerState {
+    const living = this.livingPlayers()
+    if (living.length === 0) return this.players[0]
+    let best = living[0], bestD = distance(best.entity.pos, pos)
+    for (let i = 1; i < living.length; i++) {
+      const d = distance(living[i].entity.pos, pos)
+      if (d < bestD) { bestD = d; best = living[i] }
+    }
+    return best
   }
 
   /**

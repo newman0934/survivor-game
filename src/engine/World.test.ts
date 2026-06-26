@@ -708,3 +708,23 @@ describe('撿取物效果', () => {
     expect(b.maxHp).toBe(4000)
   })
 })
+
+describe('多玩家建構', () => {
+  it('陣列角色建立多名玩家、各自起始武器', () => {
+    const w = new World(1, ['macrophage', 'neutrophil'])
+    expect(w.playerCount).toBe(2)
+    expect(w.players[0].weapons[0].kind).toBe('antibody')
+    expect(w.players[1].weapons[0].kind).toBe('perforin')
+    expect(w.players[1].entity.maxHp).toBe(80) // neutrophil
+  })
+
+  it('單一角色與省略仍為 N=1', () => {
+    expect(new World(1).playerCount).toBe(1)
+    expect(new World(1, 'nkcell').playerCount).toBe(1)
+  })
+
+  it('全員存活時 hasLost 為 false', () => {
+    const w = new World(1, ['macrophage', 'neutrophil'])
+    expect(w.hasLost()).toBe(false)
+  })
+})
