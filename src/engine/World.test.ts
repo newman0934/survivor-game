@@ -774,4 +774,19 @@ describe('多玩家建構', () => {
     expect(w.players[1].entity.hp).toBeLessThan(hp1)
     expect(w.players[0].entity.hp).toBe(hp0)
   })
+
+  it('寶石只給碰到它的玩家經驗（各自升級）', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.pos = { x: -1000, y: 0 }
+    w.players[1].entity.pos = { x: 1000, y: 0 }
+    w.players[0].stats.pickupRadius = 0
+    w.players[1].stats.pickupRadius = 0
+    const before1 = w.players[1].xp + w.players[1].level
+    // 在玩家 1 腳下放一顆大經驗寶石
+    w.spawnGemForTest({ x: 1000, y: 0 }, 100)
+    w.step(1 / 60)
+    expect(w.players[1].xp + w.players[1].level).toBeGreaterThan(before1)
+    expect(w.players[0].xp).toBe(0)
+    expect(w.players[0].level).toBe(1)
+  })
 })

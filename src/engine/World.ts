@@ -79,8 +79,6 @@ export class World {
   set moveInput(v: Vec2) { this.players[0].moveInput = v }
   get lastMoveDir(): Vec2 { return this.players[0].lastMoveDir }
   set lastMoveDir(v: Vec2) { this.players[0].lastMoveDir = v }
-  private get vacuumTimer(): number { return this.players[0].vacuumTimer }
-  private set vacuumTimer(v: number) { this.players[0].vacuumTimer = v }
   private get level(): number { return this.players[0].level }
   private set level(v: number) { this.players[0].level = v }
   private get xp(): number { return this.players[0].xp }
@@ -385,21 +383,32 @@ export class World {
     return (lvl.radius ?? 0) * this.stats.areaMult
   }
 
+  /** 測試輔助：在指定位置放一顆經驗寶石（直接進 gemEntities，繞過擊殺流程）。 */
+  spawnGemForTest(pos: Vec2, xp: number): Entity {
+    const g = createGem(pos, xp)
+    this.gemEntities.push(g)
+    return g
+  }
+
   /**
-   * 給予經驗值，並結算可能連續觸發的升級。
-   * @param amount 增加的經驗值。
+   * 對指定玩家加經驗、必要時升級（per-player）。
+   * 一次拾取可能跨越多個等級門檻，故用 while 迴圈把多餘經驗結算掉。
    */
-  grantXp(amount: number): void {
-    this.xp += amount
-    // 一次拾取可能跨越多個等級門檻，故用 while 迴圈把多餘經驗結算掉，
-    // 每升一級就累加一次待處理升級（讓上層逐一彈出選卡）。
-    while (this.xp >= xpForLevel(this.level)) {
-      this.xp -= xpForLevel(this.level)
-      this.level += 1
-      this.pendingLevelUps += 1
+  private grantXpTo(p: PlayerState, amount: number): void {
+    p.xp += amount
+    while (p.xp >= xpForLevel(p.level)) {
+      p.xp -= xpForLevel(p.level)
+      p.level += 1
+      p.pendingLevelUps += 1
       this.soundEventQueue.push('levelup')
     }
   }
+
+  /**
+   * 給予經驗值（相容 API），對 players[0] 加經驗。
+   * @param amount 增加的經驗值。
+   */
+  grantXp(amount: number): void { this.grantXpTo(this.players[0], amount) }
 
   /**
    * 取走一次待處理的升級。
@@ -659,42 +668,46 @@ export class World {
       }
     }
 
-    // 6) 寶石：進入感應半徑後朝玩家吸取並位移；碰到玩家本體即拾取並給經驗。
-    // 全場吸取（vacuum）啟動期間：不分距離吸引全部寶石、加速飛向玩家。
-    if (this.vacuumTimer > 0) this.vacuumTimer = Math.max(0, this.vacuumTimer - dt)
-    const gemRadius = this.vacuumTimer > 0 ? Infinity : this.stats.pickupRadius
-    const gemPull = this.vacuumTimer > 0 ? VACUUM_PULL_SPEED : GEM_PULL_SPEED
+    // 6) 寶石：每顆找最近的存活玩家為吸引者，位移一次後若進入其半徑則由其收取。
+    // vacuum 倒數逐玩家各自遞減；吸引者的 vacuum 狀態決定吸力參數。
+    for (const p of this.livingPlayers()) {
+      if (p.vacuumTimer > 0) p.vacuumTimer = Math.max(0, p.vacuumTimer - dt)
+    }
     for (const g of this.gemEntities) {
       if (!g.active) continue
-      attractGem(g, this.player.pos, gemRadius, gemPull)
+      const p = this.nearestLivingPlayer(g.pos)
+      const vac = p.vacuumTimer > 0
+      attractGem(g, p.entity.pos, vac ? Infinity : p.stats.pickupRadius, vac ? VACUUM_PULL_SPEED : GEM_PULL_SPEED)
       applyVelocity(g, dt)
-      if (distance(g.pos, this.player.pos) <= this.player.radius) {
+      if (distance(g.pos, p.entity.pos) <= p.entity.radius) {
         g.active = false
-        this.grantXp(g.xp * this.stats.xpGain)
+        this.grantXpTo(p, g.xp * p.stats.xpGain)
         // 寶石收取不發音（每顆都響太頻繁）；heal/vacuum 撿取物仍有音效
       }
     }
 
-    // 6b) 寶箱：吸取並位移；碰到玩家本體即收取並觸發一次免費升級（pendingLevelUps）。
+    // 6b) 寶箱：吸取並位移；碰到最近玩家本體即收取並觸發一次免費升級（pendingLevelUps）。
     for (const c of this.chestEntities) {
       if (!c.active) continue
-      attractGem(c, this.player.pos, this.stats.pickupRadius, GEM_PULL_SPEED)
+      const p = this.nearestLivingPlayer(c.pos)
+      attractGem(c, p.entity.pos, p.stats.pickupRadius, GEM_PULL_SPEED)
       applyVelocity(c, dt)
-      if (distance(c.pos, this.player.pos) <= this.player.radius) {
+      if (distance(c.pos, p.entity.pos) <= p.entity.radius) {
         c.active = false
-        this.pendingLevelUps += 1
+        p.pendingLevelUps += 1
         this.soundEventQueue.push('chest')
       }
     }
 
-    // 6c) 撿取物：吸取並位移；碰玩家本體即拾取並套用效果。
+    // 6c) 撿取物：吸取並位移；碰最近玩家本體即拾取並套用效果。
     for (const pk of this.pickupEntities) {
       if (!pk.active) continue
-      attractGem(pk, this.player.pos, this.stats.pickupRadius, GEM_PULL_SPEED)
+      const p = this.nearestLivingPlayer(pk.pos)
+      attractGem(pk, p.entity.pos, p.stats.pickupRadius, GEM_PULL_SPEED)
       applyVelocity(pk, dt)
-      if (distance(pk.pos, this.player.pos) <= this.player.radius) {
+      if (distance(pk.pos, p.entity.pos) <= p.entity.radius) {
         pk.active = false
-        this.applyPickup(pk.pickupKind!)
+        this.applyPickupTo(p, pk.pickupKind!)
       }
     }
 
@@ -836,23 +849,24 @@ export class World {
     }
   }
 
-  /** 撿取物掉落：獨立 seeded rng；一次擊殺最多一個（heal/vacuum 互斥）；heal 僅低血 mercy。 */
+  /** 撿取物掉落：獨立 seeded rng；一次擊殺最多一個（heal/vacuum 互斥）；heal 僅任一存活玩家低血 mercy。 */
   private maybeDropPickup(pos: Vec2): void {
     const r = this.pickupRng.next()
-    if (this.player.hp < this.player.maxHp * HEAL_DROP_HP_FRAC && r < HEAL_DROP_CHANCE) {
+    const anyLow = this.players.some((p) => p.entity.hp > 0 && p.entity.hp < p.entity.maxHp * HEAL_DROP_HP_FRAC)
+    if (anyLow && r < HEAL_DROP_CHANCE) {
       this.pickupEntities.push(createPickup(pos, 'heal'))
     } else if (r >= HEAL_DROP_CHANCE && r < HEAL_DROP_CHANCE + VACUUM_DROP_CHANCE) {
       this.pickupEntities.push(createPickup(pos, 'vacuum'))
     }
   }
 
-  /** 套用撿取物效果：heal 回血（夾上限）；vacuum 收全場寶石轉經驗。 */
-  private applyPickup(kind: PickupKind): void {
+  /** 套用指定玩家的撿取物效果：heal 回血（夾上限）；vacuum 啟動該玩家的全場吸取計時器。 */
+  private applyPickupTo(p: PlayerState, kind: PickupKind): void {
     if (kind === 'heal') {
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * HEAL_FRAC)
+      p.entity.hp = Math.min(p.entity.maxHp, p.entity.hp + p.entity.maxHp * HEAL_FRAC)
     } else {
       // 全場吸取：啟動 vacuum 期間，寶石迴圈會把全部寶石加速吸向玩家、逐顆收取（保留飛行手感）。
-      this.vacuumTimer = VACUUM_DURATION
+      p.vacuumTimer = VACUUM_DURATION
     }
     this.soundEventQueue.push('pickup')
   }
