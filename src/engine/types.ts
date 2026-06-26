@@ -24,7 +24,7 @@ export type FxEvent =
 
 /** 敵人子種類；僅 kind==='enemy' 的 entity 使用，決定數值/顏色/行為。 */
 export type EnemyKind = 'virus' | 'bacteria' | 'spore' | 'spiral' | 'superbug'
-  | 'spitter' | 'splitter' | 'exploder'
+  | 'spitter' | 'splitter' | 'exploder' | 'finalboss'
 
 /** 精英詞綴；附加在敵人上強化其數值/行為。 */
 export type EliteAffix = 'giant' | 'frenzy' | 'regen' | 'volatile'

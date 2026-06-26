@@ -46,6 +46,8 @@ const HEAL_DROP_CHANCE = 0.025   // 每次擊殺掉回血機率（低血時）
 const VACUUM_DROP_CHANCE = 0.012 // 每次擊殺掉全場吸取機率
 /** Boss 生成週期（秒）。 */
 const BOSS_INTERVAL = 60
+/** 終局 Boss 出現時間（秒）。 */
+const FINAL_BOSS_TIME = 900
 /** 地圖事件週期（秒）與觸發前預警時間（秒）。 */
 const EVENT_INTERVAL = 150
 const EVENT_WARNING_LEAD = 5
@@ -141,6 +143,10 @@ export class World {
   private bossTimer = BOSS_INTERVAL
   /** 已生成的 Boss 數量；用來讓每隻 Boss 比前一隻硬。 */
   private bossCount = 0
+  /** 終局 Boss 是否已生成（確保只生一隻、並閘住 60s Boss 與事件）。 */
+  private finalBossSpawned = false
+  /** 是否已通關（擊敗終局 Boss）。 */
+  private won = false
   /** 地圖事件倒數（秒）。 */
   private eventTimer = EVENT_INTERVAL
   /** 已挑定、預警中即將觸發的事件（在預警窗鎖定，確保預警文字與觸發事件一致）。 */
@@ -284,6 +290,21 @@ export class World {
   }
 
   /**
+   * 生成終局 Boss（固定數值、不套地圖 enemyHpMult、不參與 bossCount 縮放）。
+   * @param pos 生成位置。
+   * @returns 新建立的終局 Boss entity。
+   */
+  spawnFinalBossAt(pos: Vec2): Entity {
+    const b = createEnemy(pos, 'finalboss')
+    // 確保 hp 未被套用地圖倍率（createEnemy 從 ENEMY_DEFS 直接讀取）
+    b.hp = ENEMY_DEFS.finalboss.hp
+    b.maxHp = ENEMY_DEFS.finalboss.hp
+    this.enemies.push(b)
+    this.soundEventQueue.push('boss')
+    return b
+  }
+
+  /**
    * 觸發一個地圖事件：依種類生成對應的一波敵人（全走 seeded rng）。
    * @param kind 事件種類。
    */
@@ -420,26 +441,37 @@ export class World {
       }
     }
 
-    // 2b) Boss：獨立計時器，到點在環上生成一隻（隨次數變強）。
-    this.bossTimer -= dt
-    if (this.bossTimer <= 0) {
-      this.bossTimer = BOSS_INTERVAL
-      const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
-      this.spawnBossAt(pos)
+    // 2b/2c) 終局 Boss 出現前才推進 60s Boss 與地圖事件。
+    if (!this.finalBossSpawned) {
+      // 2b) Boss：獨立計時器，到點在環上生成一隻（隨次數變強）。
+      this.bossTimer -= dt
+      if (this.bossTimer <= 0) {
+        this.bossTimer = BOSS_INTERVAL
+        const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
+        this.spawnBossAt(pos)
+      }
+
+      // 2c) 地圖事件：到預警窗鎖定事件並顯示警告；倒數歸零時觸發、重置計時。
+      this.eventTimer -= dt
+      if (this.eventTimer <= EVENT_WARNING_LEAD && this.eventTimer > 0) {
+        if (!this.pendingEvent) this.pendingEvent = pickEvent(this.rng)
+        this.eventWarning = GAME_EVENT_DEFS[this.pendingEvent].warning
+      }
+      if (this.eventTimer <= 0) {
+        const kind = this.pendingEvent ?? pickEvent(this.rng)
+        this.triggerEvent(kind)
+        this.pendingEvent = undefined
+        this.eventWarning = undefined
+        this.eventTimer = EVENT_INTERVAL
+      }
     }
 
-    // 2c) 地圖事件：到預警窗鎖定事件並顯示警告；倒數歸零時觸發、重置計時。
-    this.eventTimer -= dt
-    if (this.eventTimer <= EVENT_WARNING_LEAD && this.eventTimer > 0) {
-      if (!this.pendingEvent) this.pendingEvent = pickEvent(this.rng)
-      this.eventWarning = GAME_EVENT_DEFS[this.pendingEvent].warning
-    }
-    if (this.eventTimer <= 0) {
-      const kind = this.pendingEvent ?? pickEvent(this.rng)
-      this.triggerEvent(kind)
-      this.pendingEvent = undefined
-      this.eventWarning = undefined
-      this.eventTimer = EVENT_INTERVAL
+    // 2d) 終局 Boss：到 FINAL_BOSS_TIME 生成一隻（只生一次），之後閘住上方 Boss/事件。
+    if (this.elapsed > FINAL_BOSS_TIME - dt && !this.finalBossSpawned) {
+      const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
+      this.spawnFinalBossAt(pos)
+      this.finalBossSpawned = true
+      this.eventWarning = undefined // 清掉殘留預警
     }
 
     // 3) 敵人 AI：每隻朝玩家轉向後位移。
@@ -746,6 +778,7 @@ export class World {
   private killEnemy(e: Entity): void {
     e.active = false
     this.kills += 1
+    if (e.enemyKind === 'finalboss') this.won = true
     this.gemEntities.push(createGem(e.pos, e.xp))
     if (e.enemyKind === 'superbug' || e.affix) this.chestEntities.push(createChest(e.pos))
     this.soundEventQueue.push('kill')
@@ -799,6 +832,11 @@ export class World {
   /** @returns 玩家是否已死亡（hp <= 0）。 */
   isPlayerDead(): boolean {
     return this.player.hp <= 0
+  }
+
+  /** @returns 是否已通關（擊敗終局 Boss）。 */
+  hasWon(): boolean {
+    return this.won
   }
 
   /**
