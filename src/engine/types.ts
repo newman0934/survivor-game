@@ -43,6 +43,10 @@ export interface EliteAffixDef {
   regenPerSec: number
   /** 死亡時是否觸發範圍爆炸（volatile 用）。 */
   explodeOnDeath: boolean
+  /** 死亡爆炸半徑（volatile 用；其餘為 0）。 */
+  explodeRadius: number
+  /** 死亡爆炸傷害（volatile 用；其餘為 0）。 */
+  explodeDamage: number
 }
 
 /** 地圖事件種類。 */

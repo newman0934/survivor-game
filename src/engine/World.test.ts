@@ -3,6 +3,7 @@ import { World } from './World'
 import { xpForLevel } from './systems/leveling'
 import { createEnemyProjectile, createProjectile, createPickup, createGem } from './entities/factory'
 import { WEAPON_DEFS } from './systems/weaponDefs'
+import { GAME_EVENT_DEFS } from './systems/eventDefs'
 
 describe('World', () => {
   it('starts with one player and no enemies', () => {
@@ -566,9 +567,22 @@ describe('地圖事件系統', () => {
   it('事件於 150 秒觸發、前 5 秒預警，開始後清空', () => {
     const w = new World(1)
     for (let i = 0; i < 146 * 60; i++) w.step(1 / 60) // 146 秒：已進預警窗
-    expect(w.summary().eventWarning).toBeTruthy()
-    for (let i = 0; i < 6 * 60; i++) w.step(1 / 60) // 越過 150 秒
+
+    // 進預警窗後 warning 非空，且能從 GAME_EVENT_DEFS 反查到對應的合法事件種類
+    const warning = w.summary().eventWarning
+    expect(warning).toBeTruthy()
+    const matchedKind = Object.values(GAME_EVENT_DEFS).find((d) => d.warning === warning)?.kind
+    expect(matchedKind).toBeDefined()
+
+    // 記下觸發前的敵人數量（Boss 週期對齊問題：只抓活的存活敵）
+    const enemiesBefore = w.activeEnemies().length
+
+    for (let i = 0; i < 6 * 60; i++) w.step(1 / 60) // 越過 150 秒，事件已觸發
+
+    // 觸發後預警清空
     expect(w.summary().eventWarning).toBeFalsy()
+    // 事件確實生了怪（增量 ≥ 3，即最小批次 elite-pack 的 3 隻）
+    expect(w.activeEnemies().length - enemiesBefore).toBeGreaterThanOrEqual(3)
   })
 })
 

@@ -299,11 +299,14 @@ export class World {
         const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
         this.spawnEnemyAt(pos, pickEnemyKind(this.elapsed, this.rng), pickAffix(this.rng))
       }
-    } else {
+    } else if (kind === 'encircle') {
       for (let i = 0; i < ENCIRCLE_COUNT; i++) {
         const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, i / ENCIRCLE_COUNT)
         this.spawnEnemyAt(pos, pickEnemyKind(this.elapsed, this.rng))
       }
+    } else {
+      const _exhaustive: never = kind
+      void _exhaustive
     }
   }
 
@@ -749,6 +752,7 @@ export class World {
     this.maybeDropPickup(e.pos)
     const def = e.enemyKind ? ENEMY_DEFS[e.enemyKind] : undefined
     // 死亡分裂：在原地生 count 隻子體（小角度錯位，確定性）。
+    // 子體刻意不繼承精英詞綴，避免精英分裂雪崩。
     if (def?.splitInto) {
       const { kind, count } = def.splitInto
       for (let i = 0; i < count; i++) {
@@ -757,8 +761,10 @@ export class World {
       }
     }
     // 死亡爆炸：exploder 敵種或 volatile 精英；玩家在半徑內扣血（套護甲）+ 推爆裂視覺。
-    // exploder 敵種的 def.explode 數值優先於 volatile affix（?? 短路）
-    const explode = def?.explode ?? (e.affix === 'volatile' ? { radius: 90, damage: 18 } : undefined)
+    // exploder 敵種的 def.explode 數值優先於 volatile affix（?? 短路）；volatile 數值取自詞綴定義。
+    const affixDef = e.affix ? ELITE_AFFIX_DEFS[e.affix] : undefined
+    const explode = def?.explode
+      ?? (affixDef?.explodeOnDeath ? { radius: affixDef.explodeRadius, damage: affixDef.explodeDamage } : undefined)
     if (explode) {
       const { radius, damage } = explode
       if (distance(e.pos, this.player.pos) <= radius) {
