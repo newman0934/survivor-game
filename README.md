@@ -92,33 +92,7 @@ src/
    └─ Game.ts              # 固定步長 raf 迴圈，串接 World + renderer + input + store
 ```
 
-## 測試與品質
-
-- **203 單元測試全綠**（引擎核心邏輯走 TDD：core/、systems/、World、持久化等）。
-- 型別檢查（vue-tsc）乾淨、production build 乾淨。
-- 呈現/整合層（renderer、UI、音效）以瀏覽器實機驗證，不寫單元測試。
-
-## 開發流程（SDD）
-
-新功能皆遵循 SDD：Spec → BDD → Acceptance → Plan → Tasks → 實作 → 驗證。
-各功能的五件套文件位於 `docs/superpowers/specs/<feature>/`；最新狀態與路線圖見 `progress.md`。
-
 ## 部署
 
 靜態站，托管於 **GitHub Pages**（base path `/survivor-game/`）。`npm run build` 後部署 `dist/`。
 
-## 狀態與路線圖
-
-階段 0–4 大致完成：完整核心循環 + 內容（武器/敵人/Boss/角色/地圖）+ 美術 + UI 精修 +
-音效 + 暫停 + 手感調校 + 撿取物 + 存檔 + 排行榜 + 手機支援。
-
-**尚未做**：
-
-- 解鎖系統（用累積統計鎖/解角色與地圖）
-- 多人合作連線（已有設計藍圖 `docs/superpowers/specs/2026-06-26-multiplayer-coop-design.md`，未實作）
-
-## 慣例
-
-- Vue 一律 Composition API + `<script setup lang="ts">`。
-- 引擎邏輯走 TDD、system 保持無狀態、隨機一律走 seeded `core/rng`、遊戲迴圈固定步長。
-- 文件/說明預設繁體中文；程式碼/型別/API 用英文。
