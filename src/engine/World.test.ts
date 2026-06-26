@@ -196,6 +196,16 @@ describe('World', () => {
     expect(kinds.every((k) => k !== undefined)).toBe(true)
   })
 
+  it('各玩家依自己輸入移動', () => {
+    const w = new World(1, ['macrophage', 'neutrophil'])
+    const x0 = w.players[0].entity.pos.x, x1 = w.players[1].entity.pos.x
+    w.setMoveInput(0, { x: 1, y: 0 })
+    w.setMoveInput(1, { x: -1, y: 0 })
+    for (let i = 0; i < 30; i++) w.step(1 / 60)
+    expect(w.players[0].entity.pos.x).toBeGreaterThan(x0)
+    expect(w.players[1].entity.pos.x).toBeLessThan(x1)
+  })
+
   it('spawnSwarmAt 一次生成 4 隻 swarm', () => {
     const w = new World(1)
     const before = w.enemies.length

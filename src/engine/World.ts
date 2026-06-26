@@ -444,14 +444,14 @@ export class World {
   step(dt: number): void {
     this.elapsed += dt
 
-    // 1) 玩家移動：依輸入方向與移動速度設定速度，再套用位移。
-    this.player.vel = { x: this.moveInput.x * this.stats.moveSpeed, y: this.moveInput.y * this.stats.moveSpeed }
-    applyVelocity(this.player, dt)
-
-    // 記錄最後非零移動方向（飛刀發射方向用）。
-    if (this.moveInput.x !== 0 || this.moveInput.y !== 0) {
-      const len = Math.hypot(this.moveInput.x, this.moveInput.y) || 1
-      this.lastMoveDir = { x: this.moveInput.x / len, y: this.moveInput.y / len }
+    // 1) 玩家移動：每位存活玩家依自己輸入位移、更新各自 lastMoveDir。
+    for (const p of this.livingPlayers()) {
+      p.entity.vel = { x: p.moveInput.x * p.stats.moveSpeed, y: p.moveInput.y * p.stats.moveSpeed }
+      applyVelocity(p.entity, dt)
+      if (p.moveInput.x !== 0 || p.moveInput.y !== 0) {
+        const len = Math.hypot(p.moveInput.x, p.moveInput.y) || 1
+        p.lastMoveDir = { x: p.moveInput.x / len, y: p.moveInput.y / len }
+      }
     }
 
     // 2) 生怪：計時器歸零時，依目前時間決定下次間隔（難度曲線），並在玩家周圍隨機生一隻。
