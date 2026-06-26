@@ -8,7 +8,7 @@ import type { EnemyDef, EnemyKind } from '../types'
 
 /** 確定性迭代用的固定順序。 */
 export const ENEMY_ORDER: EnemyKind[] = ['virus', 'bacteria', 'spore', 'spiral', 'superbug',
-  'spitter', 'splitter', 'exploder']
+  'spitter', 'splitter', 'exploder', 'finalboss']
 
 /** 全部敵人的定義表。 */
 export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
@@ -32,4 +32,5 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
     kind: 'exploder', hp: 16, speed: 95, damage: 6, radius: 14, xp: 3, color: 0xfdd835,
     unlockTime: 50, spawnWeight: 12, explode: { radius: 90, damage: 18 },
   },
+  finalboss: { kind: 'finalboss', hp: 4000, speed: 26, damage: 26, radius: 60, xp: 200, color: 0xff1744, unlockTime: 0, spawnWeight: 0 },
 }

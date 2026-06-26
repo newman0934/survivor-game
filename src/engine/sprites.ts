@@ -345,6 +345,20 @@ export function drawEnemy(g: Graphics, e: Entity): void {
       membrane(g, r, color)
       break
     }
+    case 'finalboss': {
+      // 終局 Boss：超大體型 + 雙重發光光環 + 核（最終頭目威壓感）
+      g.circle(0, 0, r * 1.35).fill({ color, alpha: 0.16 })
+      g.circle(0, 0, r * 1.18).stroke({ width: 4, color, alpha: 0.85 })
+      g.circle(0, 0, r).fill({ color, alpha: 0.9 })
+      g.circle(0, 0, r).stroke({ width: 3, color: dim(color, 0.4) })
+      g.circle(-r * 0.3, -r * 0.3, r * 0.4).fill({ color: lighten(color, 0.5), alpha: 0.3 })
+      g.circle(0, 0, r * 0.42).fill(dim(color, 0.45))
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2
+        g.circle(Math.cos(a) * r * 0.7, Math.sin(a) * r * 0.7, r * 0.1).fill({ color: lighten(color, 0.6), alpha: 0.8 })
+      }
+      break
+    }
     default: {
       // virus（多刺二十面體殼）：立體圓身 + 一圈三角棘突 + 衣殼核心
       shaded(g, 0, 0, r, color)

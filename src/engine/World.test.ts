@@ -235,6 +235,16 @@ describe('World', () => {
     expect(s.bossMaxHp).toBe(b.maxHp)
   })
 
+  it('summary 偵測終局 Boss：bossActive + isFinalBoss', () => {
+    const w = new World(1)
+    expect(w.summary().isFinalBoss).toBe(false)
+    const b = w.spawnFinalBossAt({ x: 100, y: 0 })
+    const s = w.summary()
+    expect(s.bossActive).toBe(true)
+    expect(s.isFinalBoss).toBe(true)
+    expect(s.bossMaxHp).toBe(b.maxHp)
+  })
+
   it('spawns enemies over time', () => {
     const w = new World(1)
     for (let i = 0; i < 180; i++) w.step(1 / 60)
@@ -645,5 +655,48 @@ describe('撿取物效果', () => {
     w.step(1 / 60) // 觸發死亡結算
     expect(e.active).toBe(false)
     expect(hpBefore - w.player.hp).toBeCloseTo(Math.max(0, 18 - 5), 5) // 爆炸 18 套護甲 5
+  })
+
+  it('15:00 生成終局 Boss 且只生一隻', () => {
+    const w = new World(1)
+    for (let i = 0; i < 900 * 60; i++) {
+      w.step(1 / 60)
+      if (i % 1000 === 0) w.consumeSoundEvents() // 定期清空隊列
+    }
+    const finals = w.enemies.filter((e) => e.enemyKind === 'finalboss')
+    expect(finals.length).toBe(1)
+    for (let i = 0; i < 5 * 60; i++) w.step(1 / 60)
+    expect(w.enemies.filter((e) => e.enemyKind === 'finalboss').length).toBe(1)
+  })
+
+  it('終局 Boss 出現後不再生 60s Boss', () => {
+    const w = new World(1)
+    for (let i = 0; i < 905 * 60; i++) {
+      w.step(1 / 60)
+      if (i % 1000 === 0) w.consumeSoundEvents() // 定期清空隊列
+    }
+    const superbugsBefore = w.enemies.filter((e) => e.enemyKind === 'superbug').length
+    for (let i = 0; i < 70 * 60; i++) {
+      w.step(1 / 60)
+      if (i % 1000 === 0) w.consumeSoundEvents() // 定期清空隊列
+    }
+    const superbugsAfter = w.enemies.filter((e) => e.enemyKind === 'superbug').length
+    expect(superbugsAfter).toBeLessThanOrEqual(superbugsBefore) // 無新增 boss
+  })
+
+  it('擊敗終局 Boss 觸發 hasWon', () => {
+    const w = new World(1)
+    expect(w.hasWon()).toBe(false)
+    const b = w.spawnFinalBossAt({ x: 9999, y: 9999 })
+    b.hp = 0
+    w.step(1 / 60)
+    expect(b.active).toBe(false)
+    expect(w.hasWon()).toBe(true)
+  })
+
+  it('終局 Boss hp 為固定值、不套地圖倍率', () => {
+    const w = new World(1, 'macrophage', 'stomach') // stomach enemyHpMult 1.25
+    const b = w.spawnFinalBossAt({ x: 100, y: 0 })
+    expect(b.maxHp).toBe(4000)
   })
 })

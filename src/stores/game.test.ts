@@ -26,11 +26,17 @@ describe('game store', () => {
   it('gameOver() records final summary', () => {
     const s = useGameStore()
     s.start()
-    s.updateSummary({ hp: 0, maxHp: 100, time: 42, level: 3, kills: 99, xp: 0, xpNeeded: 10, bossActive: false, bossHp: 0, bossMaxHp: 0 })
+    s.updateSummary({ hp: 0, maxHp: 100, time: 42, level: 3, kills: 99, xp: 0, xpNeeded: 10, bossActive: false, bossHp: 0, bossMaxHp: 0, isFinalBoss: false })
     s.gameOver()
     expect(s.phase).toBe('over')
     expect(s.time).toBe(42)
     expect(s.kills).toBe(99)
+  })
+  it('victory() sets phase to won', () => {
+    const s = useGameStore()
+    s.start()
+    s.victory()
+    expect(s.phase).toBe('won')
   })
   it('start() clears onUpgradePicked to null', () => {
     const s = useGameStore()

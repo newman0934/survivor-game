@@ -30,6 +30,8 @@ export interface RunRecord {
   map: MapKind
   /** Date.now() 毫秒時間戳（由呼叫端提供，保持本模組無時間相依）。 */
   date: number
+  /** 本場是否通關（擊敗終局 Boss）。 */
+  cleared: boolean
 }
 
 /** 跨場累積統計。 */
@@ -40,6 +42,8 @@ export interface CumulativeStats {
   bestTime: number
   bestKills: number
   maxLevel: number
+  /** 跨場通關次數。 */
+  clears: number
 }
 
 /** 完整存檔結構。 */
@@ -55,7 +59,7 @@ function emptySave(): SaveData {
   return {
     version: 1,
     runs: [],
-    stats: { totalKills: 0, totalRuns: 0, bestTime: 0, bestKills: 0, maxLevel: 0 },
+    stats: { totalKills: 0, totalRuns: 0, bestTime: 0, bestKills: 0, maxLevel: 0, clears: 0 },
   }
 }
 
@@ -82,9 +86,9 @@ export function loadSave(storage: StorageLike | null = defaultStorage()): SaveDa
       version: 1,
       // 過濾掉竄改造成的壞元素（如 null）——讓「結構缺漏回空白/略過」延伸到陣列元素層級，
       // 避免後續 recordRun 的 sort 對 null 取 .time 而拋例外。
-      runs: (parsed.runs as unknown[]).filter(
-        (r): r is RunRecord => !!r && typeof (r as RunRecord).time === 'number',
-      ),
+      runs: (parsed.runs as unknown[])
+        .filter((r): r is RunRecord => !!r && typeof (r as RunRecord).time === 'number')
+        .map((r) => ({ ...r, cleared: (r as Partial<RunRecord>).cleared ?? false })),
       stats: { ...base.stats, ...parsed.stats },
     }
   } catch {
@@ -116,6 +120,7 @@ export function recordRun(
     bestTime: Math.max(save.stats.bestTime, run.time),
     bestKills: Math.max(save.stats.bestKills, run.kills),
     maxLevel: Math.max(save.stats.maxLevel, run.level),
+    clears: save.stats.clears + (run.cleared ? 1 : 0),
   }
 
   if (storage) {

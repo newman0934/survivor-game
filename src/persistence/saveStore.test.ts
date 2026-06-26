@@ -19,7 +19,7 @@ function throwingStorage(): StorageLike {
 }
 
 function makeRun(over: Partial<RunRecord> = {}): RunRecord {
-  return { time: 75, kills: 40, level: 6, character: 'macrophage', map: 'vessel', date: 1000, ...over }
+  return { time: 75, kills: 40, level: 6, character: 'macrophage', map: 'vessel', date: 1000, cleared: false, ...over }
 }
 
 describe('saveStore', () => {
@@ -27,7 +27,7 @@ describe('saveStore', () => {
     const s = loadSave(memStorage())
     expect(s.version).toBe(1)
     expect(s.runs).toEqual([])
-    expect(s.stats).toEqual({ totalKills: 0, totalRuns: 0, bestTime: 0, bestKills: 0, maxLevel: 0 })
+    expect(s.stats).toEqual({ totalKills: 0, totalRuns: 0, bestTime: 0, bestKills: 0, maxLevel: 0, clears: 0 })
   })
 
   it('loadSave storage 為 null 回空白存檔（非瀏覽器/無 localStorage）', () => {
@@ -65,7 +65,7 @@ describe('saveStore', () => {
     expect(r.isNewBestTime).toBe(true)
     expect(r.isNewBestKills).toBe(true)
     expect(r.save.runs).toHaveLength(1)
-    expect(r.save.stats).toEqual({ totalKills: 40, totalRuns: 1, bestTime: 75, bestKills: 40, maxLevel: 6 })
+    expect(r.save.stats).toEqual({ totalKills: 40, totalRuns: 1, bestTime: 75, bestKills: 40, maxLevel: 6, clears: 0 })
   })
 
   it('recordRun 寫回後 loadSave 可還原', () => {
@@ -81,7 +81,7 @@ describe('saveStore', () => {
     recordRun(makeRun(), st)
     const r = recordRun(makeRun({ time: 120, kills: 90, level: 9, date: 2000 }), st)
     expect(r.isNewBestTime).toBe(true)
-    expect(r.save.stats).toEqual({ totalKills: 130, totalRuns: 2, bestTime: 120, bestKills: 90, maxLevel: 9 })
+    expect(r.save.stats).toEqual({ totalKills: 130, totalRuns: 2, bestTime: 120, bestKills: 90, maxLevel: 9, clears: 0 })
   })
 
   it('recordRun 存活時間平手不算破紀錄', () => {
@@ -119,5 +119,30 @@ describe('saveStore', () => {
     expect(r.isNewBestTime).toBe(true)
     expect(r.save.stats.bestTime).toBe(75)
     expect(r.save.runs).toHaveLength(1)
+  })
+
+  it('recordRun 記錄 cleared 並累計 clears', () => {
+    const s = memStorage()
+    recordRun({ time: 100, kills: 5, level: 3, character: 'macrophage', map: 'vessel', date: 1, cleared: true }, s)
+    const save = loadSave(s)
+    expect(save.runs[0].cleared).toBe(true)
+    expect(save.stats.clears).toBe(1)
+  })
+
+  it('未通關不累計 clears', () => {
+    const s = memStorage()
+    recordRun({ time: 50, kills: 1, level: 1, character: 'macrophage', map: 'vessel', date: 1, cleared: false }, s)
+    expect(loadSave(s).stats.clears).toBe(0)
+  })
+
+  it('舊存檔無 cleared/clears 正規化為 false/0', () => {
+    const s = memStorage(JSON.stringify({
+      version: 1,
+      runs: [{ time: 100, kills: 5, level: 3, character: 'macrophage', map: 'vessel', date: 1 }],
+      stats: { totalKills: 5, totalRuns: 1, bestTime: 100, bestKills: 5, maxLevel: 3 },
+    }))
+    const save = loadSave(s)
+    expect(save.runs[0].cleared).toBe(false)
+    expect(save.stats.clears).toBe(0)
   })
 })
