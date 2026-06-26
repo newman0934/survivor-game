@@ -10,7 +10,7 @@ _驗證日期：（待填）_
 - [ ] `drawEnemy` 有 finalboss 造型（大體型 + 光環）
 
 ## 生成與生怪閘門
-- [ ] `FINAL_BOSS_TIME = 900`；elapsed≥900 且未生成時生一隻 finalboss
+- [ ] `FINAL_BOSS_TIME = 900`；於遊戲時間到達 900 秒的那一格生成一隻 finalboss（實作用浮點容差條件 `elapsed > FINAL_BOSS_TIME - dt`，確保跨越 900 秒當格穩定觸發、不因浮點累積而延後）
 - [ ] `finalBossSpawned` 旗標確保只生一隻（重複到點不再生）
 - [ ] finalboss 生成後不再推進 60s Boss 計時與地圖事件排程
 - [ ] finalboss 生成後一般生怪與升級照常
