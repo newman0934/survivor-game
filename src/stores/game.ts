@@ -10,10 +10,11 @@
  *  - store → 引擎：UI 透過 pickUpgrade 觸發引擎事先註冊的 onUpgradePicked callback。
  */
 import { defineStore } from 'pinia'
-import type { WeaponKind, PassiveKind, CharacterKind } from '../engine/types'
+import type { WeaponKind, PassiveKind, CharacterKind, MapKind } from '../engine/types'
+import type { LobbyPlayer } from '../engine/net/session'
 
 /** 遊戲整體狀態階段；App.vue 依此切換要顯示的 UI overlay。 */
-export type Phase = 'menu' | 'playing' | 'upgrading' | 'over' | 'paused' | 'won'
+export type Phase = 'menu' | 'playing' | 'upgrading' | 'over' | 'paused' | 'won' | 'lobby'
 
 /** 引擎每隔一段時間推給 UI 的精簡狀態快照（HUD 渲染所需的全部數值）。 */
 export interface Summary {
@@ -71,6 +72,16 @@ interface State extends Summary {
   multiOfferTimeLeft: number
   /** 多人非阻塞升級：玩家選定後由 pickMultiUpgrade 呼叫的引擎 callback。 */
   onMultiUpgradePicked: ((id: string) => void) | null
+  /** 等待室：目前房間內的玩家列表。 */
+  lobbyPlayers: LobbyPlayer[]
+  /** 等待室：房間邀請碼。 */
+  roomCode: string
+  /** 等待室：本地玩家是否為房主。 */
+  isHost: boolean
+  /** 等待室：房主選定的地圖。 */
+  lobbyMap: MapKind
+  /** 等待室：是否可以開始（房主 && ≥2 人 && 全員就緒）。 */
+  canStart: boolean
 }
 
 /** 取得遊戲橋接 store 的 composable（Pinia 自動生成）。 */
@@ -96,6 +107,11 @@ export const useGameStore = defineStore('game', {
     multiOffer: null,
     multiOfferTimeLeft: 0,
     onMultiUpgradePicked: null,
+    lobbyPlayers: [],
+    roomCode: '',
+    isHost: false,
+    lobbyMap: 'vessel',
+    canStart: false,
   }),
   actions: {
     /** 開始新的一場：切到 playing 並把所有 summary/升級狀態歸零。由 App.vue 在啟動引擎前呼叫。 */
@@ -173,6 +189,21 @@ export const useGameStore = defineStore('game', {
     /** 回到主選單。 */
     toMenu() {
       this.phase = 'menu'
+      this.lobbyPlayers = []
+      this.roomCode = ''
+      this.isHost = false
+      this.canStart = false
+      this.lobbyMap = 'vessel'
+    },
+    /** 進入等待室（建立/加入後）。 */
+    enterLobby() { this.phase = 'lobby' },
+    /** 引擎/App → store：更新等待室狀態。 */
+    setLobby(s: { players: LobbyPlayer[]; roomCode: string; isHost: boolean; map: MapKind; canStart: boolean }) {
+      this.lobbyPlayers = s.players
+      this.roomCode = s.roomCode
+      this.isHost = s.isHost
+      this.lobbyMap = s.map
+      this.canStart = s.canStart
     },
     /** 遊戲中暫停（僅 playing 生效，切到 paused）。 */
     pauseGame() {
