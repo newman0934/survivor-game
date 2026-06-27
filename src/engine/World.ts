@@ -84,8 +84,6 @@ export class World {
   set lastMoveDir(v: Vec2) { this.players[0].lastMoveDir = v }
   private get level(): number { return this.players[0].level }
   private set level(v: number) { this.players[0].level = v }
-  private get xp(): number { return this.players[0].xp }
-  private set xp(v: number) { this.players[0].xp = v }
   private get pendingLevelUps(): number { return this.players[0].pendingLevelUps }
   private set pendingLevelUps(v: number) { this.players[0].pendingLevelUps = v }
 
@@ -957,12 +955,14 @@ export class World {
 
   /**
    * 產生目前持有的武器/被動快照（純資料），供升級彈窗顯示。
+   * @param playerIndex 玩家索引（預設 0，單人用）；超越範圍則回到 players[0]。
    * @returns weapons（kind/level/evolved）與 passives（kind/level）的快照。
    */
-  loadoutSnapshot(): LoadoutSnapshot {
+  loadoutSnapshot(playerIndex = 0): LoadoutSnapshot {
+    const p = this.players[playerIndex] ?? this.players[0]
     return {
-      weapons: this.weapons.map((w) => ({ kind: w.kind, level: w.level, evolved: !!w.evolved })),
-      passives: this.passives.map((p) => ({ kind: p.kind, level: p.level })),
+      weapons: p.weapons.map((w) => ({ kind: w.kind, level: w.level, evolved: !!w.evolved })),
+      passives: p.passives.map((ps) => ({ kind: ps.kind, level: ps.level })),
     }
   }
 
@@ -1010,18 +1010,20 @@ export class World {
 
   /**
    * 產生供 UI 顯示的唯讀摘要快照（HUD 需要的最小資料集）。
+   * @param playerIndex 玩家索引（預設 0，單人用）；超越範圍則回到 players[0]。
    * @returns 經四捨五入／取整的 `Summary`，由上層轉交給 store。
    */
-  summary(): Summary {
+  summary(playerIndex = 0): Summary {
+    const p = this.players[playerIndex] ?? this.players[0]
     const boss = this.enemies.find((e) => e.active && (e.enemyKind === 'superbug' || e.enemyKind === 'finalboss'))
     return {
-      hp: Math.max(0, Math.round(this.player.hp)),
-      maxHp: this.player.maxHp,
+      hp: Math.max(0, Math.round(p.entity.hp)),
+      maxHp: p.entity.maxHp,
       time: Math.floor(this.elapsed),
-      level: this.level,
+      level: p.level,
       kills: this.kills,
-      xp: this.xp,
-      xpNeeded: xpForLevel(this.level),
+      xp: p.xp,
+      xpNeeded: xpForLevel(p.level),
       bossActive: !!boss,
       bossHp: boss ? Math.round(boss.hp) : 0,
       bossMaxHp: boss ? boss.maxHp : 0,

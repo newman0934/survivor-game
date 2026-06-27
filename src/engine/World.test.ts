@@ -974,4 +974,27 @@ describe('N=1 回復紅線', () => {
       expect(v).toBeLessThanOrEqual(0xffffffff)
     })
   })
+
+  describe('視角化 summary/loadout（SP3）', () => {
+    it('summary(i) 回對應玩家、省略＝players[0]', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      w.players[1].pendingLevelUps = 0
+      w.players[1].level = 3
+      w.players[0].level = 1
+      expect(w.summary(1).level).toBe(3)
+      expect(w.summary(0).level).toBe(1)
+      expect(w.summary().level).toBe(w.summary(0).level) // 省略＝players[0]
+    })
+    it('summary(i) 的 hp 為該玩家', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      w.players[1].entity.hp = 42
+      expect(w.summary(1).hp).toBe(42)
+    })
+    it('loadoutSnapshot(i) 回對應玩家武器', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      expect(w.loadoutSnapshot(0).weapons.some((x) => x.kind === 'antibody')).toBe(true)
+      expect(w.loadoutSnapshot(1).weapons.some((x) => x.kind === 'perforin')).toBe(true)
+      expect(w.loadoutSnapshot().weapons).toEqual(w.loadoutSnapshot(0).weapons) // 省略＝0
+    })
+  })
 })
