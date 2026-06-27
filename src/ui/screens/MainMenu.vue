@@ -4,13 +4,13 @@
  * 顯示角色與地圖選擇卡，按開始時向 App.vue 發出 start 事件並帶 { character, map }。
  */
 import { ref } from 'vue'
-import { CHARACTER_ORDER, CHARACTER_DEFS } from '../engine/systems/characterDefs'
-import { MAP_ORDER, MAP_DEFS } from '../engine/systems/mapDefs'
-import type { CharacterKind, MapKind } from '../engine/types'
-import type { CumulativeStats } from '../persistence/saveStore'
-import { useGameStore } from '../stores/game'
-import Overlay from './Overlay.vue'
-import Panel from './Panel.vue'
+import { CHARACTER_ORDER, CHARACTER_DEFS } from '../../engine/systems/characterDefs'
+import { MAP_ORDER, MAP_DEFS } from '../../engine/systems/mapDefs'
+import type { CharacterKind, MapKind } from '../../engine/types'
+import type { CumulativeStats } from '../../persistence/saveStore'
+import { useGameStore } from '../../stores/game'
+import Overlay from '../common/Overlay.vue'
+import Panel from '../common/Panel.vue'
 
 const store = useGameStore()
 

@@ -37,7 +37,7 @@ src/
 ├─ main.ts                 # Vue 進入點
 ├─ App.vue                 # 狀態機：menu / playing / upgrading / over；掛載引擎
 ├─ stores/game.ts          # Pinia 橋接 — 只放純 summary 資料 + {id,label} 升級描述
-├─ ui/                     # MainMenu, Hud, UpgradeModal, GameOver（純呈現）
+├─ ui/                     # 純呈現，依職責分層：common/（Overlay,Panel,GameIcon）screens/（MainMenu,GameOver,Leaderboard,PauseMenu,MultiplayerMenu,WaitingRoom）hud/（Hud,BossBar,LoadoutBar,PlayerAvatar,MuteButton,PauseButton）upgrade/（UpgradeModal,MultiUpgradeOverlay）icons/
 └─ engine/                 # 純 TS — 無 Vue/Pinia 執行期依賴（依職責分層）
    ├─ types.ts             # Entity, PlayerStats, UpgradeOption
    ├─ core/                # 純確定性原語：vector, rng（seeded mulberry32）, spatialGrid, objectPool, noise, checksum, hitStop

@@ -4,12 +4,12 @@
  * 由 App.vue 以 props 傳入 runs（已依存活時間降冪、最多 10 筆）；顯示前 N 名戰績。
  * 「關閉」發出 close 事件由 App 收起。不讀 store、不碰引擎/存檔。
  */
-import type { RunRecord } from '../persistence/saveStore'
-import { CHARACTER_DEFS } from '../engine/systems/characterDefs'
-import { MAP_DEFS } from '../engine/systems/mapDefs'
-import type { CharacterKind, MapKind } from '../engine/types'
-import Overlay from './Overlay.vue'
-import Panel from './Panel.vue'
+import type { RunRecord } from '../../persistence/saveStore'
+import { CHARACTER_DEFS } from '../../engine/systems/characterDefs'
+import { MAP_DEFS } from '../../engine/systems/mapDefs'
+import type { CharacterKind, MapKind } from '../../engine/types'
+import Overlay from '../common/Overlay.vue'
+import Panel from '../common/Panel.vue'
 
 defineProps<{ runs: RunRecord[] }>()
 const emit = defineEmits<{ close: [] }>()

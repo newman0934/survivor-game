@@ -4,7 +4,7 @@
  * 切換 soundManager 靜音；不讀 store、不碰引擎邏輯。
  */
 import { ref } from 'vue'
-import { soundManager } from '../engine/audio/soundManager'
+import { soundManager } from '../../engine/audio/soundManager'
 
 const muted = ref(false)
 function toggle(): void {

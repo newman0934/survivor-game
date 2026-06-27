@@ -4,7 +4,7 @@
  * 純讀取元件：只從 store 讀 summary 數值並衍生顯示值，不送出任何事件、不碰引擎。
  */
 import { computed, ref, watch } from 'vue'
-import { useGameStore } from '../stores/game'
+import { useGameStore } from '../../stores/game'
 import PlayerAvatar from './PlayerAvatar.vue'
 import LoadoutBar from './LoadoutBar.vue'
 

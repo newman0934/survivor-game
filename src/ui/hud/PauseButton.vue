@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** PauseButton.vue — 戰鬥中右上角暫停鈕（呈現層）。點擊呼叫 store.pauseGame。 */
-import { useGameStore } from '../stores/game'
+import { useGameStore } from '../../stores/game'
 
 const store = useGameStore()
 </script>

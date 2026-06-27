@@ -7,14 +7,14 @@
  * 持有區：彈窗上方顯示目前武器/被動持有快照（名稱、等級、進化提示）。
  */
 import { computed } from 'vue'
-import { useGameStore, type LoadoutSnapshot } from '../stores/game'
-import { WEAPON_DEFS } from '../engine/systems/weaponDefs'
-import { PASSIVE_DEFS } from '../engine/systems/passiveDefs'
-import { evolutionStatus } from '../engine/systems/loadout'
-import Overlay from './Overlay.vue'
-import Panel from './Panel.vue'
-import GameIcon from './GameIcon.vue'
-import { resolveOptionIcon } from './icons/iconRegistry'
+import { useGameStore, type LoadoutSnapshot } from '../../stores/game'
+import { WEAPON_DEFS } from '../../engine/systems/weaponDefs'
+import { PASSIVE_DEFS } from '../../engine/systems/passiveDefs'
+import { evolutionStatus } from '../../engine/systems/loadout'
+import Overlay from '../common/Overlay.vue'
+import Panel from '../common/Panel.vue'
+import GameIcon from '../common/GameIcon.vue'
+import { resolveOptionIcon } from '../icons/iconRegistry'
 
 const store = useGameStore()
 

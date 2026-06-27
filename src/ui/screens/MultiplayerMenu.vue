@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /** MultiplayerMenu.vue — 多人：建立或加入房間（輸入邀請碼）。真連線屬 4C。 */
 import { ref } from 'vue'
-import Overlay from './Overlay.vue'
-import Panel from './Panel.vue'
+import Overlay from '../common/Overlay.vue'
+import Panel from '../common/Panel.vue'
 
 const emit = defineEmits<{ create: []; join: [code: string]; back: [] }>()
 const code = ref('')
