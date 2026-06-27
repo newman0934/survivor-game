@@ -1,6 +1,6 @@
 # Tasks — coop-playroom-adapter（4C）
 
-依 `../../plans/2026-06-28-coop-playroom-adapter.md` 執行（含完整程式碼與指令）。
+依 `plan.md` 執行（含完整程式碼與指令）。
 單人零退化（既有 312 測試零改動全綠）；adapter 置 `src/net/playroom/` 僅 `import type` 引擎；
 Playroom 綁定/UI 屬整合膠水層，以 typecheck/build + 兩機實測驗證。
 
