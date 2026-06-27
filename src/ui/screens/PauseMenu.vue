@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** PauseMenu.vue — 暫停選單 overlay（phase==='paused'）。重用 Overlay/Panel + .ui-btn。含泛光(bloom)開關。 */
-import Overlay from './Overlay.vue'
-import Panel from './Panel.vue'
+import Overlay from '../common/Overlay.vue'
+import Panel from '../common/Panel.vue'
 
 defineProps<{ bloom: boolean }>()
 const emit = defineEmits<{ resume: []; restart: []; menu: []; 'toggle-bloom': [] }>()

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /** PlayerAvatar.vue — 左上玩家頭像框（純讀取）。角色圖示 + 主題色發光邊 + Lv 徽章。 */
 import { computed } from 'vue'
-import { useGameStore } from '../stores/game'
-import { CHARACTER_DEFS } from '../engine/systems/characterDefs'
-import GameIcon from './GameIcon.vue'
+import { useGameStore } from '../../stores/game'
+import { CHARACTER_DEFS } from '../../engine/systems/characterDefs'
+import GameIcon from '../common/GameIcon.vue'
 
 const store = useGameStore()
 const color = computed(() => {

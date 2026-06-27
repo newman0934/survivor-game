@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /** WaitingRoom.vue — 等待室（phase==='lobby'）：玩家列表/角色/就緒；房主選圖 + 開始。 */
 import { ref } from 'vue'
-import { useGameStore } from '../stores/game'
-import { CHARACTER_ORDER, CHARACTER_DEFS } from '../engine/systems/characterDefs'
-import { MAP_ORDER, MAP_DEFS } from '../engine/systems/mapDefs'
-import type { CharacterKind, MapKind } from '../engine/types'
-import Overlay from './Overlay.vue'
-import Panel from './Panel.vue'
+import { useGameStore } from '../../stores/game'
+import { CHARACTER_ORDER, CHARACTER_DEFS } from '../../engine/systems/characterDefs'
+import { MAP_ORDER, MAP_DEFS } from '../../engine/systems/mapDefs'
+import type { CharacterKind, MapKind } from '../../engine/types'
+import Overlay from '../common/Overlay.vue'
+import Panel from '../common/Panel.vue'
 
 const store = useGameStore()
 const emit = defineEmits<{

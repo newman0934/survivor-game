@@ -5,9 +5,9 @@
  * 「再玩一次」發出 restart（同角色/地圖快速重開）；「回主選單」發出 menu（重選角色/地圖）。
  */
 import { computed } from 'vue'
-import { useGameStore } from '../stores/game'
-import Overlay from './Overlay.vue'
-import Panel from './Panel.vue'
+import { useGameStore } from '../../stores/game'
+import Overlay from '../common/Overlay.vue'
+import Panel from '../common/Panel.vue'
 
 const props = defineProps<{
   /** 歷史最佳存活秒數（已含本場）。0 代表尚無紀錄。 */

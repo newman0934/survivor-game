@@ -5,7 +5,7 @@
  * 只從 store 讀 summary 資料，不送事件、不碰引擎。
  */
 import { computed } from 'vue'
-import { useGameStore } from '../stores/game'
+import { useGameStore } from '../../stores/game'
 
 const store = useGameStore()
 // Boss 血量百分比；bossMaxHp 為 0 時回 0 以避免除以零。

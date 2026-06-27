@@ -2,10 +2,10 @@
 /** MultiUpgradeOverlay.vue — 多人非阻塞升級浮層：本地玩家有待選時顯示限時卡列 + 倒數條。
  *  不暫停世界、不擋遊戲輸入（pointer-events 僅卡片）。 */
 import { computed } from 'vue'
-import { useGameStore } from '../stores/game'
-import GameIcon from './GameIcon.vue'
-import { resolveOptionIcon } from './icons/iconRegistry'
-import { UPGRADE_TIMEOUT } from '../engine/World'
+import { useGameStore } from '../../stores/game'
+import GameIcon from '../common/GameIcon.vue'
+import { resolveOptionIcon } from '../icons/iconRegistry'
+import { UPGRADE_TIMEOUT } from '../../engine/World'
 
 const store = useGameStore()
 const pct = computed(() => Math.max(0, Math.min(100, (store.multiOfferTimeLeft / UPGRADE_TIMEOUT) * 100)))
