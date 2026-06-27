@@ -27,7 +27,9 @@ import PauseButton from './ui/PauseButton.vue'
 import MultiUpgradeOverlay from './ui/MultiUpgradeOverlay.vue'
 import MultiplayerMenu from './ui/MultiplayerMenu.vue'
 import WaitingRoom from './ui/WaitingRoom.vue'
-import { LoopbackSession } from './engine/net/loopbackSession'
+// LoopbackSession 保留供本地單機測試切換用；正式多人改用 PlayroomSession。
+// import { LoopbackSession } from './engine/net/loopbackSession'
+import { PlayroomSession } from './net/playroom/playroomSession'
 import type { NetSession } from './engine/net/session'
 
 const store = useGameStore()
@@ -68,8 +70,13 @@ function pushLobby() {
 }
 function openMultiplayer() { showMultiMenu.value = true }
 function createOrJoin(code?: string) {
-  session = new LoopbackSession({ roomCode: code || 'ROOM' + Math.floor(Math.random() * 9000 + 1000) })
+  session = new PlayroomSession({ roomCode: code || undefined, localCharacter: 'macrophage' })
   session.onChange(pushLobby)
+  session.onPeerLeft(() => {
+    game?.stop(); game = null
+    store.toMenu()
+    store.setNotice('有玩家離線，本局結束')
+  })
   session.onStart(async (seed, map, players) => {
     if (!session || !canvasParent.value) return
     const localIndex = players.findIndex((p) => p.id === session!.localId)
