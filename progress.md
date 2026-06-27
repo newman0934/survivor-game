@@ -68,7 +68,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 子專案 1A — 多玩家 World 結構重構：`World` 改 `players: PlayerState[]`，移動/武器/聖經/敵人AI/接觸傷害/經驗/撿取逐玩家化、難度依人數（生怪÷N、Boss/終局 Boss hp×N）、死亡觀戰/hasLost；相容存取器保 N=1 零退化（Game/renderer 零改動）→ specs/coop-multiplayer-world/
 - [x] 子專案 1B — 非阻塞升級流程：World per-player 待選（seeded upgradeRng 跨機一致）+ 12s 逾時自動選第一張 + `pendingOfferFor`/`upgradeTimeRemaining`/`chooseUpgrade`；單人零退化（processUpgrades 僅 playerCount>1 生效）→ specs/coop-upgrade-nonblocking/
 - [x] 子專案 2 — 確定性稽核 + 回放雜湊：`core/checksum.ts`（FNV-1a）+ `World.checksum()`（規範化狀態雜湊，SP4 desync 也用）+ `determinism.test.ts`（同 seed+輸入兩 run 相同 + 原始碼守護模擬路徑無 Math.random/Date.now/performance.now）；已知限制：跨瀏覽器超越函式不定點化 → specs/coop-determinism-audit/
-- [ ] 子專案 3 — 本地多人 + 選單/等待室外殼（多鏡頭/HUD）（尚未開始）
+- [x] 子專案 3（連線就緒外殼）— `localPlayerIndex` 管線：World `summary(i)`/`loadoutSnapshot(i)`、Game/renderer 跟本地玩家並渲染全部玩家、多人非阻塞升級浮層（`MultiUpgradeOverlay`，消費 1B）；單人零退化（index 0 + playerCount>1 guard）→ specs/coop-local-player-shell/。本地分割畫面/第二輸入排除（A 案）；主選單多人分層/等待室併 SP4
 - [ ] 子專案 4 — 網路傳輸層（lockstep 輸入廣播）（尚未開始）
 
 ### 平台支援 ✅
@@ -83,7 +83,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 
 | 項目 | 結果 |
 |---------|------|
-| 單元測試（Vitest） | 287 通過（含多玩家 1A/1B + 確定性回放雜湊與守護 SP2） |
+| 單元測試（Vitest） | 290 通過（含多玩家 1A/1B/SP2 + 本地玩家管線 SP3） |
 | 型別檢查（vue-tsc） | 乾淨 |
 | Production build | 乾淨 |
 | 瀏覽器煙霧測試 | 階段 1–3 + 美術 + 特效 + 新武器/敵種 + 武器進化 + 進度存檔 + 排行榜 + 手機 + 音效 驗收通過（偶見既有 favicon 404，與功能無關） |
