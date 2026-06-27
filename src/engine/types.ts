@@ -319,6 +319,10 @@ export interface PlayerState {
   moveInput: Vec2
   vacuumTimer: number
   alive: boolean
+  /** 目前提供的待選升級卡（多人非阻塞流程；無則 undefined）。 */
+  pendingOffer?: UpgradeOption[]
+  /** 待選逾時倒數（秒）；無待選為 0。 */
+  upgradeTimer: number
   /** 聖經環繞 per-player 執行期狀態。 */
   bibleAngle: number
   orbitEntities: Entity[]
