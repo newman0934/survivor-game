@@ -66,17 +66,12 @@ export class PlayroomSession implements NetSession {
     })
 
     // RPC.register 回呼簽章：(payload, senderPlayer: PlayerState, mode) => Promise<any>
-    RPC.register('start', async (data: { seed: number; map: MapKind }) => {
+    // I-1：信任 payload.players（房主已排序的權威快照），不再各機自行掃 players_。
+    RPC.register('start', async (data: { seed: number; map: MapKind; players: LobbyPlayer[] }) => {
+      const players: LobbyPlayer[] = data.players
+      this.startedIds = players.map((p) => p.id)
       this.started = true
-      this.startedIds = sortPlayerIds([...this.players_.keys()])
-      this.startCb?.(data.seed, data.map, this.startedIds.map((id) => {
-        const p = this.players_.get(id)!
-        return {
-          id,
-          character: (p.getState('character') as CharacterKind) ?? 'macrophage',
-          ready: (p.getState('ready') as boolean) ?? false,
-        }
-      }))
+      this.startCb?.(data.seed, data.map, players)
     })
 
     RPC.register('input', async (msg: InputMsg, sender: PlayerState) => {
@@ -117,7 +112,7 @@ export class PlayroomSession implements NetSession {
   }
 
   start(seed: number): void {
-    if (this.canStart()) void RPC.call('start', { seed, map: this.getMap() }, RPC.Mode.ALL)
+    if (this.canStart()) void RPC.call('start', { seed, map: this.getMap(), players: this.players() }, RPC.Mode.ALL)
   }
 
   toTransport(_localIndex: number): NetTransport {
@@ -134,6 +129,10 @@ export class PlayroomSession implements NetSession {
     this.startCb = null
     this.peerLeftCb = null
     this.inputRecv = null
+    // M-4：重置開局狀態，避免重用同實例時殘留舊快照。
+    this.started = false
+    this.startedIds = []
+    this.players_.clear()
     if (this.localId) myPlayer().leaveRoom()
   }
 }
