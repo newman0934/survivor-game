@@ -1,4 +1,4 @@
-import type { Vec2 } from './vector'
+import type { Vec2 } from '../core/vector'
 
 /**
  * 鍵盤輸入狀態。

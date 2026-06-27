@@ -6,8 +6,8 @@
  * 純呈現——不碰模擬/確定性。生成/建立 try/catch 退回，destroy 釋放紋理。
  */
 import { Application, Container, Sprite, Texture, TilingSprite } from 'pixi.js'
-import type { MapKind } from './types'
-import { fbm, ridgedFbm, cellular } from './core/noise'
+import type { MapKind } from '../types'
+import { fbm, ridgedFbm, cellular } from '../core/noise'
 
 /** 各場景兩層 tint（深層底色 / 中層提色）與暖核色。 */
 const MAP_TINT: Record<MapKind, { deep: number; mid: number; core: number }> = {
