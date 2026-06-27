@@ -31,8 +31,8 @@ import { pickEvent, pickAffix } from './systems/events'
 import { GAME_EVENT_DEFS } from './systems/eventDefs'
 import { circlesOverlap } from './systems/collision'
 import { attractGem } from './systems/pickup'
-import { xpForLevel, applyUpgradeById } from './systems/leveling'
-import type { Summary, LoadoutSnapshot } from '../stores/game'
+import { xpForLevel, applyUpgradeById, rollUpgrades } from './systems/leveling'
+import type { Summary, LoadoutSnapshot, UpgradeDescriptor } from '../stores/game'
 
 /** 敵人生成的距離：在玩家周圍此半徑的圓上隨機生怪（畫面外）。 */
 const SPAWN_RADIUS = 700
@@ -48,6 +48,8 @@ const VACUUM_DROP_CHANCE = 0.012 // 每次擊殺掉全場吸取機率
 const BOSS_INTERVAL = 60
 /** 終局 Boss 出現時間（秒）。 */
 const FINAL_BOSS_TIME = 900
+/** 多人非阻塞升級的待選逾時（秒）。 */
+const UPGRADE_TIMEOUT = 12
 /** 地圖事件週期（秒）與觸發前預警時間（秒）。 */
 const EVENT_INTERVAL = 150
 const EVENT_WARNING_LEAD = 5
@@ -121,6 +123,8 @@ export class World {
   private rng: Rng
   /** 撿取物掉落專用 rng（自 seed 衍生，獨立於 spawn/combat 串流，避免擾動既有確定性）。 */
   private pickupRng: Rng
+  /** 升級選項專用 rng（自 seed 衍生，獨立串流；使多人選項跨機一致、不擾動其他串流）。 */
+  private upgradeRng: Rng
   /** 累積遊戲時間（秒）。 */
   private elapsed = 0
   /** 生怪倒數計時器（秒）；歸零即生怪並重置。 */
@@ -168,6 +172,7 @@ export class World {
       passives: [], level: 1, xp: 0, pendingLevelUps: 0,
       lastMoveDir: { x: 1, y: 0 }, moveInput: { x: 0, y: 0 }, vacuumTimer: 0, alive: true,
       bibleAngle: 0, orbitEntities: [], bibleHitTimers: new Map(),
+      upgradeTimer: 0,
     }
   }
 
@@ -179,6 +184,7 @@ export class World {
     this.rng = createRng(seed)
     this.finalBossTime = finalBossTime
     this.pickupRng = createRng(seed ^ 0x5bd1e995)
+    this.upgradeRng = createRng(seed ^ 0x9e3779b9)
     const characters = Array.isArray(character) ? character : [character]
     this.players = characters.map((c) => World.makePlayerState(c))
     for (const p of this.players) {
@@ -430,6 +436,63 @@ export class World {
    */
   applyUpgrade(id: string): void {
     applyUpgradeById(id, this.upgradeContext())
+  }
+
+  /**
+   * 指定玩家目前的待選升級卡（多人非阻塞流程）；無則 null。
+   * @param playerIndex 玩家索引。
+   */
+  pendingOfferFor(playerIndex: number): UpgradeDescriptor[] | null {
+    const p = this.players[playerIndex]
+    if (!p || !p.pendingOffer) return null
+    return p.pendingOffer.map((o) => ({ id: o.id, label: o.label }))
+  }
+
+  /** 指定玩家待選的剩餘秒數（無待選回 0）。 */
+  upgradeTimeRemaining(playerIndex: number): number {
+    const p = this.players[playerIndex]
+    return p && p.pendingOffer ? Math.max(0, p.upgradeTimer) : 0
+  }
+
+  /**
+   * 玩家於逾時前選定一張待選升級：套用後清待選、扣一次 pendingLevelUps。
+   * id 不在該玩家待選中則安靜略過。
+   * @param playerIndex 玩家索引。
+   * @param id 選定的升級卡 id。
+   */
+  chooseUpgrade(playerIndex: number, id: string): void {
+    const p = this.players[playerIndex]
+    if (!p || !p.pendingOffer) return
+    const opt = p.pendingOffer.find((o) => o.id === id)
+    if (!opt) return
+    applyUpgradeById(opt.id, this.upgradeContextFor(p))
+    p.pendingOffer = undefined
+    p.pendingLevelUps -= 1
+  }
+
+  /**
+   * 多人非阻塞升級處理（僅 playerCount>1 生效；單人沿用既有暫停握手）。
+   * 為待升級玩家產生待選卡、倒數逾時、逾時自動選第一張。死亡玩家略過。
+   * @param dt 固定步長秒數。
+   */
+  private processUpgrades(dt: number): void {
+    if (this.playerCount <= 1) return
+    for (const p of this.players) {
+      if (!p.alive) continue
+      if (!p.pendingOffer) {
+        if (p.pendingLevelUps > 0) {
+          p.pendingOffer = rollUpgrades(this.upgradeRng, 3, this.upgradeContextFor(p))
+          p.upgradeTimer = UPGRADE_TIMEOUT
+        }
+      } else {
+        p.upgradeTimer -= dt
+        if (p.upgradeTimer <= 0) {
+          applyUpgradeById(p.pendingOffer[0].id, this.upgradeContextFor(p))
+          p.pendingOffer = undefined
+          p.pendingLevelUps -= 1
+        }
+      }
+    }
   }
 
   /** 取武器的生效數值：進化則用 evolution.level，否則用當前等級值。 */
@@ -739,6 +802,9 @@ export class World {
 
     // 7d) 同步玩家存活旗標（hp<=0 即觀戰，不再參與 living 計算）。
     for (const p of this.players) p.alive = p.entity.hp > 0
+
+    // 7e) 多人非阻塞升級：產生待選/倒數/逾時自動選（單人 no-op）。
+    this.processUpgrades(dt)
 
     // 8) 清理：本格結束後一次篩除所有死亡／失效的 entity。
     this.enemies = this.enemies.filter((e) => e.active)

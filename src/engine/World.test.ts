@@ -859,4 +859,99 @@ describe('N=1 回復紅線', () => {
     w.step(1 / 60)
     expect(w.isPlayerDead()).toBe(true)
   })
+
+  describe('多人非阻塞升級（1B）', () => {
+    it('多人玩家升級取得 3 張待選、世界不暫停', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      w.players[0].pendingLevelUps = 1
+      w.step(1 / 60)
+      const offer = w.pendingOfferFor(0)
+      expect(offer).not.toBeNull()
+      expect(offer!.length).toBe(3)
+      expect(w.upgradeTimeRemaining(0)).toBeGreaterThan(0)
+      expect(() => w.step(1 / 60)).not.toThrow() // 世界仍可推進
+    })
+
+    it('逾時 12 秒自動選第一張', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      w.players[0].pendingLevelUps = 1
+      w.step(1 / 60) // 產生待選
+      expect(w.pendingOfferFor(0)!.length).toBe(3)
+      for (let i = 0; i < 13 * 60; i++) w.step(1 / 60) // 越過 12 秒
+      expect(w.pendingOfferFor(0)).toBeNull()
+      expect(w.players[0].pendingLevelUps).toBe(0)
+    })
+
+    it('逾時前主動 chooseUpgrade 套用該卡', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      w.players[1].pendingLevelUps = 1
+      w.step(1 / 60)
+      const id = w.pendingOfferFor(1)![0].id
+      w.chooseUpgrade(1, id)
+      expect(w.pendingOfferFor(1)).toBeNull()
+      expect(w.players[1].pendingLevelUps).toBe(0)
+    })
+
+    it('chooseUpgrade 非待選 id 安靜略過', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      w.players[0].pendingLevelUps = 1
+      w.step(1 / 60)
+      const before = w.pendingOfferFor(0)!.length
+      w.chooseUpgrade(0, '不存在的id')
+      expect(w.pendingOfferFor(0)!.length).toBe(before)
+      expect(w.players[0].pendingLevelUps).toBe(1)
+    })
+
+    it('一次升多級逐張提供', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      w.players[0].pendingLevelUps = 2
+      w.step(1 / 60)
+      const id1 = w.pendingOfferFor(0)![0].id
+      w.chooseUpgrade(0, id1)
+      expect(w.pendingOfferFor(0)).toBeNull()
+      w.step(1 / 60) // 下一格產下一張
+      expect(w.pendingOfferFor(0)!.length).toBe(3)
+      expect(w.players[0].pendingLevelUps).toBe(1)
+    })
+
+    it('升級浮層期間角色照常可動', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      w.players[0].pendingLevelUps = 1
+      w.step(1 / 60)
+      const x = w.players[0].entity.pos.x
+      w.setMoveInput(0, { x: 1, y: 0 })
+      for (let i = 0; i < 30; i++) w.step(1 / 60)
+      expect(w.players[0].entity.pos.x).toBeGreaterThan(x)
+    })
+
+    it('死亡玩家不再倒數/自動選', () => {
+      const w = new World(1, ['macrophage', 'neutrophil'])
+      w.players[0].pendingLevelUps = 1
+      w.step(1 / 60)
+      expect(w.pendingOfferFor(0)!.length).toBe(3)
+      w.players[0].entity.hp = 0
+      const remainBefore = w.upgradeTimeRemaining(0)
+      for (let i = 0; i < 13 * 60; i++) w.step(1 / 60)
+      expect(w.upgradeTimeRemaining(0)).toBe(remainBefore) // 不再倒數
+      expect(w.pendingOfferFor(0)!.length).toBe(3) // 不自動選
+    })
+
+    it('選項跨機確定性（相同 seed → 相同選項序列）', () => {
+      const gen = () => {
+        const w = new World(7, ['macrophage', 'neutrophil'])
+        w.players[1].pendingLevelUps = 1
+        w.step(1 / 60)
+        return w.pendingOfferFor(1)!.map((o) => o.id)
+      }
+      expect(gen()).toEqual(gen())
+    })
+
+    it('單人 processUpgrades 為 no-op（pendingOfferFor 回 null）', () => {
+      const w = new World(1) // playerCount 1
+      w.players[0].pendingLevelUps = 1
+      w.step(1 / 60)
+      expect(w.pendingOfferFor(0)).toBeNull()
+      expect(w.consumeLevelUp()).toBe(true) // 既有單人路徑仍可消費
+    })
+  })
 })
