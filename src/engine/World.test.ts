@@ -954,4 +954,24 @@ describe('N=1 回復紅線', () => {
       expect(w.consumeLevelUp()).toBe(true) // 既有單人路徑仍可消費
     })
   })
+
+  describe('World.checksum（SP2）', () => {
+    it('相同 seed/角色、未 step 的兩 World checksum 相同', () => {
+      const a = new World(1, ['macrophage', 'neutrophil'])
+      const b = new World(1, ['macrophage', 'neutrophil'])
+      expect(a.checksum()).toBe(b.checksum())
+    })
+    it('step 推進後 checksum 改變', () => {
+      const w = new World(1)
+      const before = w.checksum()
+      for (let i = 0; i < 120; i++) w.step(1 / 60)
+      expect(w.checksum()).not.toBe(before)
+    })
+    it('checksum 為 32-bit 無號整數', () => {
+      const v = new World(5).checksum()
+      expect(Number.isInteger(v)).toBe(true)
+      expect(v).toBeGreaterThanOrEqual(0)
+      expect(v).toBeLessThanOrEqual(0xffffffff)
+    })
+  })
 })
