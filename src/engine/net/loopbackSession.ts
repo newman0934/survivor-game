@@ -37,6 +37,7 @@ export class LoopbackSession implements NetSession {
   canStart(): boolean { return this.list.length >= 2 && this.list.every((p) => p.ready) }
   start(seed: number): void { if (this.canStart()) this.startCb?.(seed, this.map, this.list.slice()) }
   onStart(cb: (seed: number, map: MapKind, players: LobbyPlayer[]) => void): void { this.startCb = cb }
+  onPeerLeft(_cb: () => void): void { /* 單機 Loopback 無遠端離線 */ }
   leave(): void { this.changeCb = null; this.startCb = null }
 
   /** 測試/UI 模擬他人加入；回新玩家 id（滿員回空字串）。 */

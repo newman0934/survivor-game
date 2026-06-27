@@ -8,8 +8,11 @@ import { CHARACTER_ORDER, CHARACTER_DEFS } from '../engine/systems/characterDefs
 import { MAP_ORDER, MAP_DEFS } from '../engine/systems/mapDefs'
 import type { CharacterKind, MapKind } from '../engine/types'
 import type { CumulativeStats } from '../persistence/saveStore'
+import { useGameStore } from '../stores/game'
 import Overlay from './Overlay.vue'
 import Panel from './Panel.vue'
+
+const store = useGameStore()
 
 defineProps<{
   /** 跨場累積統計（由 App.vue loadSave 後傳入）。 */
@@ -40,6 +43,9 @@ function fmtBest(sec: number): string {
 
 <template>
   <Overlay>
+    <div v-if="store.notice" class="notice-banner" @click="store.clearNotice()">
+      {{ store.notice }}（點擊關閉）
+    </div>
     <Panel class="menu-panel">
       <h1>Survivor</h1>
 
@@ -119,4 +125,11 @@ h1 { font-family: var(--font-display); font-size: var(--fs-title); margin: 0 0 0
   font-size: 0.85rem; opacity: 0.85; margin-bottom: 0.4rem; }
 .stats b { color: var(--immune-accent-strong); }
 @media (max-width: 600px) { .stats { gap: 0.6rem; font-size: 0.78rem; } }
+.notice-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  background: rgba(255, 80, 80, 0.85); color: #fff;
+  text-align: center; padding: 0.6rem 1rem; font-size: 0.95rem;
+  cursor: pointer; letter-spacing: 0.05em;
+  backdrop-filter: blur(4px);
+}
 </style>

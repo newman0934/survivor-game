@@ -82,6 +82,8 @@ interface State extends Summary {
   lobbyMap: MapKind
   /** 等待室：是否可以開始（房主 && ≥2 人 && 全員就緒）。 */
   canStart: boolean
+  /** 全域通知橫幅文字（null 表示無提示）；用於離線提示等臨時訊息。 */
+  notice: string | null
 }
 
 /** 取得遊戲橋接 store 的 composable（Pinia 自動生成）。 */
@@ -112,6 +114,7 @@ export const useGameStore = defineStore('game', {
     isHost: false,
     lobbyMap: 'vessel',
     canStart: false,
+    notice: null,
   }),
   actions: {
     /** 開始新的一場：切到 playing 並把所有 summary/升級狀態歸零。由 App.vue 在啟動引擎前呼叫。 */
@@ -194,7 +197,12 @@ export const useGameStore = defineStore('game', {
       this.isHost = false
       this.canStart = false
       this.lobbyMap = 'vessel'
+      this.notice = null
     },
+    /** 設定全域通知橫幅文字（用於離線提示等）。 */
+    setNotice(msg: string) { this.notice = msg },
+    /** 清除全域通知橫幅。 */
+    clearNotice() { this.notice = null },
     /** 進入等待室（建立/加入後）。 */
     enterLobby() { this.phase = 'lobby' },
     /** 引擎/App → store：更新等待室狀態。 */

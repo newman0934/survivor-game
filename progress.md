@@ -10,9 +10,9 @@ _最後更新：2026-06-28_
 
 「**免疫大戰**」主題（免疫細胞 vs 病原體，場景在血管／胃／肺泡／腸道／腦）：7 武器（各有進化層）、8 病原（含遠程／分裂／自爆）、
 Boss、10 被動、5 角色、5 地圖；進度存檔記錄戰績與累積統計，主選單顯示統計與排行榜，結算可「再玩一次」或
-「回主選單」重選。**312 測試全綠、型別檢查乾淨、production build 乾淨。** 另：多人合作連線引擎地基 1A→4B-2 完成（剩 4C 真連線 adapter）。
+「回主選單」重選。**319 測試全綠、型別檢查乾淨、production build 乾淨。** 多人合作連線地基（1A→4B-2）✅ + Playroom adapter（4C）我方可驗部分 ✅；真跨機同步待使用者兩機實測（見 `specs/coop-playroom-adapter/manual-test-guide.md`）。
 
-> 規畫中（未實作）：多人合作連線設計文件 → `specs/2026-06-26-multiplayer-coop-design.md`
+> 多人合作連線設計文件 → `specs/2026-06-26-multiplayer-coop-design.md`
 
 ## 路線圖
 
@@ -72,7 +72,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 子專案 4A（lockstep 核心）— 傳輸抽象 `NetTransport` + `LoopbackTransport` + `LockstepRunner`（inputDelay 緩衝、到齊推進、升級走 pick 輸入）；以 `World.checksum()` 驗兩端同步；純新增 `engine/net/`、零退化 → specs/coop-lockstep-core/
 - [x] 子專案 4B-1 — `NetSession` 抽象 + `LoopbackSession` + 主選單單人/多人分層 + `MultiplayerMenu`/`WaitingRoom`（建立/加入/等待室，房主選圖+就緒+開始觸發 onStart）；單人零退化 → specs/coop-lobby-session/
 - [x] 子專案 4B-2 — Game 多人 lockstep 模式：`NetSession.toTransport`（LoopbackSession auto-neutral，單機可跑）+ `Game.startMultiplayer`（LockstepRunner 驅動）+ loop 多人分支（M-1：不暫停、升級走 pick）+ hasWon/hasLost 結束 + App onStart 接線；單人逐行等價零退化 → specs/coop-game-lockstep/
-- [ ] 子專案 4C — Playroom（Free）adapter：實作 NetSession + NetTransport（真房間/碼/onPlayerJoin/RPC/種子廣播/斷線）；需兩台機器實測（尚未開始）
+- [x] 子專案 4C — Playroom（Free）adapter：實作 NetSession + NetTransport（真房間/碼/onPlayerJoin/RPC/種子廣播/斷線）+ App 接線 + store notice 離線提示 + 兩機測試指南；我方可驗部分完成（typecheck/build/319 測試全綠）；真跨機同步待使用者兩機實測
 
 ### 平台支援 ✅
 手機觸控 + RWD — 浮動虛擬搖桿（與鍵盤並存）、視口防捲動縮放、主選單與升級彈窗窄螢幕適配。
