@@ -25,6 +25,10 @@ import Leaderboard from './ui/Leaderboard.vue'
 import PauseMenu from './ui/PauseMenu.vue'
 import PauseButton from './ui/PauseButton.vue'
 import MultiUpgradeOverlay from './ui/MultiUpgradeOverlay.vue'
+import MultiplayerMenu from './ui/MultiplayerMenu.vue'
+import WaitingRoom from './ui/WaitingRoom.vue'
+import { LoopbackSession } from './engine/net/loopbackSession'
+import type { NetSession } from './engine/net/session'
 
 const store = useGameStore()
 // PixiJS 畫布要掛載的 DOM 容器（由 template 中的 ref 綁定）。
@@ -48,6 +52,40 @@ const lastRun = ref<{ bestTime: number; isNewBestTime: boolean; isNewBestKills: 
   isNewBestTime: false,
   isNewBestKills: false,
 })
+
+const showMultiMenu = ref(false)
+let session: NetSession | null = null
+
+function pushLobby() {
+  if (!session) return
+  store.setLobby({
+    players: session.players().map((p) => ({ ...p })),
+    roomCode: session.roomCode,
+    isHost: session.isHost(),
+    map: session.getMap(),
+    canStart: session.canStart(),
+  })
+}
+function openMultiplayer() { showMultiMenu.value = true }
+function createOrJoin(code?: string) {
+  session = new LoopbackSession({ roomCode: code || 'ROOM' + Math.floor(Math.random() * 9000 + 1000) })
+  session.onChange(pushLobby)
+  session.onStart((seed, map, players) => {
+    // 4B-2 接：以 LockstepRunner + NetTransport 開多人局。本份先記錄。
+    console.info('[lobby] onStart', seed, map, players)
+  })
+  showMultiMenu.value = false
+  pushLobby()
+  store.enterLobby()
+}
+function leaveLobby() {
+  session?.leave(); session = null
+  store.toMenu()
+}
+function lobbySetCharacter(k: CharacterKind) { session?.setCharacter(k) }
+function lobbySetReady(r: boolean) { session?.setReady(r) }
+function lobbySetMap(k: MapKind) { session?.setMap(k) }
+function lobbyStart() { session?.start(Math.floor(Math.random() * 1e9)) }
 
 // bloom 設定（持久化）；開機讀取、切換時存回並即時套到引擎。
 const bloomEnabled = ref(loadSettings().bloom)
@@ -139,7 +177,14 @@ onBeforeUnmount(() => {
     <PauseButton v-if="store.phase === 'playing'" />
     <MultiUpgradeOverlay v-if="store.phase === 'playing'" />
     <!-- 以下三個 overlay 依 phase 互斥顯示 -->
-    <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" :stats="stats" @start="startGame" @open-leaderboard="showLeaderboard = true" /></Transition>
+    <Transition name="fade"><MainMenu v-if="store.phase === 'menu' && !showMultiMenu" :stats="stats" @start="startGame" @open-leaderboard="showLeaderboard = true" @multiplayer="openMultiplayer" /></Transition>
+    <Transition name="fade"><MultiplayerMenu v-if="store.phase === 'menu' && showMultiMenu" @create="createOrJoin()" @join="(c) => createOrJoin(c)" @back="showMultiMenu = false" /></Transition>
+    <Transition name="fade"><WaitingRoom v-if="store.phase === 'lobby'"
+      @set-character="lobbySetCharacter"
+      @set-ready="lobbySetReady"
+      @set-map="lobbySetMap"
+      @start="lobbyStart"
+      @leave="leaveLobby" /></Transition>
     <Transition name="fade"><Leaderboard v-if="showLeaderboard && store.phase === 'menu'" :runs="runs" @close="showLeaderboard = false" /></Transition>
     <Transition name="fade"><UpgradeModal v-if="store.phase === 'upgrading'" /></Transition>
     <Transition name="fade"><GameOver v-if="store.phase === 'over' || store.phase === 'won'" :won="store.phase === 'won'" :best-time="lastRun.bestTime" :is-new-best-time="lastRun.isNewBestTime" :is-new-best-kills="lastRun.isNewBestKills" @restart="restart" @menu="toMenu" /></Transition>

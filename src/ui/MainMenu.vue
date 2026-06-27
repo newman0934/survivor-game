@@ -19,6 +19,7 @@ defineProps<{
 const emit = defineEmits<{
   start: [opts: { character: CharacterKind; map: MapKind }]
   'open-leaderboard': []
+  multiplayer: []
 }>()
 const character = ref<CharacterKind>('macrophage')
 const map = ref<MapKind>('vessel')
@@ -79,7 +80,8 @@ function fmtBest(sec: number): string {
         </button>
       </div>
 
-      <button class="ui-btn ui-btn-primary start" @click="emit('start', { character, map })">開始遊戲</button>
+      <button class="ui-btn ui-btn-primary start" @click="emit('start', { character, map })">單人遊玩</button>
+      <button class="ui-btn ui-btn-ghost" @click="emit('multiplayer')">多人遊玩</button>
       <button class="ui-btn ui-btn-ghost ranking" @click="emit('open-leaderboard')">排行榜</button>
       <p class="hint">WASD / 方向鍵移動 · 自動攻擊</p>
     </Panel>
