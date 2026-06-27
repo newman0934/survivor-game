@@ -5,7 +5,7 @@
  * 與武器不同：被動不在每格開火，而是在升級握手「選到即套用」一次增量。
  * 新增道具或調數值都從這裡下手。
  */
-import type { PassiveDef, PassiveKind } from '../types'
+import type { PassiveDef, PassiveKind } from '../../types'
 
 /** 被動道具持有上限（共 10 種 → 必須取捨）。 */
 export const PASSIVE_CAP = 6

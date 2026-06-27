@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { steerEnemy, steerSpitter, spitterTick } from './enemyAI'
 import { createEnemy } from '../entities/factory'
-import { ENEMY_DEFS } from './enemyDefs'
+import { ENEMY_DEFS } from './defs/enemyDefs'
 
 describe('enemyAI', () => {
   it('virus 朝玩家直線移動', () => {

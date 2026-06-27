@@ -10,7 +10,7 @@
 import type { Vec2 } from '../core/vector'
 import type { Rng } from '../core/rng'
 import type { EnemyKind } from '../types'
-import { ENEMY_DEFS, ENEMY_ORDER } from './enemyDefs'
+import { ENEMY_DEFS, ENEMY_ORDER } from './defs/enemyDefs'
 
 /**
  * 生怪曲線：回傳目前每隔幾秒生一隻敵人。

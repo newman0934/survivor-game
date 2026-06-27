@@ -3,8 +3,8 @@
  * 純繪製、不修改模擬狀態；地貌以 bgHash 確定性散布，動畫靠傳入的 clock/t。
  */
 import { Graphics } from 'pixi.js'
-import type { MapKind } from '../types'
-import { bgHash } from './spriteHelpers'
+import type { MapKind } from '../../types'
+import { bgHash } from './helpers'
 
 /** 背景網格：在世界座標、玩家可視範圍內畫間距 64 的細線（無限捲動）；顏色/透明度由地圖決定。 */
 export function drawBackgroundGrid(

@@ -10,8 +10,8 @@
  */
 import type { UpgradeOption, UpgradeContext, WeaponKind, PassiveKind } from '../types'
 import type { Rng } from '../core/rng'
-import { WEAPON_DEFS, WEAPON_ORDER } from './weaponDefs'
-import { PASSIVE_DEFS, PASSIVE_ORDER, PASSIVE_CAP } from './passiveDefs'
+import { WEAPON_DEFS, WEAPON_ORDER } from './defs/weaponDefs'
+import { PASSIVE_DEFS, PASSIVE_ORDER, PASSIVE_CAP } from './defs/passiveDefs'
 
 /**
  * 經驗曲線：回傳從 (level-1) 升到 level 所需的經驗值總量。

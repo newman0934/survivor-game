@@ -1,7 +1,7 @@
 /**
  * 地圖事件定義表（純資料）。每個事件的名稱與預警字串。
  */
-import type { GameEventKind, GameEventDef } from '../types'
+import type { GameEventKind, GameEventDef } from '../../types'
 
 /** 確定性迭代/抽選用的固定順序。 */
 export const GAME_EVENT_ORDER: GameEventKind[] = ['swarm-rush', 'elite-pack', 'encircle']

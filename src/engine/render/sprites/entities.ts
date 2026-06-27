@@ -3,9 +3,9 @@
  * 純繪製、不修改模擬狀態；方向由 PixiRenderer 依 vel 旋轉。
  */
 import { Graphics } from 'pixi.js'
-import type { Entity } from '../types'
-import { PICKUP_DEFS } from '../systems/pickupDefs'
-import { dim, lighten, emissiveCore } from './spriteHelpers'
+import type { Entity } from '../../types'
+import { PICKUP_DEFS } from '../../systems/defs/pickupDefs'
+import { dim, lighten, emissiveCore } from './helpers'
 
 /** 抗原碎片：結晶菱形（四切面明暗）+ 外發光暈 + 亮核。 */
 export function drawGem(g: Graphics, e: Entity): void {

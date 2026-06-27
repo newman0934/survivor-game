@@ -5,8 +5,8 @@
 import type { World } from '../World'
 import type { Weapon, WeaponLevelStats, PlayerState } from '../types'
 import { createOrbit } from '../entities/factory'
-import { MAX_ENEMY_RADIUS } from './enemyDefs'
-import { WEAPON_DEFS } from './weaponDefs'
+import { MAX_ENEMY_RADIUS } from './defs/enemyDefs'
+import { WEAPON_DEFS } from './defs/weaponDefs'
 import { fireWand, fireKnife, orbitPositions, garlicTick,
   phagocyteSweep, chainTargets, novaBurst, PHAGOCYTE_HALF_ANGLE, CASCADE_FALLOFF } from './weapons'
 import { checkKills } from './enemyDeath'

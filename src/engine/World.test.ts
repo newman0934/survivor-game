@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { World } from './World'
 import { xpForLevel } from './systems/leveling'
 import { createEnemyProjectile, createProjectile, createPickup, createGem } from './entities/factory'
-import { WEAPON_DEFS } from './systems/weaponDefs'
-import { GAME_EVENT_DEFS } from './systems/eventDefs'
+import { WEAPON_DEFS } from './systems/defs/weaponDefs'
+import { GAME_EVENT_DEFS } from './systems/defs/eventDefs'
 
 describe('World', () => {
   it('starts with one player and no enemies', () => {

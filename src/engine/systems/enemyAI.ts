@@ -9,7 +9,7 @@ import type { Entity } from '../types'
 import type { Vec2 } from '../core/vector'
 import { normalize, sub, scale } from '../core/vector'
 import { steerTowards } from './movement'
-import { ENEMY_DEFS } from './enemyDefs'
+import { ENEMY_DEFS } from './defs/enemyDefs'
 
 /** 噴吐病原維持距離的容差（±margin 內視為到位、停步）。 */
 const SPITTER_MARGIN = 40

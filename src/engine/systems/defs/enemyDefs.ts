@@ -4,7 +4,7 @@
  * 每種敵人的數值、登場時間、生成權重與顏色；charger 另含走/衝參數。
  * 新增敵種或調數值都從這裡下手（見 CLAUDE.md「新增敵人」）。
  */
-import type { EnemyDef, EnemyKind } from '../types'
+import type { EnemyDef, EnemyKind } from '../../types'
 
 /** 確定性迭代用的固定順序。 */
 export const ENEMY_ORDER: EnemyKind[] = ['virus', 'bacteria', 'spore', 'spiral', 'superbug',

@@ -2,7 +2,7 @@
  * 角色定義表（純資料）。每個可選角色的起始武器、數值、被動與顏色。
  * World 建構時依此套用起始狀態。新增角色或調數值都從這裡下手。
  */
-import type { CharacterDef, CharacterKind } from '../types'
+import type { CharacterDef, CharacterKind } from '../../types'
 
 /** 選單呈現順序（預設選第一個）。 */
 export const CHARACTER_ORDER: CharacterKind[] = ['macrophage', 'neutrophil', 'nkcell', 'dendritic', 'mastcell']

@@ -2,7 +2,7 @@
  * 地圖定義表（純資料）。每張地圖的背景視覺與難度修正。
  * World 建構時依此套用。新增地圖或調數值都從這裡下手。
  */
-import type { MapDef, MapKind } from '../types'
+import type { MapDef, MapKind } from '../../types'
 
 /** 選單呈現順序（預設選第一張）。 */
 export const MAP_ORDER: MapKind[] = ['vessel', 'stomach', 'lung', 'gut', 'brain']

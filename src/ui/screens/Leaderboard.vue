@@ -5,8 +5,8 @@
  * 「關閉」發出 close 事件由 App 收起。不讀 store、不碰引擎/存檔。
  */
 import type { RunRecord } from '../../persistence/saveStore'
-import { CHARACTER_DEFS } from '../../engine/systems/characterDefs'
-import { MAP_DEFS } from '../../engine/systems/mapDefs'
+import { CHARACTER_DEFS } from '../../engine/systems/defs/characterDefs'
+import { MAP_DEFS } from '../../engine/systems/defs/mapDefs'
 import type { CharacterKind, MapKind } from '../../engine/types'
 import Overlay from '../common/Overlay.vue'
 import Panel from '../common/Panel.vue'

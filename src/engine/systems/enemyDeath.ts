@@ -7,9 +7,9 @@ import type { Entity, PickupKind, PlayerState } from '../types'
 import type { Vec2 } from '../core/vector'
 import { distance } from '../core/vector'
 import { createGem, createChest, createPickup } from '../entities/factory'
-import { ENEMY_DEFS } from './enemyDefs'
-import { ELITE_AFFIX_DEFS } from './eliteDefs'
-import { spawnEnemy } from './spawning'
+import { ENEMY_DEFS } from './defs/enemyDefs'
+import { ELITE_AFFIX_DEFS } from './defs/eliteDefs'
+import { spawnEnemy } from './enemySpawning'
 
 const HEAL_FRAC = 0.3            // 回血回復 maxHp 比例
 const HEAL_DROP_HP_FRAC = 0.5    // 血量低於 maxHp 此比例才可能掉回血（mercy）

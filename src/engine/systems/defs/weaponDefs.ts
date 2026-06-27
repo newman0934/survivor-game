@@ -4,7 +4,7 @@
  * 每把武器的等級上限與逐級生效數值；`levels[level-1]` 為該等級的生效值。
  * 新增武器或調整數值都從這裡下手（見 CLAUDE.md「新增敵人/武器」）。
  */
-import type { WeaponDef, WeaponKind } from '../types'
+import type { WeaponDef, WeaponKind } from '../../types'
 
 /** 解鎖時提供候選的順序（antibody 為起始武器，恆持有）。 */
 export const WEAPON_ORDER: WeaponKind[] = ['antibody', 'perforin', 'complement', 'inflammation',

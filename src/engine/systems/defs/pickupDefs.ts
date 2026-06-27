@@ -1,5 +1,5 @@
 /** 撿取物登錄表（資料驅動）：每種撿取物的主題色等 metadata。新增撿取物只加一筆 + World 效果分支。 */
-import type { PickupKind } from '../types'
+import type { PickupKind } from '../../types'
 
 export interface PickupDef {
   /** 主題色（造型與光暈用）。 */

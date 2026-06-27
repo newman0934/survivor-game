@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { PASSIVE_DEFS } from './passiveDefs'
-import type { PlayerStats, UpgradeContext, Passive } from '../types'
-import { createPlayer } from '../entities/factory'
+import type { PlayerStats, UpgradeContext, Passive } from '../../types'
+import { createPlayer } from '../../entities/factory'
 
 function makeCtx(): UpgradeContext {
   const stats: PlayerStats = {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createPlayer, createEnemy, createProjectile, createEnemyProjectile, createGem, createChest } from './factory'
-import { ENEMY_DEFS } from '../systems/enemyDefs'
+import { ENEMY_DEFS } from '../systems/defs/enemyDefs'
 
 describe('entity factory', () => {
   it('creates an active player at a position', () => {

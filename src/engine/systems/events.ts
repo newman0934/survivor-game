@@ -4,8 +4,8 @@
  */
 import type { Rng } from '../core/rng'
 import type { GameEventKind, EliteAffix } from '../types'
-import { GAME_EVENT_ORDER } from './eventDefs'
-import { ELITE_AFFIX_ORDER } from './eliteDefs'
+import { GAME_EVENT_ORDER } from './defs/eventDefs'
+import { ELITE_AFFIX_ORDER } from './defs/eliteDefs'
 
 /** 等機率挑一個地圖事件。 */
 export function pickEvent(rng: Rng): GameEventKind {
