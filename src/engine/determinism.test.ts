@@ -30,7 +30,13 @@ describe('確定性回放（SP2）', () => {
 describe('原始碼守護：模擬路徑無非確定性 global（SP2）', () => {
   // Vite 原生：以 ?raw 讀入所有 engine .ts 原始碼。
   const all = import.meta.glob('./**/*.ts', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
-  /** 呈現/IO/驅動層白名單（可合法使用 Math.random/時間）。 */
+  /**
+   * 白名單：非模擬路徑、可合法使用 Math.random/時間者。
+   * 驅動層：Game.ts（rAF 迴圈、真實時間）。
+   * 呈現層：PixiRenderer/sprites/postProcessing/noiseBackground/effects（PixiJS 視覺）。
+   * IO/音訊：core/{soundManager,input,touchInput,hitStop,noise}（音效/輸入/特效計時）。
+   * 此清單外的 src/engine 檔一律視為模擬路徑、自動受守護（fail-safe）。
+   */
   const EXCLUDE = new Set([
     './Game.ts', './PixiRenderer.ts', './sprites.ts', './postProcessing.ts',
     './noiseBackground.ts', './effects.ts',
