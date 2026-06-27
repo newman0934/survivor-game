@@ -70,9 +70,15 @@ function openMultiplayer() { showMultiMenu.value = true }
 function createOrJoin(code?: string) {
   session = new LoopbackSession({ roomCode: code || 'ROOM' + Math.floor(Math.random() * 9000 + 1000) })
   session.onChange(pushLobby)
-  session.onStart((seed, map, players) => {
-    // 4B-2 接：以 LockstepRunner + NetTransport 開多人局。本份先記錄。
-    console.info('[lobby] onStart', seed, map, players)
+  session.onStart(async (seed, map, players) => {
+    if (!session || !canvasParent.value) return
+    const localIndex = players.findIndex((p) => p.id === session!.localId)
+    store.setCharacter(players[localIndex]?.character ?? 'macrophage')
+    store.start() // phase → playing
+    game = await Game.startMultiplayer(
+      canvasParent.value, seed, players.map((p) => p.character), map,
+      session.toTransport(localIndex), localIndex, bloomEnabled.value,
+    )
   })
   showMultiMenu.value = false
   pushLobby()
