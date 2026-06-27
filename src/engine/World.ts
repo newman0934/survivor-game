@@ -50,7 +50,7 @@ const BOSS_INTERVAL = 60
 /** 終局 Boss 出現時間（秒）。 */
 const FINAL_BOSS_TIME = 900
 /** 多人非阻塞升級的待選逾時（秒）。 */
-const UPGRADE_TIMEOUT = 12
+export const UPGRADE_TIMEOUT = 12
 /** 地圖事件週期（秒）與觸發前預警時間（秒）。 */
 const EVENT_INTERVAL = 150
 const EVENT_WARNING_LEAD = 5
@@ -381,13 +381,17 @@ export class World {
   }
 
   /**
-   * @returns 目前大蒜場域半徑（已套乘區）；未持有大蒜則回 0。供 renderer 畫場域圓。
+   * @returns 指定玩家的大蒜場域半徑（已套乘區）；未持有大蒜則回 0。供 renderer 畫場域圓。
+   * @param playerIndex 玩家索引（預設 0，向後相容單人）。
    */
-  garlicRadius(): number {
-    const g = this.weapons.find((w) => w.kind === 'inflammation')
+  garlicRadius(playerIndex = 0): number {
+    const p = this.players[playerIndex] ?? this.players[0]
+    const weapons = p?.weapons ?? this.players[0].weapons
+    const g = weapons.find((w) => w.kind === 'inflammation')
     if (!g) return 0
     const lvl = WEAPON_DEFS.inflammation.levels[g.level - 1]
-    return (lvl.radius ?? 0) * this.stats.areaMult
+    const stats = p?.stats ?? this.players[0].stats
+    return (lvl.radius ?? 0) * stats.areaMult
   }
 
   /** 測試輔助：在指定位置放一顆經驗寶石（直接進 gemEntities，繞過擊殺流程）。 */

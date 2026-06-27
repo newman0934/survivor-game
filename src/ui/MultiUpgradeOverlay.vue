@@ -5,9 +5,9 @@ import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 import GameIcon from './GameIcon.vue'
 import { resolveOptionIcon } from './icons/iconRegistry'
+import { UPGRADE_TIMEOUT } from '../engine/World'
 
 const store = useGameStore()
-const UPGRADE_TIMEOUT = 12
 const pct = computed(() => Math.max(0, Math.min(100, (store.multiOfferTimeLeft / UPGRADE_TIMEOUT) * 100)))
 // 每張卡的圖示解析一次（對齊 UpgradeModal 的 cardIcons 模式，避免 template 重複呼叫）。
 const cardIcons = computed(() => store.multiOffer?.map((o) => resolveOptionIcon(o.id)) ?? [])

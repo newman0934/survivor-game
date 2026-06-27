@@ -159,7 +159,7 @@ export class PixiRenderer {
 
     // 大蒜光環：持有時呼吸脈動。
     this.garlicAura.clear()
-    const gr = world.garlicRadius()
+    const gr = world.garlicRadius(localPlayerIndex)
     if (gr > 0) drawGarlicAura(this.garlicAura, local.pos.x, local.pos.y, gr, this.clock)
 
     // 依序處理各來源並就地戳記本幀（免每幀配置合併陣列與 seen Set）。

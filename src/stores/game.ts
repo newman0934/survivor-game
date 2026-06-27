@@ -116,6 +116,7 @@ export const useGameStore = defineStore('game', {
       this.upgradeOptions = []
       this.onUpgradePicked = null
       this.loadout = { weapons: [], passives: [] }
+      this.localPlayerIndex = 0
       this.multiOffer = null
       this.multiOfferTimeLeft = 0
       this.onMultiUpgradePicked = null
