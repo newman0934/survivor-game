@@ -9,6 +9,8 @@ import { resolveOptionIcon } from './icons/iconRegistry'
 const store = useGameStore()
 const UPGRADE_TIMEOUT = 12
 const pct = computed(() => Math.max(0, Math.min(100, (store.multiOfferTimeLeft / UPGRADE_TIMEOUT) * 100)))
+// 每張卡的圖示解析一次（對齊 UpgradeModal 的 cardIcons 模式，避免 template 重複呼叫）。
+const cardIcons = computed(() => store.multiOffer?.map((o) => resolveOptionIcon(o.id)) ?? [])
 </script>
 
 <template>
@@ -16,8 +18,8 @@ const pct = computed(() => Math.max(0, Math.min(100, (store.multiOfferTimeLeft /
     <div class="hint">升級！選一張（{{ Math.ceil(store.multiOfferTimeLeft) }}s）</div>
     <div class="timer"><div class="fill" :style="{ width: pct + '%' }" /></div>
     <div class="cards">
-      <button v-for="o in store.multiOffer" :key="o.id" class="card ui-btn" @click="store.pickMultiUpgrade(o.id)">
-        <GameIcon v-if="resolveOptionIcon(o.id)" :category="resolveOptionIcon(o.id)!.category" :kind="resolveOptionIcon(o.id)!.kind" :size="28" />
+      <button v-for="(o, i) in store.multiOffer" :key="o.id" class="card ui-btn" @click="store.pickMultiUpgrade(o.id)">
+        <GameIcon v-if="cardIcons[i]" :category="cardIcons[i]!.category" :kind="cardIcons[i]!.kind" :size="28" />
         <span class="label">{{ o.label }}</span>
       </button>
     </div>
