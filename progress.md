@@ -69,7 +69,9 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 子專案 1B — 非阻塞升級流程：World per-player 待選（seeded upgradeRng 跨機一致）+ 12s 逾時自動選第一張 + `pendingOfferFor`/`upgradeTimeRemaining`/`chooseUpgrade`；單人零退化（processUpgrades 僅 playerCount>1 生效）→ specs/coop-upgrade-nonblocking/
 - [x] 子專案 2 — 確定性稽核 + 回放雜湊：`core/checksum.ts`（FNV-1a）+ `World.checksum()`（規範化狀態雜湊，SP4 desync 也用）+ `determinism.test.ts`（同 seed+輸入兩 run 相同 + 原始碼守護模擬路徑無 Math.random/Date.now/performance.now）；已知限制：跨瀏覽器超越函式不定點化 → specs/coop-determinism-audit/
 - [x] 子專案 3（連線就緒外殼）— `localPlayerIndex` 管線：World `summary(i)`/`loadoutSnapshot(i)`、Game/renderer 跟本地玩家並渲染全部玩家、多人非阻塞升級浮層（`MultiUpgradeOverlay`，消費 1B）；單人零退化（index 0 + playerCount>1 guard）→ specs/coop-local-player-shell/。本地分割畫面/第二輸入排除（A 案）；主選單多人分層/等待室併 SP4
-- [ ] 子專案 4 — 網路傳輸層（lockstep 輸入廣播）（尚未開始）
+- [x] 子專案 4A（lockstep 核心）— 傳輸抽象 `NetTransport` + `LoopbackTransport` + `LockstepRunner`（inputDelay 緩衝、到齊推進、升級走 pick 輸入）；以 `World.checksum()` 驗兩端同步；純新增 `engine/net/`、零退化 → specs/coop-lockstep-core/
+- [ ] 子專案 4B — Game 迴圈接 LockstepRunner（含 M-1）+ 主選單多人分層 + 建立/加入/等待室（尚未開始）
+- [ ] 子專案 4C — 真 Playroom（或選定）adapter：房間碼/種子廣播/斷線處理（需 app-id + 兩台機器手動測；尚未開始）
 
 ### 平台支援 ✅
 手機觸控 + RWD — 浮動虛擬搖桿（與鍵盤並存）、視口防捲動縮放、主選單與升級彈窗窄螢幕適配。
@@ -83,7 +85,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 
 | 項目 | 結果 |
 |---------|------|
-| 單元測試（Vitest） | 290 通過（含多玩家 1A/1B/SP2 + 本地玩家管線 SP3） |
+| 單元測試（Vitest） | 301 通過（含多玩家 1A/1B/SP2/SP3 + lockstep 核心 4A） |
 | 型別檢查（vue-tsc） | 乾淨 |
 | Production build | 乾淨 |
 | 瀏覽器煙霧測試 | 階段 1–3 + 美術 + 特效 + 新武器/敵種 + 武器進化 + 進度存檔 + 排行榜 + 手機 + 音效 驗收通過（偶見既有 favicon 404，與功能無關） |
