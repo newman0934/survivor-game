@@ -44,10 +44,14 @@ export class Game {
   /** 升級抽選專用的亂數來源（與模擬 rng 分離）。 */
   private upgradeRng: ReturnType<typeof createRng>
 
+  /** 本地玩家索引（單人＝0；SP4 連線時為自己的位置）。 */
+  private localPlayerIndex: number
+
   /** 私有建構子；請改用靜態的 `start()`（renderer 初始化為非同步）。 */
-  private constructor(world: World, renderer: PixiRenderer, seed: number) {
+  private constructor(world: World, renderer: PixiRenderer, seed: number, localPlayerIndex = 0) {
     this.world = world
     this.renderer = renderer
+    this.localPlayerIndex = localPlayerIndex
     // Derive the upgrade RNG from the run seed so each run offers a different
     // upgrade sequence (rather than an identical one every game).
     this.upgradeRng = createRng(seed ^ 0xdead)
@@ -59,19 +63,24 @@ export class Game {
    * @param seed 本場亂數種子。
    * @returns 已啟動的 `Game` 實例。
    */
-  static async start(canvasParent: HTMLElement, seed: number, character: CharacterKind, map: MapKind, bloomEnabled = true): Promise<Game> {
+  static async start(canvasParent: HTMLElement, seed: number, character: CharacterKind, map: MapKind, bloomEnabled = true, localPlayerIndex = 0): Promise<Game> {
     const world = new World(seed, character, map)
     const renderer = await PixiRenderer.create(canvasParent, bloomEnabled)
-    const game = new Game(world, renderer, seed)
-    game.store.setLoadout(world.loadoutSnapshot()) // 開賽即把起始武器推進持有快照，供 HUD 持有列顯示
+    const game = new Game(world, renderer, seed, localPlayerIndex)
+    game.store.setLoadout(world.loadoutSnapshot(localPlayerIndex)) // 開賽即把起始武器推進持有快照，供 HUD 持有列顯示
+    game.store.localPlayerIndex = localPlayerIndex
     game.input.attach()
     game.touch.attach(canvasParent)
     soundManager.resume()
     soundManager.startMusic(map)
     game.store.onUpgradePicked = (id: string) => {
       world.applyUpgrade(id)
-      game.store.setLoadout(world.loadoutSnapshot()) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
+      game.store.setLoadout(world.loadoutSnapshot(localPlayerIndex)) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
       game.paused = false
+    }
+    game.store.onMultiUpgradePicked = (id: string) => {
+      world.chooseUpgrade(localPlayerIndex, id)
+      game.store.setLoadout(world.loadoutSnapshot(localPlayerIndex))
     }
     game.loop(0)
     return game
@@ -104,7 +113,7 @@ export class Game {
 
     if (!this.paused && !this.renderer.isHitStopped()) {
       const tdir = this.touch.direction()
-      this.world.moveInput = (tdir.x !== 0 || tdir.y !== 0) ? tdir : this.input.direction()
+      this.world.setMoveInput(this.localPlayerIndex, (tdir.x !== 0 || tdir.y !== 0) ? tdir : this.input.direction())
       // 固定步長累積器：把真實時間存進累積器，再以整數倍的 STEP 消化，確保每步皆為 1/60 秒。
       this.accumulator += frameTime
       while (this.accumulator >= STEP) {
@@ -114,11 +123,11 @@ export class Game {
         // 升級握手：偵測到本步升級即提供 3 選 1、設定選後 callback、暫停迴圈並中斷消化。
         if (this.world.consumeLevelUp()) {
           const opts = rollUpgrades(this.upgradeRng, 3, this.world.upgradeContext())
-          this.store.setLoadout(this.world.loadoutSnapshot())
+          this.store.setLoadout(this.world.loadoutSnapshot(this.localPlayerIndex))
           this.store.offerUpgrades(opts.map((o) => ({ id: o.id, label: o.label })))
           this.store.onUpgradePicked = (id: string) => {
             this.world.applyUpgrade(id)
-            this.store.setLoadout(this.world.loadoutSnapshot()) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
+            this.store.setLoadout(this.world.loadoutSnapshot(this.localPlayerIndex)) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
             this.paused = false // 玩家選定後恢復
           }
           this.paused = true
@@ -126,7 +135,7 @@ export class Game {
         }
         // 通關（擊敗終局 Boss）：勝利優先於死亡；推送最終 summary、播勝利音效、切勝利畫面並停迴圈。
         if (this.world.hasWon()) {
-          this.store.updateSummary(this.world.summary())
+          this.store.updateSummary(this.world.summary(this.localPlayerIndex))
           soundManager.play('chest')
           this.store.victory()
           this.stop()
@@ -134,7 +143,7 @@ export class Game {
         }
         // 死亡即推送最終 summary、通知 store 遊戲結束並停掉迴圈。
         if (this.world.isPlayerDead()) {
-          this.store.updateSummary(this.world.summary())
+          this.store.updateSummary(this.world.summary(this.localPlayerIndex))
           soundManager.play('gameover')
           this.store.gameOver()
           this.stop()
@@ -142,14 +151,21 @@ export class Game {
         }
       }
       // 每幀（消化完該幀步數後）推送一次 summary 給 store 更新 HUD。
-      this.store.updateSummary(this.world.summary())
+      this.store.updateSummary(this.world.summary(this.localPlayerIndex))
+      // 多人非阻塞升級：推送本地玩家待選（單人 playerCount 1 不進此分支，multiOffer 保持 null）。
+      if (this.world.playerCount > 1) {
+        this.store.setMultiOffer(
+          this.world.pendingOfferFor(this.localPlayerIndex),
+          this.world.upgradeTimeRemaining(this.localPlayerIndex),
+        )
+      }
       // 排空本幀累積的語意音效事件交由音訊層播放。
       for (const ev of this.world.consumeSoundEvents()) soundManager.play(ev)
       // 排空本幀武器視覺事件交特效層繪製。
       this.renderer.applyFxEvents(this.world.consumeFxEvents())
     }
 
-    this.renderer.render(this.world)
+    this.renderer.render(this.world, this.localPlayerIndex)
     this.renderer.drawJoystick(this.touch.joystick)
   }
 
