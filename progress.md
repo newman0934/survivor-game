@@ -73,7 +73,6 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 子專案 4B-1 — `NetSession` 抽象 + `LoopbackSession` + 主選單單人/多人分層 + `MultiplayerMenu`/`WaitingRoom`（建立/加入/等待室，房主選圖+就緒+開始觸發 onStart）；單人零退化 → specs/coop-lobby-session/
 - [ ] 子專案 4B-2 — onStart → Game 以 LockstepRunner + NetTransport 開多人局（含 M-1）（尚未開始）
 - [ ] 子專案 4C — Playroom（Free）adapter：實作 NetSession + NetTransport（真房間/碼/onPlayerJoin/RPC/種子廣播/斷線）；需兩台機器實測（尚未開始）
-- [ ] 子專案 4C — 真 Playroom（或選定）adapter：房間碼/種子廣播/斷線處理（需 app-id + 兩台機器手動測；尚未開始）
 
 ### 平台支援 ✅
 手機觸控 + RWD — 浮動虛擬搖桿（與鍵盤並存）、視口防捲動縮放、主選單與升級彈窗窄螢幕適配。
