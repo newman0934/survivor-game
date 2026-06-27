@@ -121,9 +121,9 @@ export class PixiRenderer {
     return s
   }
 
-  /** 處理單一 entity：取得/建立 sprite、更新位置與動畫、戳記本幀。 */
-  private syncSprite(e: Entity, world: World): void {
-    const s = this.spriteFor(e, world.playerColor, world.playerCharacter)
+  /** 處理單一 entity：取得/建立 sprite、更新位置與動畫、戳記本幀。選填 playerColor/playerCharacter 可 override 預設值（多人各自外觀）。 */
+  private syncSprite(e: Entity, world: World, playerColor = world.playerColor, playerCharacter = world.playerCharacter): void {
+    const s = this.spriteFor(e, playerColor, playerCharacter)
     s.root.position.set(e.pos.x, e.pos.y)
     s.root.visible = true
     s.lastSeen = this.frameId
@@ -131,36 +131,40 @@ export class PixiRenderer {
     this.applyHitFlash(e, s)
   }
 
-  render(world: World): void {
+  render(world: World, localPlayerIndex = 0): void {
     this.clock += 1 / 60
     this.frameId += 1
 
+    // 取本地玩家狀態；index 超界時 fallback 至 players[0]。
+    const lp = world.players[localPlayerIndex] ?? world.players[0]
+    const local = lp.entity
+
     // 噪聲視差背景：懶初始化（需 world.mapKind），每幀更新視差捲動。
     if (!this.noise) this.noise = new NoiseBackground(this.app, world.mapKind)
-    this.noise.update(world.player.pos.x, world.player.pos.y)
+    this.noise.update(local.pos.x, local.pos.y)
 
     // 升級上升沿：玩家身上爆發光環。
-    if (world.currentLevel > this.lastLevel) {
-      this.effects.spawnLevelUp(world.player.pos.x, world.player.pos.y)
+    if (lp.level > this.lastLevel) {
+      this.effects.spawnLevelUp(local.pos.x, local.pos.y)
     }
-    this.lastLevel = world.currentLevel
+    this.lastLevel = lp.level
 
     // 背景網格：依玩家可視範圍重畫（世界座標，隨容器平移捲動）。
     this.app.renderer.background.color = world.mapBgColor
     this.grid.clear()
     drawMapBackground(
-      this.grid, world.mapKind, world.player.pos.x, world.player.pos.y,
+      this.grid, world.mapKind, local.pos.x, local.pos.y,
       this.app.renderer.width, this.app.renderer.height, this.clock,
     )
 
     // 大蒜光環：持有時呼吸脈動。
     this.garlicAura.clear()
     const gr = world.garlicRadius()
-    if (gr > 0) drawGarlicAura(this.garlicAura, world.player.pos.x, world.player.pos.y, gr, this.clock)
+    if (gr > 0) drawGarlicAura(this.garlicAura, local.pos.x, local.pos.y, gr, this.clock)
 
     // 依序處理各來源並就地戳記本幀（免每幀配置合併陣列與 seen Set）。
     // 順序即首次建立時的 z-order：gems → enemies → projectiles → enemyProjectiles
-    // → orbits → chests → pickups → player（玩家最後建立，畫在最上層）。
+    // → orbits → chests → pickups → players（本地玩家最後建立，畫在最上層）。
     for (const g of world.gems()) if (g.active) this.syncSprite(g, world)
     for (const e of world.enemies) if (e.active) this.syncSprite(e, world)
     for (const p of world.projectiles) if (p.active) this.syncSprite(p, world)
@@ -168,7 +172,12 @@ export class PixiRenderer {
     for (const o of world.orbits()) if (o.active) this.syncSprite(o, world)
     for (const c of world.chests()) if (c.active) this.syncSprite(c, world)
     for (const pk of world.pickups()) if (pk.active) this.syncSprite(pk, world)
-    this.syncSprite(world.player, world)
+    // 渲染全部玩家（各自 color/character）；本地玩家最後畫（最上層）。
+    for (const pl of world.players) {
+      if (pl === lp) continue
+      this.syncSprite(pl.entity, world, pl.color, pl.character)
+    }
+    this.syncSprite(local, world, lp.color, lp.character)
     // 回收：本幀未戳記者（已消失）銷毀並移出對照表，避免洩漏。
     for (const [e, s] of this.sprites) {
       if (s.lastSeen !== this.frameId) {
@@ -197,10 +206,10 @@ export class PixiRenderer {
     }
     // 推進特效並取得鏡頭震動偏移。
     const shake = this.effects.update()
-    // 鏡頭跟隨：玩家恆在畫面中央（加上震動偏移）。
+    // 鏡頭跟隨：本地玩家恆在畫面中央（加上震動偏移）。
     this.world.position.set(
-      this.app.renderer.width / 2 - world.player.pos.x + shake.shakeX,
-      this.app.renderer.height / 2 - world.player.pos.y + shake.shakeY,
+      this.app.renderer.width / 2 - local.pos.x + shake.shakeX,
+      this.app.renderer.height / 2 - local.pos.y + shake.shakeY,
     )
   }
 
