@@ -193,6 +193,7 @@ export const useGameStore = defineStore('game', {
       this.roomCode = ''
       this.isHost = false
       this.canStart = false
+      this.lobbyMap = 'vessel'
     },
     /** 進入等待室（建立/加入後）。 */
     enterLobby() { this.phase = 'lobby' },
