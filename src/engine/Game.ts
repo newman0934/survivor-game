@@ -77,6 +77,10 @@ export class Game {
       game.store.setLoadout(world.loadoutSnapshot(localPlayerIndex)) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
       game.paused = false
     }
+    game.store.onMultiUpgradePicked = (id: string) => {
+      world.chooseUpgrade(localPlayerIndex, id)
+      game.store.setLoadout(world.loadoutSnapshot(localPlayerIndex))
+    }
     game.loop(0)
     return game
   }
@@ -147,6 +151,13 @@ export class Game {
       }
       // 每幀（消化完該幀步數後）推送一次 summary 給 store 更新 HUD。
       this.store.updateSummary(this.world.summary(this.localPlayerIndex))
+      // 多人非阻塞升級：推送本地玩家待選（單人 playerCount 1 不進此分支，multiOffer 保持 null）。
+      if (this.world.playerCount > 1) {
+        this.store.setMultiOffer(
+          this.world.pendingOfferFor(this.localPlayerIndex),
+          this.world.upgradeTimeRemaining(this.localPlayerIndex),
+        )
+      }
       // 排空本幀累積的語意音效事件交由音訊層播放。
       for (const ev of this.world.consumeSoundEvents()) soundManager.play(ev)
       // 排空本幀武器視覺事件交特效層繪製。

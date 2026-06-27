@@ -63,6 +63,14 @@ interface State extends Summary {
   loadout: LoadoutSnapshot
   /** 目前角色（顯示用：HUD 頭像）。 */
   character: CharacterKind
+  /** 本地玩家索引（單人為 0）。 */
+  localPlayerIndex: number
+  /** 多人非阻塞升級：本地玩家目前待選的升級卡列；無待選時為 null。 */
+  multiOffer: UpgradeDescriptor[] | null
+  /** 多人非阻塞升級：本地玩家待選的剩餘秒數。 */
+  multiOfferTimeLeft: number
+  /** 多人非阻塞升級：玩家選定後由 pickMultiUpgrade 呼叫的引擎 callback。 */
+  onMultiUpgradePicked: ((id: string) => void) | null
 }
 
 /** 取得遊戲橋接 store 的 composable（Pinia 自動生成）。 */
@@ -84,6 +92,10 @@ export const useGameStore = defineStore('game', {
     onUpgradePicked: null,
     loadout: { weapons: [], passives: [] },
     character: 'macrophage',
+    localPlayerIndex: 0,
+    multiOffer: null,
+    multiOfferTimeLeft: 0,
+    onMultiUpgradePicked: null,
   }),
   actions: {
     /** 開始新的一場：切到 playing 並把所有 summary/升級狀態歸零。由 App.vue 在啟動引擎前呼叫。 */
@@ -104,6 +116,9 @@ export const useGameStore = defineStore('game', {
       this.upgradeOptions = []
       this.onUpgradePicked = null
       this.loadout = { weapons: [], passives: [] }
+      this.multiOffer = null
+      this.multiOfferTimeLeft = 0
+      this.onMultiUpgradePicked = null
     },
     /** 引擎 → store：把最新一份 summary 推進來供 HUD 渲染。不更動 phase。 */
     updateSummary(s: Summary) {
@@ -165,6 +180,15 @@ export const useGameStore = defineStore('game', {
     /** 從暫停恢復（僅 paused 生效，切回 playing）。 */
     resumeGame() {
       if (this.phase === 'paused') this.phase = 'playing'
+    },
+    /** 引擎 → store：推送本地玩家目前的多人待選與剩餘秒（無待選傳 null/0）。 */
+    setMultiOffer(offer: UpgradeDescriptor[] | null, timeLeft: number) {
+      this.multiOffer = offer
+      this.multiOfferTimeLeft = timeLeft
+    },
+    /** UI → 引擎：選定一張多人升級卡（觸發引擎註冊的 callback）。 */
+    pickMultiUpgrade(id: string) {
+      this.onMultiUpgradePicked?.(id)
     },
   },
 })

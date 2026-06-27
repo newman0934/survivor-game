@@ -24,6 +24,7 @@ import MuteButton from './ui/MuteButton.vue'
 import Leaderboard from './ui/Leaderboard.vue'
 import PauseMenu from './ui/PauseMenu.vue'
 import PauseButton from './ui/PauseButton.vue'
+import MultiUpgradeOverlay from './ui/MultiUpgradeOverlay.vue'
 
 const store = useGameStore()
 // PixiJS 畫布要掛載的 DOM 容器（由 template 中的 ref 綁定）。
@@ -136,6 +137,7 @@ onBeforeUnmount(() => {
     <BossBar v-if="store.phase === 'playing' || store.phase === 'upgrading'" />
     <MuteButton v-if="store.phase !== 'menu'" />
     <PauseButton v-if="store.phase === 'playing'" />
+    <MultiUpgradeOverlay v-if="store.phase === 'playing'" />
     <!-- 以下三個 overlay 依 phase 互斥顯示 -->
     <Transition name="fade"><MainMenu v-if="store.phase === 'menu'" :stats="stats" @start="startGame" @open-leaderboard="showLeaderboard = true" /></Transition>
     <Transition name="fade"><Leaderboard v-if="showLeaderboard && store.phase === 'menu'" :runs="runs" @close="showLeaderboard = false" /></Transition>
