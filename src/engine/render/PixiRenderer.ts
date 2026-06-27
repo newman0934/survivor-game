@@ -6,8 +6,8 @@
  * 純呈現層——不修改模擬狀態，只讀取 World。造型繪製委派給 sprites.ts。
  */
 import { Application, Container, Graphics } from 'pixi.js'
-import type { World } from './World'
-import type { Entity, CharacterKind, FxEvent } from './types'
+import type { World } from '../World'
+import type { Entity, CharacterKind, FxEvent } from '../types'
 import {
   drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit, drawChest, drawPickup,
   drawMapBackground, drawGarlicAura,
@@ -15,7 +15,7 @@ import {
 import { EffectsLayer } from './effects'
 import { PostProcessing } from './postProcessing'
 import { NoiseBackground } from './noiseBackground'
-import { ENEMY_DEFS } from './systems/enemyDefs'
+import { ENEMY_DEFS } from '../systems/enemyDefs'
 
 /** 每個 entity 的顯示物件：body（造型）+ flash（命中閃白用的白色覆蓋圓）。 */
 interface Sprite {

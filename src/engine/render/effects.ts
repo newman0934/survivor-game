@@ -3,8 +3,8 @@
  * 擊殺粒子/環波、收集閃光、升級光環、傷害數字、受傷紅暈、鏡頭震動。純呈現、不碰模擬、走固定 dt。
  */
 import { Container, Graphics, Text } from 'pixi.js'
-import type { EnemyKind } from './types'
-import { HitStop } from './core/hitStop'
+import type { EnemyKind } from '../types'
+import { HitStop } from '../core/hitStop'
 
 const DT = 1 / 60
 const TAU = Math.PI * 2

@@ -13,10 +13,10 @@
  * 注意：此檔直接呼叫 `useGameStore()`，故必須在 Pinia context 內執行。
  */
 import { World } from './World'
-import { PixiRenderer } from './PixiRenderer'
-import { KeyboardInput } from './core/input'
-import { TouchInput } from './core/touchInput'
-import { soundManager } from './core/soundManager'
+import { PixiRenderer } from './render/PixiRenderer'
+import { KeyboardInput } from './input/input'
+import { TouchInput } from './input/touchInput'
+import { soundManager } from './audio/soundManager'
 import { rollUpgrades } from './systems/leveling'
 import { createRng } from './core/rng'
 import { useGameStore } from '../stores/game'

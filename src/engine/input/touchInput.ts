@@ -4,7 +4,7 @@
  * 用 Pointer Events（touch + 滑鼠通用）：按下記錄原點，拖曳方向即移動方向，放開停止。
  * 與 KeyboardInput 同層的純 TS 輸入源；不依賴 Vue/Pinia。採輪詢式：迴圈每幀讀 direction()。
  */
-import type { Vec2 } from './vector'
+import type { Vec2 } from '../core/vector'
 
 /**
  * 由搖桿原點與當前點算出移動方向。

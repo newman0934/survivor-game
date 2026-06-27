@@ -5,10 +5,10 @@
  * 閃白）由 PixiRenderer 以 transform 每幀套用。純繪製、不修改模擬狀態。
  */
 import { Graphics } from 'pixi.js'
-import type { Entity, MapKind, CharacterKind } from './types'
-import { ENEMY_DEFS } from './systems/enemyDefs'
-import { PICKUP_DEFS } from './systems/pickupDefs'
-import { ELITE_AFFIX_DEFS } from './systems/eliteDefs'
+import type { Entity, MapKind, CharacterKind } from '../types'
+import { ENEMY_DEFS } from '../systems/enemyDefs'
+import { PICKUP_DEFS } from '../systems/pickupDefs'
+import { ELITE_AFFIX_DEFS } from '../systems/eliteDefs'
 
 /** 把顏色各通道乘上係數 f（<1 變暗），用來產生描邊/陰影色。 */
 function dim(color: number, f: number): number {
