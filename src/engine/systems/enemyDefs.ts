@@ -34,3 +34,6 @@ export const ENEMY_DEFS: Record<EnemyKind, EnemyDef> = {
   },
   finalboss: { kind: 'finalboss', hp: 4000, speed: 26, damage: 26, radius: 60, xp: 200, color: 0xff1744, unlockTime: 0, spawnWeight: 0 },
 }
+
+/** 最大敵人半徑；空間網格鄰近查詢的查詢半徑須加上它以免漏接重疊敵人。 */
+export const MAX_ENEMY_RADIUS = Math.max(...ENEMY_ORDER.map((k) => ENEMY_DEFS[k].radius))
