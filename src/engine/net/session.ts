@@ -32,5 +32,7 @@ export interface NetSession {
   onStart(cb: (seed: number, map: MapKind, players: LobbyPlayer[]) => void): void
   /** 進遊戲時產生逐幀輸入傳輸（lockstep 用）。 */
   toTransport(localIndex: number): NetTransport
+  /** 遊戲中任一玩家離線時呼叫（MVP：本局結束）；Loopback 無實作。 */
+  onPeerLeft(cb: () => void): void
   leave(): void
 }
