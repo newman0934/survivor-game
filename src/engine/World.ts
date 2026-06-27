@@ -363,8 +363,8 @@ export class World {
   /** 目前存活玩家（alive 旗標為 true），固定 index 升冪。 */
   private livingPlayers(): PlayerState[] { return this.players.filter((p) => p.alive) }
 
-  /** 離指定座標最近的存活玩家（無存活玩家時回 players[0]）。 */
-  nearestLivingPlayer(pos: Vec2): PlayerState {
+  /** 離指定座標最近的存活玩家（無存活玩家時回 players[0]）。僅供 World 內部使用。 */
+  private nearestLivingPlayer(pos: Vec2): PlayerState {
     const living = this.livingPlayers()
     if (living.length === 0) return this.players[0]
     let best = living[0], bestD = distance(best.entity.pos, pos)
@@ -725,9 +725,11 @@ export class World {
       }
     }
 
-    // 7b) 回復：逐玩家依 regen 回血（僅存活時，夾 maxHp）。
-    for (const p of this.livingPlayers()) {
-      if (p.stats.regen > 0) {
+    // 7b) 回復：每位玩家依即時 hp 與 regen 回血（夾 maxHp）。
+    // 注意：此處不用 livingPlayers()（依上格 alive 旗標），而是用即時 hp > 0 守衛，
+    // 以確保「接觸傷害將 hp 壓至 0 以下」的當格不被 regen 救回（N=1 等價紅線）。
+    for (const p of this.players) {
+      if (p.entity.hp > 0 && p.stats.regen > 0) {
         p.entity.hp = Math.min(p.entity.maxHp, p.entity.hp + p.stats.regen * dt)
       }
     }

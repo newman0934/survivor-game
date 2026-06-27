@@ -850,3 +850,13 @@ describe('多玩家建構', () => {
     expect(f2.maxHp).toBe(f1.maxHp * 2)
   })
 })
+
+describe('N=1 回復紅線', () => {
+  it('持回復被動的玩家瀕死當格不被回血救回（N=1 等價）', () => {
+    const w = new World(1)
+    w.stats.regen = 0.6 // 模擬 tomato 回復被動
+    w.player.hp = -0.005 // 落在 (-regen*dt, 0] 區間
+    w.step(1 / 60)
+    expect(w.isPlayerDead()).toBe(true)
+  })
+})
