@@ -41,6 +41,8 @@ describe('原始碼守護：模擬路徑無非確定性 global（SP2）', () => 
     './Game.ts',
     './render/PixiRenderer.ts', './render/sprites.ts', './render/postProcessing.ts',
     './render/noiseBackground.ts', './render/effects.ts',
+    './render/spriteHelpers.ts', './render/spriteCast.ts',
+    './render/spriteEntities.ts', './render/spriteBackground.ts',
     './audio/soundManager.ts', './input/input.ts', './input/touchInput.ts',
     './core/hitStop.ts', './core/noise.ts',
   ])
