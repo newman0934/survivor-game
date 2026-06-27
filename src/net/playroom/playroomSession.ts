@@ -29,6 +29,7 @@ export class PlayroomSession implements NetSession {
   private peerLeftCb: (() => void) | null = null
   private inputRecv: ((msg: InputMsg, senderId: string) => void) | null = null
   private started = false
+  private startedIds: string[] = []
   private poll: ReturnType<typeof setInterval> | null = null
   private readonly localCharacter: CharacterKind
 
@@ -67,7 +68,15 @@ export class PlayroomSession implements NetSession {
     // RPC.register 回呼簽章：(payload, senderPlayer: PlayerState, mode) => Promise<any>
     RPC.register('start', async (data: { seed: number; map: MapKind }) => {
       this.started = true
-      this.startCb?.(data.seed, data.map, this.players())
+      this.startedIds = sortPlayerIds([...this.players_.keys()])
+      this.startCb?.(data.seed, data.map, this.startedIds.map((id) => {
+        const p = this.players_.get(id)!
+        return {
+          id,
+          character: (p.getState('character') as CharacterKind) ?? 'macrophage',
+          ready: (p.getState('ready') as boolean) ?? false,
+        }
+      }))
     })
 
     RPC.register('input', async (msg: InputMsg, sender: PlayerState) => {
@@ -93,8 +102,8 @@ export class PlayroomSession implements NetSession {
     })
   }
 
-  setCharacter(kind: CharacterKind): void { myPlayer().setState('character', kind); this.notify() }
-  setReady(ready: boolean): void { myPlayer().setState('ready', ready); this.notify() }
+  setCharacter(kind: CharacterKind): void { if (!this.localId) return; myPlayer().setState('character', kind); this.notify() }
+  setReady(ready: boolean): void { if (!this.localId) return; myPlayer().setState('ready', ready); this.notify() }
   setMap(kind: MapKind): void { setState('map', kind); this.notify() }
   getMap(): MapKind { return (getState('map') as MapKind) ?? 'vessel' }
 
@@ -112,12 +121,11 @@ export class PlayroomSession implements NetSession {
   }
 
   toTransport(_localIndex: number): NetTransport {
-    const sortedIds = sortPlayerIds([...this.players_.keys()])
     const channel: RpcChannel = {
       send: (msg) => { void RPC.call('input', msg, RPC.Mode.ALL) },
       onReceive: (cb) => { this.inputRecv = cb },
     }
-    return new PlayroomTransport(sortedIds, this.localId, channel)
+    return new PlayroomTransport(this.startedIds, this.localId, channel)
   }
 
   leave(): void {
@@ -126,5 +134,6 @@ export class PlayroomSession implements NetSession {
     this.startCb = null
     this.peerLeftCb = null
     this.inputRecv = null
+    if (this.localId) myPlayer().leaveRoom()
   }
 }
