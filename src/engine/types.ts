@@ -303,6 +303,28 @@ export interface MapDef {
   enemyHpMult: number
 }
 
+/** 單一玩家的完整狀態（多玩家 World 每位玩家一份）。 */
+export interface PlayerState {
+  entity: Entity
+  character: CharacterKind
+  /** 玩家圓顏色（取自角色）。 */
+  color: number
+  stats: PlayerStats
+  weapons: Weapon[]
+  passives: Passive[]
+  level: number
+  xp: number
+  pendingLevelUps: number
+  lastMoveDir: Vec2
+  moveInput: Vec2
+  vacuumTimer: number
+  alive: boolean
+  /** 聖經環繞 per-player 執行期狀態。 */
+  bibleAngle: number
+  orbitEntities: Entity[]
+  bibleHitTimers: Map<Entity, number>
+}
+
 /**
  * 一個升級選項。
  *

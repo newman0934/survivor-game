@@ -10,7 +10,7 @@
  *
  * 確定性：所有隨機都走建構時以 seed 建立的 `rng`，絕不呼叫 `Math.random()`。
  */
-import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, EliteAffix, Passive, CharacterKind, MapKind, SoundEvent, FxEvent, PickupKind, GameEventKind } from './types'
+import type { Entity, PlayerStats, Weapon, WeaponLevelStats, UpgradeContext, EnemyKind, EliteAffix, Passive, CharacterKind, MapKind, SoundEvent, FxEvent, PickupKind, GameEventKind, PlayerState } from './types'
 import type { Vec2 } from './core/vector'
 import { distance } from './core/vector'
 import { createRng, type Rng } from './core/rng'
@@ -64,8 +64,28 @@ const CELL_SIZE = 100
 const MAX_ENEMY_RADIUS = Math.max(...ENEMY_ORDER.map((k) => ENEMY_DEFS[k].radius))
 
 export class World {
-  /** 玩家 entity（永遠存在，不會被篩除）。 */
-  player: Entity
+  /** 全部玩家（index 0 為單人/本地玩家）。 */
+  players: PlayerState[] = []
+
+  // ── 相容存取器：一律作用於 players[0]，使既有單人呼叫端/測試零改動 ──
+  get player(): Entity { return this.players[0].entity }
+  get stats(): PlayerStats { return this.players[0].stats }
+  get weapons(): Weapon[] { return this.players[0].weapons }
+  set weapons(v: Weapon[]) { this.players[0].weapons = v }
+  get passives(): Passive[] { return this.players[0].passives }
+  get playerColor(): number { return this.players[0].color }
+  get playerCharacter(): CharacterKind { return this.players[0].character }
+  get moveInput(): Vec2 { return this.players[0].moveInput }
+  set moveInput(v: Vec2) { this.players[0].moveInput = v }
+  get lastMoveDir(): Vec2 { return this.players[0].lastMoveDir }
+  set lastMoveDir(v: Vec2) { this.players[0].lastMoveDir = v }
+  private get level(): number { return this.players[0].level }
+  private set level(v: number) { this.players[0].level = v }
+  private get xp(): number { return this.players[0].xp }
+  private set xp(v: number) { this.players[0].xp = v }
+  private get pendingLevelUps(): number { return this.players[0].pendingLevelUps }
+  private set pendingLevelUps(v: number) { this.players[0].pendingLevelUps = v }
+
   /** 場上所有敵人（含本格剛死、待篩除者）。 */
   enemies: Entity[] = []
   /** 場上所有 projectile（含本格剛失效、待篩除者）。 */
@@ -79,27 +99,6 @@ export class World {
   /** 場上所有撿取物（回血／全場吸取）。 */
   pickupEntities: Entity[] = []
 
-  /** 玩家數值（全域乘區），會被升級就地修改。 */
-  stats: PlayerStats = {
-    moveSpeed: 200,
-    pickupRadius: 120,
-    damageMult: 1,
-    cooldownMult: 1,
-    projectileSpeedMult: 1,
-    areaMult: 1,
-    regen: 0,
-    armor: 0,
-    xpGain: 1,
-  }
-
-  /** 玩家持有的武器（起始只有魔杖）；各自獨立計時與升級、共存開火。 */
-  weapons: Weapon[] = [{ kind: 'antibody', level: 1, cooldownTimer: 0 }]
-  /** 玩家持有的被動道具（起始為空）。 */
-  passives: Passive[] = []
-  /** 玩家圓顏色（取自所選角色）；供 renderer 取用。 */
-  playerColor = 0x4aa3ff
-  /** 所選角色種類（供 renderer 決定免疫細胞造型）。 */
-  playerCharacter: CharacterKind = 'macrophage'
   /** 所選地圖種類（供 renderer 決定背景地貌）。 */
   mapKind: MapKind = 'vessel'
   /** 背景底色（取自所選地圖）；供 renderer 取用。 */
@@ -112,17 +111,6 @@ export class World {
   mapSpawnIntervalMult = 1
   /** 敵人 hp 倍率（取自所選地圖）。 */
   mapEnemyHpMult = 1
-  /** 玩家最後一次非零移動方向（飛刀發射方向用）；預設朝右。 */
-  lastMoveDir: Vec2 = { x: 1, y: 0 }
-  /** 聖經環繞基準角（每格隨角速度累加）。 */
-  private bibleAngle = 0
-  /** 聖經環繞物 entity（每格依等級重建/更新位置）。 */
-  private orbitEntities: Entity[] = []
-  /** 聖經 per-enemy 命中冷卻（秒）；避免每幀重複扣血。 */
-  private bibleHitTimers = new Map<Entity, number>()
-
-  /** 由上層每格寫入的玩家移動方向（已正規化的 -1..1 向量）。 */
-  moveInput: Vec2 = { x: 0, y: 0 }
 
   /** 本格累積的語意音效事件；由上層每幀 consumeSoundEvents 排空。 */
   private soundEventQueue: SoundEvent[] = []
@@ -133,8 +121,6 @@ export class World {
   private rng: Rng
   /** 撿取物掉落專用 rng（自 seed 衍生，獨立於 spawn/combat 串流，避免擾動既有確定性）。 */
   private pickupRng: Rng
-  /** 全場吸取剩餘秒數（>0 時寶石不分距離朝玩家飛）。 */
-  private vacuumTimer = 0
   /** 累積遊戲時間（秒）。 */
   private elapsed = 0
   /** 生怪倒數計時器（秒）；歸零即生怪並重置。 */
@@ -157,40 +143,49 @@ export class World {
   private eventWarning?: string
   /** 敵人空間網格；每格在敵人移動後重建，供碰撞鄰近查詢。 */
   private enemyGrid = new SpatialGrid<Entity>(CELL_SIZE)
-  /** 目前等級。 */
-  private level = 1
+  /** 累計擊殺數。 */
+  private kills = 0
 
   /** 目前玩家等級（唯讀，供 renderer 偵測升級上升沿）。 */
   get currentLevel(): number {
     return this.level
   }
 
-  /** 目前等級內已累積的經驗值。 */
-  private xp = 0
-  /** 累計擊殺數。 */
-  private kills = 0
-  /** 尚未處理的升級次數；由上層逐一 `consumeLevelUp()` 取走以觸發升級握手。 */
-  private pendingLevelUps = 0
+  /** 依角色建立一位玩家的初始 PlayerState（起始武器/數值/血/被動/顏色）。 */
+  private static makePlayerState(character: CharacterKind): PlayerState {
+    const def = CHARACTER_DEFS[character]
+    const entity = createPlayer({ x: 0, y: 0 })
+    entity.maxHp = def.maxHp
+    entity.hp = def.maxHp
+    const stats: PlayerStats = {
+      moveSpeed: 200, pickupRadius: 120, damageMult: 1, cooldownMult: 1,
+      projectileSpeedMult: 1, areaMult: 1, regen: 0, armor: 0, xpGain: 1,
+    }
+    Object.assign(stats, def.statMods)
+    return {
+      entity, character, color: def.color, stats,
+      weapons: [{ kind: def.startWeapon, level: 1, cooldownTimer: 0 }],
+      passives: [], level: 1, xp: 0, pendingLevelUps: 0,
+      lastMoveDir: { x: 1, y: 0 }, moveInput: { x: 0, y: 0 }, vacuumTimer: 0, alive: true,
+      bibleAngle: 0, orbitEntities: [], bibleHitTimers: new Map(),
+    }
+  }
 
   /**
    * @param seed      本場的亂數種子，決定生怪位置等隨機序列（可重現）。
-   * @param character 起始角色（預設巨噬細胞）；決定起始武器/數值/血/被動/顏色/造型。
+   * @param character 起始角色（預設巨噬細胞）；可傳陣列以啟用多玩家模式。
    */
-  constructor(seed: number, character: CharacterKind = 'macrophage', map: MapKind = 'vessel', finalBossTime: number = FINAL_BOSS_TIME) {
+  constructor(seed: number, character: CharacterKind | CharacterKind[] = 'macrophage', map: MapKind = 'vessel', finalBossTime: number = FINAL_BOSS_TIME) {
     this.rng = createRng(seed)
     this.finalBossTime = finalBossTime
     this.pickupRng = createRng(seed ^ 0x5bd1e995)
-    this.player = createPlayer({ x: 0, y: 0 })
-    const def = CHARACTER_DEFS[character]
-    this.playerColor = def.color
-    this.playerCharacter = character
-    this.player.maxHp = def.maxHp
-    this.player.hp = def.maxHp
-    Object.assign(this.stats, def.statMods)
-    this.weapons = [{ kind: def.startWeapon, level: 1, cooldownTimer: 0 }]
-    for (const pk of def.startPassives) {
-      this.passives.push({ kind: pk, level: 1 })
-      PASSIVE_DEFS[pk].apply(this.upgradeContext())
+    const characters = Array.isArray(character) ? character : [character]
+    this.players = characters.map((c) => World.makePlayerState(c))
+    for (const p of this.players) {
+      for (const pk of CHARACTER_DEFS[p.character].startPassives) {
+        p.passives.push({ kind: pk, level: 1 })
+        PASSIVE_DEFS[pk].apply(this.upgradeContextFor(p))
+      }
     }
     const m = MAP_DEFS[map]
     this.mapKind = map
@@ -286,6 +281,8 @@ export class World {
     b.hp = ENEMY_DEFS.superbug.hp * scale
     b.maxHp = b.hp
     this.scaleEnemyHp(b)
+    b.hp *= this.playerCount
+    b.maxHp *= this.playerCount
     this.bossCount += 1
     this.enemies.push(b)
     this.soundEventQueue.push('boss')
@@ -300,8 +297,8 @@ export class World {
   spawnFinalBossAt(pos: Vec2): Entity {
     const b = createEnemy(pos, 'finalboss')
     // 確保 hp 未被套用地圖倍率（createEnemy 從 ENEMY_DEFS 直接讀取）
-    b.hp = ENEMY_DEFS.finalboss.hp
-    b.maxHp = ENEMY_DEFS.finalboss.hp
+    b.hp = ENEMY_DEFS.finalboss.hp * this.playerCount
+    b.maxHp = b.hp
     this.enemies.push(b)
     this.soundEventQueue.push('boss')
     return b
@@ -334,30 +331,48 @@ export class World {
     }
   }
 
-  /** 強制下一格立即開火（重置所有武器的開火計時器）。 */
-  forceFire(): void {
-    for (const w of this.weapons) w.cooldownTimer = 0
-  }
+  /** 強制下一格立即開火（重置所有玩家所有武器計時）。 */
+  forceFire(): void { for (const p of this.players) for (const w of p.weapons) w.cooldownTimer = 0 }
 
-  /** @returns 目前的聖經環繞物（供 renderer 顯示）。 */
-  orbits(): Entity[] {
-    return this.orbitEntities
-  }
+  /** 全部玩家的聖經環繞物（供 renderer）。 */
+  orbits(): Entity[] { return this.players.flatMap((p) => p.orbitEntities) }
 
-  /**
-   * 建立升級套用所需的上下文（stats + weapons + heal）。
-   * @returns 指向 World 內部狀態的上下文，供 leveling 就地修改。
-   */
-  upgradeContext(): UpgradeContext {
+  /** 指定玩家的升級上下文（leveling/passive 就地修改）。 */
+  upgradeContextFor(p: PlayerState): UpgradeContext {
     return {
-      stats: this.stats,
-      weapons: this.weapons,
-      passives: this.passives,
-      player: this.player,
-      heal: (amount: number) => {
-        this.player.hp = Math.min(this.player.maxHp, this.player.hp + amount)
-      },
+      stats: p.stats, weapons: p.weapons, passives: p.passives, player: p.entity,
+      heal: (amount: number) => { p.entity.hp = Math.min(p.entity.maxHp, p.entity.hp + amount) },
     }
+  }
+
+  /** 相容：players[0] 的升級上下文。 */
+  upgradeContext(): UpgradeContext { return this.upgradeContextFor(this.players[0]) }
+
+  /** 玩家數。 */
+  get playerCount(): number { return this.players.length }
+
+  /** 設定指定玩家的移動輸入方向。 */
+  setMoveInput(playerIndex: number, dir: Vec2): void {
+    const p = this.players[playerIndex]
+    if (p) p.moveInput = dir
+  }
+
+  /** 全部玩家皆不存活（alive 旗標全為 false）＝本局失敗。 */
+  hasLost(): boolean { return this.players.every((p) => !p.alive) }
+
+  /** 目前存活玩家（alive 旗標為 true），固定 index 升冪。 */
+  private livingPlayers(): PlayerState[] { return this.players.filter((p) => p.alive) }
+
+  /** 離指定座標最近的存活玩家（無存活玩家時回 players[0]）。僅供 World 內部使用。 */
+  private nearestLivingPlayer(pos: Vec2): PlayerState {
+    const living = this.livingPlayers()
+    if (living.length === 0) return this.players[0]
+    let best = living[0], bestD = distance(best.entity.pos, pos)
+    for (let i = 1; i < living.length; i++) {
+      const d = distance(living[i].entity.pos, pos)
+      if (d < bestD) { bestD = d; best = living[i] }
+    }
+    return best
   }
 
   /**
@@ -370,21 +385,32 @@ export class World {
     return (lvl.radius ?? 0) * this.stats.areaMult
   }
 
+  /** 測試輔助：在指定位置放一顆經驗寶石（直接進 gemEntities，繞過擊殺流程）。 */
+  spawnGemForTest(pos: Vec2, xp: number): Entity {
+    const g = createGem(pos, xp)
+    this.gemEntities.push(g)
+    return g
+  }
+
   /**
-   * 給予經驗值，並結算可能連續觸發的升級。
-   * @param amount 增加的經驗值。
+   * 對指定玩家加經驗、必要時升級（per-player）。
+   * 一次拾取可能跨越多個等級門檻，故用 while 迴圈把多餘經驗結算掉。
    */
-  grantXp(amount: number): void {
-    this.xp += amount
-    // 一次拾取可能跨越多個等級門檻，故用 while 迴圈把多餘經驗結算掉，
-    // 每升一級就累加一次待處理升級（讓上層逐一彈出選卡）。
-    while (this.xp >= xpForLevel(this.level)) {
-      this.xp -= xpForLevel(this.level)
-      this.level += 1
-      this.pendingLevelUps += 1
+  private grantXpTo(p: PlayerState, amount: number): void {
+    p.xp += amount
+    while (p.xp >= xpForLevel(p.level)) {
+      p.xp -= xpForLevel(p.level)
+      p.level += 1
+      p.pendingLevelUps += 1
       this.soundEventQueue.push('levelup')
     }
   }
+
+  /**
+   * 給予經驗值（相容 API），對 players[0] 加經驗。
+   * @param amount 增加的經驗值。
+   */
+  grantXp(amount: number): void { this.grantXpTo(this.players[0], amount) }
 
   /**
    * 取走一次待處理的升級。
@@ -420,20 +446,20 @@ export class World {
   step(dt: number): void {
     this.elapsed += dt
 
-    // 1) 玩家移動：依輸入方向與移動速度設定速度，再套用位移。
-    this.player.vel = { x: this.moveInput.x * this.stats.moveSpeed, y: this.moveInput.y * this.stats.moveSpeed }
-    applyVelocity(this.player, dt)
-
-    // 記錄最後非零移動方向（飛刀發射方向用）。
-    if (this.moveInput.x !== 0 || this.moveInput.y !== 0) {
-      const len = Math.hypot(this.moveInput.x, this.moveInput.y) || 1
-      this.lastMoveDir = { x: this.moveInput.x / len, y: this.moveInput.y / len }
+    // 1) 玩家移動：每位存活玩家依自己輸入位移、更新各自 lastMoveDir。
+    for (const p of this.livingPlayers()) {
+      p.entity.vel = { x: p.moveInput.x * p.stats.moveSpeed, y: p.moveInput.y * p.stats.moveSpeed }
+      applyVelocity(p.entity, dt)
+      if (p.moveInput.x !== 0 || p.moveInput.y !== 0) {
+        const len = Math.hypot(p.moveInput.x, p.moveInput.y) || 1
+        p.lastMoveDir = { x: p.moveInput.x / len, y: p.moveInput.y / len }
+      }
     }
 
     // 2) 生怪：計時器歸零時，依目前時間決定下次間隔（難度曲線），並在玩家周圍隨機生一隻。
     this.spawnTimer -= dt
     if (this.spawnTimer <= 0) {
-      this.spawnTimer = spawnInterval(this.elapsed) * this.mapSpawnIntervalMult
+      this.spawnTimer = (spawnInterval(this.elapsed) * this.mapSpawnIntervalMult) / this.playerCount
       const pos = spawnPositionAround(this.player.pos, SPAWN_RADIUS, this.rng.next())
       const kind = pickEnemyKind(this.elapsed, this.rng)
       if (kind === 'bacteria') this.spawnSwarmAt(pos)
@@ -478,19 +504,20 @@ export class World {
       this.pendingEvent = undefined // 終局 Boss 起，事件排程閘住，清掉殘留挑選
     }
 
-    // 3) 敵人 AI：每隻朝玩家轉向後位移。
+    // 3) 敵人 AI：每隻朝最近的存活玩家轉向後位移。
     for (const e of this.enemies) {
       if (!e.active) continue
       if (e.affix === 'regen') {
         e.hp = Math.min(e.maxHp, e.hp + e.maxHp * ELITE_AFFIX_DEFS.regen.regenPerSec * dt)
       }
-      steerEnemy(e, this.player.pos, dt)
+      const target = this.nearestLivingPlayer(e.pos).entity
+      steerEnemy(e, target.pos, dt)
       applyVelocity(e, dt)
-      // 噴吐病原：固定間隔朝玩家當前位置吐一發毒液彈。
+      // 噴吐病原：固定間隔朝最近存活玩家當前位置吐一發毒液彈。
       if (e.enemyKind === 'spitter') {
         const spit = ENEMY_DEFS.spitter.spit!
         if (spitterTick(e, dt, spit.interval)) {
-          const dx = this.player.pos.x - e.pos.x, dy = this.player.pos.y - e.pos.y
+          const dx = target.pos.x - e.pos.x, dy = target.pos.y - e.pos.y
           const len = Math.hypot(dx, dy) || 1
           this.enemyProjectiles.push(
             createEnemyProjectile(e.pos, { x: dx / len, y: dy / len }, spit.projSpeed, spit.projDamage),
@@ -503,101 +530,103 @@ export class World {
     // 3b) 重建敵人空間網格（敵人移動後、碰撞查詢前），供本格鄰近查詢使用。
     this.rebuildEnemyGrid()
 
-    // 4) 武器：遍歷每把武器，各自倒數冷卻並結算行為（生效值 = 等級值 × 全域乘區）。
-    for (const weapon of this.weapons) {
-      const def = WEAPON_DEFS[weapon.kind]
-      const lvl = this.effectiveLevel(weapon)
-      const evo = weapon.evolved ? def.evolution : undefined
-      const damage = lvl.damage * this.stats.damageMult
+    // 4) 武器：每位存活玩家各自的武器，瞄準離自己最近的敵人、用自己 stats 開火。
+    for (const p of this.livingPlayers()) {
+      for (const weapon of p.weapons) {
+        const def = WEAPON_DEFS[weapon.kind]
+        const lvl = this.effectiveLevel(weapon)
+        const evo = weapon.evolved ? def.evolution : undefined
+        const damage = lvl.damage * p.stats.damageMult
 
-      if (weapon.kind === 'antibody' || weapon.kind === 'perforin') {
-        weapon.cooldownTimer -= dt
-        if (weapon.cooldownTimer <= 0) {
-          weapon.cooldownTimer = (lvl.cooldown ?? 0.5) * this.stats.cooldownMult
-          const speed = (lvl.projectileSpeed ?? 400) * this.stats.projectileSpeedMult
-          const count = lvl.count ?? 1
-          const projs =
-            weapon.kind === 'antibody'
-              ? fireWand(this.player.pos, this.enemies, count, damage, speed)
-              : fireKnife(this.player.pos, this.lastMoveDir, count, damage, speed)
-          if (evo) {
-            for (const p of projs) {
-              p.evolved = true
-              if (evo.pierce) { p.pierce = evo.pierce; p.hitEnemies = [] }
+        if (weapon.kind === 'antibody' || weapon.kind === 'perforin') {
+          weapon.cooldownTimer -= dt
+          if (weapon.cooldownTimer <= 0) {
+            weapon.cooldownTimer = (lvl.cooldown ?? 0.5) * p.stats.cooldownMult
+            const speed = (lvl.projectileSpeed ?? 400) * p.stats.projectileSpeedMult
+            const count = lvl.count ?? 1
+            const projs =
+              weapon.kind === 'antibody'
+                ? fireWand(p.entity.pos, this.enemies, count, damage, speed)
+                : fireKnife(p.entity.pos, p.lastMoveDir, count, damage, speed)
+            if (evo) {
+              for (const proj of projs) {
+                proj.evolved = true
+                if (evo.pierce) { proj.pierce = evo.pierce; proj.hitEnemies = [] }
+              }
+            }
+            this.projectiles.push(...projs)
+            if (projs.length > 0) this.soundEventQueue.push('shoot')
+          }
+        } else if (weapon.kind === 'inflammation') {
+          // 大蒜：每格對範圍內敵人連續扣血（dmg*dt），命中後結算死亡。
+          const radius = (lvl.radius ?? 70) * p.stats.areaMult
+          const cands = this.enemyGrid.queryRadius(
+            p.entity.pos.x, p.entity.pos.y, radius + MAX_ENEMY_RADIUS,
+          )
+          garlicTick(p.entity.pos, cands, radius, damage, dt)
+          if (evo?.fieldRegen && p.entity.hp > 0) {
+            p.entity.hp = Math.min(p.entity.maxHp, p.entity.hp + evo.fieldRegen * dt)
+          }
+          this.checkKills()
+        } else if (weapon.kind === 'phagocyte') {
+          weapon.cooldownTimer -= dt
+          if (weapon.cooldownTimer <= 0) {
+            weapon.cooldownTimer = (lvl.cooldown ?? 0.7) * p.stats.cooldownMult
+            const radius = (lvl.radius ?? 70) * p.stats.areaMult
+            const cands = this.enemyGrid.queryRadius(
+              p.entity.pos.x, p.entity.pos.y, radius + MAX_ENEMY_RADIUS,
+            )
+            const halfAngle = evo?.halfAngle ?? PHAGOCYTE_HALF_ANGLE
+            const hits = phagocyteSweep(p.entity.pos, p.lastMoveDir, cands, radius, halfAngle, damage)
+            if (hits.length > 0) {
+              this.checkKills()
+              this.soundEventQueue.push('hit')
+              this.fxEventQueue.push({
+                kind: 'sweep', x: p.entity.pos.x, y: p.entity.pos.y,
+                angle: Math.atan2(p.lastMoveDir.y, p.lastMoveDir.x), radius, halfAngle,
+              })
             }
           }
-          this.projectiles.push(...projs)
-          if (projs.length > 0) this.soundEventQueue.push('shoot')
-        }
-      } else if (weapon.kind === 'inflammation') {
-        // 大蒜：每格對範圍內敵人連續扣血（dmg*dt），命中後結算死亡。
-        const radius = (lvl.radius ?? 70) * this.stats.areaMult
-        const cands = this.enemyGrid.queryRadius(
-          this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
-        )
-        garlicTick(this.player.pos, cands, radius, damage, dt)
-        if (evo?.fieldRegen && this.player.hp > 0) {
-          this.player.hp = Math.min(this.player.maxHp, this.player.hp + evo.fieldRegen * dt)
-        }
-        this.checkKills()
-      } else if (weapon.kind === 'phagocyte') {
-        weapon.cooldownTimer -= dt
-        if (weapon.cooldownTimer <= 0) {
-          weapon.cooldownTimer = (lvl.cooldown ?? 0.7) * this.stats.cooldownMult
-          const radius = (lvl.radius ?? 70) * this.stats.areaMult
-          const cands = this.enemyGrid.queryRadius(
-            this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
-          )
-          const halfAngle = evo?.halfAngle ?? PHAGOCYTE_HALF_ANGLE
-          const hits = phagocyteSweep(this.player.pos, this.lastMoveDir, cands, radius, halfAngle, damage)
-          if (hits.length > 0) {
-            this.checkKills()
-            this.soundEventQueue.push('hit')
-            this.fxEventQueue.push({
-              kind: 'sweep', x: this.player.pos.x, y: this.player.pos.y,
-              angle: Math.atan2(this.lastMoveDir.y, this.lastMoveDir.x), radius, halfAngle,
-            })
+        } else if (weapon.kind === 'cascade') {
+          weapon.cooldownTimer -= dt
+          if (weapon.cooldownTimer <= 0) {
+            weapon.cooldownTimer = (lvl.cooldown ?? 1.0) * p.stats.cooldownMult
+            const jumps = lvl.count ?? 3
+            const range = (lvl.radius ?? 160) * p.stats.areaMult
+            const targets = chainTargets(p.entity.pos, this.enemies, jumps, range)
+            if (targets.length > 0) {
+              const falloff = evo?.noFalloff ? 1 : CASCADE_FALLOFF
+              for (let k = 0; k < targets.length; k++) targets[k].hp -= damage * Math.pow(falloff, k)
+              this.checkKills()
+              this.soundEventQueue.push('hit')
+              this.fxEventQueue.push({
+                kind: 'chain',
+                points: [{ x: p.entity.pos.x, y: p.entity.pos.y }, ...targets.map((t) => ({ x: t.pos.x, y: t.pos.y }))],
+              })
+            }
+          }
+        } else if (weapon.kind === 'nova') {
+          weapon.cooldownTimer -= dt
+          if (weapon.cooldownTimer <= 0) {
+            weapon.cooldownTimer = (lvl.cooldown ?? 1.6) * p.stats.cooldownMult
+            const radius = (lvl.radius ?? 120) * p.stats.areaMult
+            const cands = this.enemyGrid.queryRadius(
+              p.entity.pos.x, p.entity.pos.y, radius + MAX_ENEMY_RADIUS,
+            )
+            const hits = novaBurst(p.entity.pos, cands, radius, damage)
+            if (hits.length > 0) {
+              this.checkKills()
+              this.soundEventQueue.push('hit')
+              this.fxEventQueue.push({ kind: 'nova', x: p.entity.pos.x, y: p.entity.pos.y, radius })
+            }
           }
         }
-      } else if (weapon.kind === 'cascade') {
-        weapon.cooldownTimer -= dt
-        if (weapon.cooldownTimer <= 0) {
-          weapon.cooldownTimer = (lvl.cooldown ?? 1.0) * this.stats.cooldownMult
-          const jumps = lvl.count ?? 3
-          const range = (lvl.radius ?? 160) * this.stats.areaMult
-          const targets = chainTargets(this.player.pos, this.enemies, jumps, range)
-          if (targets.length > 0) {
-            const falloff = evo?.noFalloff ? 1 : CASCADE_FALLOFF
-            for (let k = 0; k < targets.length; k++) targets[k].hp -= damage * Math.pow(falloff, k)
-            this.checkKills()
-            this.soundEventQueue.push('hit')
-            this.fxEventQueue.push({
-              kind: 'chain',
-              points: [{ x: this.player.pos.x, y: this.player.pos.y }, ...targets.map((t) => ({ x: t.pos.x, y: t.pos.y }))],
-            })
-          }
-        }
-      } else if (weapon.kind === 'nova') {
-        weapon.cooldownTimer -= dt
-        if (weapon.cooldownTimer <= 0) {
-          weapon.cooldownTimer = (lvl.cooldown ?? 1.6) * this.stats.cooldownMult
-          const radius = (lvl.radius ?? 120) * this.stats.areaMult
-          const cands = this.enemyGrid.queryRadius(
-            this.player.pos.x, this.player.pos.y, radius + MAX_ENEMY_RADIUS,
-          )
-          const hits = novaBurst(this.player.pos, cands, radius, damage)
-          if (hits.length > 0) {
-            this.checkKills()
-            this.soundEventQueue.push('hit')
-            this.fxEventQueue.push({ kind: 'nova', x: this.player.pos.x, y: this.player.pos.y, radius })
-          }
-        }
+        // bible 的位置與命中於下方步驟 4b 統一處理
       }
-      // bible 的位置與命中於下方步驟 4b 統一處理
     }
 
-    // 4b) 聖經：依目前持有的聖經（若有）重建環繞物、更新位置並結算命中。
-    this.updateBible(dt)
+    // 4b) 聖經：每位存活玩家各自的環繞物。
+    for (const p of this.livingPlayers()) this.updateBibleFor(p, dt)
 
     // 5) 子彈飛行與命中：先位移、再倒數壽命；命中第一隻敵人即扣血並讓子彈失效，
     //    敵人血量歸零則記擊殺並在原地掉落經驗寶石。
@@ -625,77 +654,91 @@ export class World {
       }
     }
 
-    // 5b) 敵方投射物：飛行 + 壽命；與玩家重疊即扣血（套護甲）後消耗。
-    for (const p of this.enemyProjectiles) {
-      if (!p.active) continue
-      applyVelocity(p, dt)
-      p.life -= dt
-      if (p.life <= 0) { p.active = false; continue }
-      if (circlesOverlap(p, this.player)) {
-        this.player.hp -= Math.max(0, p.damage - this.stats.armor)
-        this.soundEventQueue.push('hurt')
-        p.active = false
+    // 5b) 敵方投射物：飛行 + 壽命；與存活玩家重疊即扣血（套該玩家護甲）後消耗。
+    for (const proj of this.enemyProjectiles) {
+      if (!proj.active) continue
+      applyVelocity(proj, dt)
+      proj.life -= dt
+      if (proj.life <= 0) { proj.active = false; continue }
+      for (const p of this.livingPlayers()) {
+        if (circlesOverlap(proj, p.entity)) {
+          p.entity.hp -= Math.max(0, proj.damage - p.stats.armor)
+          this.soundEventQueue.push('hurt')
+          proj.active = false
+          break
+        }
       }
     }
 
-    // 6) 寶石：進入感應半徑後朝玩家吸取並位移；碰到玩家本體即拾取並給經驗。
-    // 全場吸取（vacuum）啟動期間：不分距離吸引全部寶石、加速飛向玩家。
-    if (this.vacuumTimer > 0) this.vacuumTimer = Math.max(0, this.vacuumTimer - dt)
-    const gemRadius = this.vacuumTimer > 0 ? Infinity : this.stats.pickupRadius
-    const gemPull = this.vacuumTimer > 0 ? VACUUM_PULL_SPEED : GEM_PULL_SPEED
+    // 6) 寶石：每顆找最近的存活玩家為吸引者，位移一次後若進入其半徑則由其收取。
+    // vacuum 倒數逐玩家各自遞減；吸引者的 vacuum 狀態決定吸力參數。
+    for (const p of this.livingPlayers()) {
+      if (p.vacuumTimer > 0) p.vacuumTimer = Math.max(0, p.vacuumTimer - dt)
+    }
     for (const g of this.gemEntities) {
       if (!g.active) continue
-      attractGem(g, this.player.pos, gemRadius, gemPull)
+      const p = this.nearestLivingPlayer(g.pos)
+      const vac = p.vacuumTimer > 0
+      attractGem(g, p.entity.pos, vac ? Infinity : p.stats.pickupRadius, vac ? VACUUM_PULL_SPEED : GEM_PULL_SPEED)
       applyVelocity(g, dt)
-      if (distance(g.pos, this.player.pos) <= this.player.radius) {
+      if (distance(g.pos, p.entity.pos) <= p.entity.radius) {
         g.active = false
-        this.grantXp(g.xp * this.stats.xpGain)
+        this.grantXpTo(p, g.xp * p.stats.xpGain)
         // 寶石收取不發音（每顆都響太頻繁）；heal/vacuum 撿取物仍有音效
       }
     }
 
-    // 6b) 寶箱：吸取並位移；碰到玩家本體即收取並觸發一次免費升級（pendingLevelUps）。
+    // 6b) 寶箱：吸取並位移；碰到最近玩家本體即收取並觸發一次免費升級（pendingLevelUps）。
     for (const c of this.chestEntities) {
       if (!c.active) continue
-      attractGem(c, this.player.pos, this.stats.pickupRadius, GEM_PULL_SPEED)
+      const p = this.nearestLivingPlayer(c.pos)
+      attractGem(c, p.entity.pos, p.stats.pickupRadius, GEM_PULL_SPEED)
       applyVelocity(c, dt)
-      if (distance(c.pos, this.player.pos) <= this.player.radius) {
+      if (distance(c.pos, p.entity.pos) <= p.entity.radius) {
         c.active = false
-        this.pendingLevelUps += 1
+        p.pendingLevelUps += 1
         this.soundEventQueue.push('chest')
       }
     }
 
-    // 6c) 撿取物：吸取並位移；碰玩家本體即拾取並套用效果。
+    // 6c) 撿取物：吸取並位移；碰最近玩家本體即拾取並套用效果。
     for (const pk of this.pickupEntities) {
       if (!pk.active) continue
-      attractGem(pk, this.player.pos, this.stats.pickupRadius, GEM_PULL_SPEED)
+      const p = this.nearestLivingPlayer(pk.pos)
+      attractGem(pk, p.entity.pos, p.stats.pickupRadius, GEM_PULL_SPEED)
       applyVelocity(pk, dt)
-      if (distance(pk.pos, this.player.pos) <= this.player.radius) {
+      if (distance(pk.pos, p.entity.pos) <= p.entity.radius) {
         pk.active = false
-        this.applyPickup(pk.pickupKind!)
+        this.applyPickupTo(p, pk.pickupKind!)
       }
     }
 
-    // 7) 敵人接觸傷害：與玩家重疊時持續扣血（乘 dt*10 換算成每秒傷害）；armor 固定減傷。
-    const contactCands = this.enemyGrid.queryRadius(
-      this.player.pos.x, this.player.pos.y, this.player.radius + MAX_ENEMY_RADIUS,
-    )
-    for (const e of contactCands) {
-      if (!e.active) continue
-      if (circlesOverlap(e, this.player)) {
-        this.player.hp -= Math.max(0, e.damage - this.stats.armor) * dt * 10
-        this.soundEventQueue.push('hurt')
+    // 7) 敵人接觸傷害：對每位存活玩家，與其重疊的敵人持續扣血（套該玩家護甲）。
+    for (const p of this.livingPlayers()) {
+      const contactCands = this.enemyGrid.queryRadius(p.entity.pos.x, p.entity.pos.y, p.entity.radius + MAX_ENEMY_RADIUS)
+      for (const e of contactCands) {
+        if (!e.active) continue
+        if (circlesOverlap(e, p.entity)) {
+          p.entity.hp -= Math.max(0, e.damage - p.stats.armor) * dt * 10
+          this.soundEventQueue.push('hurt')
+        }
       }
     }
 
-    // 7b) 回復：每格依 regen 回血（僅存活時，夾 maxHp）。
-    if (this.player.hp > 0 && this.stats.regen > 0) {
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.stats.regen * dt)
+    // 7b) 回復：每位玩家依即時 hp 與 regen 回血（夾 maxHp）。
+    // 注意：此處不用 livingPlayers()（依上格 alive 旗標），而是用即時 hp > 0 守衛，
+    // 以確保「接觸傷害將 hp 壓至 0 以下」的當格不被 regen 救回（N=1 等價紅線）。
+    for (const p of this.players) {
+      if (p.entity.hp > 0 && p.stats.regen > 0) {
+        p.entity.hp = Math.min(p.entity.maxHp, p.entity.hp + p.stats.regen * dt)
+      }
     }
 
     // 7c) 補漏殺：掃描所有 hp<=0 但尚未結算的敵人（含外部設值、接觸傷害等非武器路徑）。
     this.checkKills()
+
+    // 7d) 同步玩家存活旗標（hp<=0 即觀戰，不再參與 living 計算）。
+    for (const p of this.players) p.alive = p.entity.hp > 0
 
     // 8) 清理：本格結束後一次篩除所有死亡／失效的 entity。
     this.enemies = this.enemies.filter((e) => e.active)
@@ -707,52 +750,53 @@ export class World {
   }
 
   /**
-   * 聖經：依目前持有的聖經重建/更新環繞物位置，並結算對敵人的命中（含 per-enemy 命中冷卻）。
-   * 未持有聖經時清空環繞物。
+   * 聖經（逐玩家）：依指定玩家持有的聖經重建/更新環繞物位置，並結算對敵人的命中（含 per-enemy 命中冷卻）。
+   * 未持有聖經時清空該玩家的環繞物。
+   * @param p  目標玩家狀態。
    * @param dt 固定步長秒數。
    */
-  private updateBible(dt: number): void {
-    const bible = this.weapons.find((w) => w.kind === 'complement')
+  private updateBibleFor(p: PlayerState, dt: number): void {
+    const bible = p.weapons.find((w) => w.kind === 'complement')
     if (!bible) {
-      this.orbitEntities = []
+      p.orbitEntities = []
       return
     }
     const evo = bible.evolved ? WEAPON_DEFS.complement.evolution : undefined
     const lvl = evo ? evo.level : WEAPON_DEFS.complement.levels[bible.level - 1]
     const hitCooldown = evo?.hitCooldown ?? 0.5
     const count = lvl.count ?? 1
-    const radius = (lvl.radius ?? 90) * this.stats.areaMult
-    const damage = lvl.damage * this.stats.damageMult
-    this.bibleAngle += (lvl.angularSpeed ?? 2.5) * dt
+    const radius = (lvl.radius ?? 90) * p.stats.areaMult
+    const damage = lvl.damage * p.stats.damageMult
+    p.bibleAngle += (lvl.angularSpeed ?? 2.5) * dt
 
     // 重建環繞物數量以對齊 count，並更新位置與傷害。
-    const pts = orbitPositions(this.player.pos, count, radius, this.bibleAngle)
-    if (this.orbitEntities.length !== count) {
-      this.orbitEntities = pts.map((p) => createOrbit(p, damage))
+    const pts = orbitPositions(p.entity.pos, count, radius, p.bibleAngle)
+    if (p.orbitEntities.length !== count) {
+      p.orbitEntities = pts.map((orb) => createOrbit(orb, damage))
     } else {
       for (let i = 0; i < count; i++) {
-        this.orbitEntities[i].pos = pts[i]
-        this.orbitEntities[i].damage = damage
+        p.orbitEntities[i].pos = pts[i]
+        p.orbitEntities[i].damage = damage
       }
     }
 
     // 命中冷卻倒數（過期或敵人失效即移除）。
-    for (const [e, t] of this.bibleHitTimers) {
+    for (const [e, t] of p.bibleHitTimers) {
       const nt = t - dt
-      if (nt <= 0 || !e.active) this.bibleHitTimers.delete(e)
-      else this.bibleHitTimers.set(e, nt)
+      if (nt <= 0 || !e.active) p.bibleHitTimers.delete(e)
+      else p.bibleHitTimers.set(e, nt)
     }
     // 環繞物對重疊敵人扣血（冷卻外才扣）。
-    for (const orb of this.orbitEntities) {
+    for (const orb of p.orbitEntities) {
       const cands = this.enemyGrid.queryRadius(orb.pos.x, orb.pos.y, orb.radius + MAX_ENEMY_RADIUS)
       for (const e of cands) {
         if (!e.active) continue
-        if (this.bibleHitTimers.has(e)) continue
+        if (p.bibleHitTimers.has(e)) continue
         const dx = orb.pos.x - e.pos.x
         const dy = orb.pos.y - e.pos.y
         if (Math.hypot(dx, dy) <= orb.radius + e.radius) {
           e.hp -= orb.damage
-          this.bibleHitTimers.set(e, hitCooldown) // 進化縮短命中冷卻
+          p.bibleHitTimers.set(e, hitCooldown) // 進化縮短命中冷卻
         }
       }
     }
@@ -812,30 +856,31 @@ export class World {
     }
   }
 
-  /** 撿取物掉落：獨立 seeded rng；一次擊殺最多一個（heal/vacuum 互斥）；heal 僅低血 mercy。 */
+  /** 撿取物掉落：獨立 seeded rng；一次擊殺最多一個（heal/vacuum 互斥）；heal 僅任一存活玩家低血 mercy。 */
   private maybeDropPickup(pos: Vec2): void {
     const r = this.pickupRng.next()
-    if (this.player.hp < this.player.maxHp * HEAL_DROP_HP_FRAC && r < HEAL_DROP_CHANCE) {
+    const anyLow = this.players.some((p) => p.entity.hp > 0 && p.entity.hp < p.entity.maxHp * HEAL_DROP_HP_FRAC)
+    if (anyLow && r < HEAL_DROP_CHANCE) {
       this.pickupEntities.push(createPickup(pos, 'heal'))
     } else if (r >= HEAL_DROP_CHANCE && r < HEAL_DROP_CHANCE + VACUUM_DROP_CHANCE) {
       this.pickupEntities.push(createPickup(pos, 'vacuum'))
     }
   }
 
-  /** 套用撿取物效果：heal 回血（夾上限）；vacuum 收全場寶石轉經驗。 */
-  private applyPickup(kind: PickupKind): void {
+  /** 套用指定玩家的撿取物效果：heal 回血（夾上限）；vacuum 啟動該玩家的全場吸取計時器。 */
+  private applyPickupTo(p: PlayerState, kind: PickupKind): void {
     if (kind === 'heal') {
-      this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * HEAL_FRAC)
+      p.entity.hp = Math.min(p.entity.maxHp, p.entity.hp + p.entity.maxHp * HEAL_FRAC)
     } else {
       // 全場吸取：啟動 vacuum 期間，寶石迴圈會把全部寶石加速吸向玩家、逐顆收取（保留飛行手感）。
-      this.vacuumTimer = VACUUM_DURATION
+      p.vacuumTimer = VACUUM_DURATION
     }
     this.soundEventQueue.push('pickup')
   }
 
-  /** @returns 玩家是否已死亡（hp <= 0）。 */
+  /** @returns 玩家是否已死亡（players[0] hp <= 0）；N=1 行為與現況一致。 */
   isPlayerDead(): boolean {
-    return this.player.hp <= 0
+    return this.players[0].entity.hp <= 0
   }
 
   /** @returns 是否已通關（擊敗終局 Boss）。 */

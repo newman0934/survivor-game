@@ -196,6 +196,16 @@ describe('World', () => {
     expect(kinds.every((k) => k !== undefined)).toBe(true)
   })
 
+  it('各玩家依自己輸入移動', () => {
+    const w = new World(1, ['macrophage', 'neutrophil'])
+    const x0 = w.players[0].entity.pos.x, x1 = w.players[1].entity.pos.x
+    w.setMoveInput(0, { x: 1, y: 0 })
+    w.setMoveInput(1, { x: -1, y: 0 })
+    for (let i = 0; i < 30; i++) w.step(1 / 60)
+    expect(w.players[0].entity.pos.x).toBeGreaterThan(x0)
+    expect(w.players[1].entity.pos.x).toBeLessThan(x1)
+  })
+
   it('spawnSwarmAt 一次生成 4 隻 swarm', () => {
     const w = new World(1)
     const before = w.enemies.length
@@ -706,5 +716,147 @@ describe('撿取物效果', () => {
     const w = new World(1, 'macrophage', 'stomach') // stomach enemyHpMult 1.25
     const b = w.spawnFinalBossAt({ x: 100, y: 0 })
     expect(b.maxHp).toBe(4000)
+  })
+})
+
+describe('多玩家武器', () => {
+  it('各玩家武器各自開火（兩玩家分處兩地各自產生子彈）', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[1].entity.pos = { x: 2000, y: 0 }
+    // 在兩玩家附近各放一隻敵人，讓 antibody 有目標
+    w.spawnEnemyAt({ x: w.players[0].entity.pos.x + 40, y: 0 })
+    w.spawnEnemyAt({ x: 2040, y: 0 })
+    w.forceFire()
+    w.step(1 / 60)
+    const near0 = w.projectiles.some((p) => Math.abs(p.pos.x - w.players[0].entity.pos.x) < 60)
+    const near1 = w.projectiles.some((p) => Math.abs(p.pos.x - 2000) < 60)
+    expect(near0).toBe(true)
+    expect(near1).toBe(true)
+  })
+})
+
+describe('死亡/觀戰 + hasLost + 確定性', () => {
+  it('一名玩家死亡仍續跑、敵人改追存活者', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.pos = { x: -500, y: 0 }
+    w.players[1].entity.pos = { x: 500, y: 0 }
+    w.players[0].entity.hp = 0
+    w.step(1 / 60)
+    expect(w.players[0].alive).toBe(false)
+    expect(w.hasLost()).toBe(false)
+    const e = w.spawnEnemyAt({ x: 0, y: 0 })
+    for (let i = 0; i < 30; i++) w.step(1 / 60)
+    expect(e.pos.x).toBeGreaterThan(0) // 朝存活的玩家 1（+500）移動
+  })
+
+  it('全員死亡 hasLost 為 true；N=1 與 isPlayerDead 等價', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.hp = 0; w.players[1].entity.hp = 0
+    w.step(1 / 60)
+    expect(w.hasLost()).toBe(true)
+    const s = new World(1)
+    s.player.hp = 0
+    s.step(1 / 60)
+    expect(s.isPlayerDead()).toBe(true)
+    expect(s.hasLost()).toBe(true)
+  })
+
+  it('相同 seed + 相同角色陣列 + 相同輸入 → 兩局一致', () => {
+    const run = () => {
+      const w = new World(42, ['macrophage', 'neutrophil'])
+      for (let i = 0; i < 300; i++) {
+        w.setMoveInput(0, { x: 1, y: 0 }); w.setMoveInput(1, { x: 0, y: 1 })
+        w.step(1 / 60)
+      }
+      return [w.enemies.length, Math.round(w.players[0].entity.pos.x), Math.round(w.players[1].entity.pos.y), w.players[0].level]
+    }
+    expect(run()).toEqual(run())
+  })
+})
+
+describe('多玩家建構', () => {
+  it('陣列角色建立多名玩家、各自起始武器', () => {
+    const w = new World(1, ['macrophage', 'neutrophil'])
+    expect(w.playerCount).toBe(2)
+    expect(w.players[0].weapons[0].kind).toBe('antibody')
+    expect(w.players[1].weapons[0].kind).toBe('perforin')
+    expect(w.players[1].entity.maxHp).toBe(80) // neutrophil
+  })
+
+  it('單一角色與省略仍為 N=1', () => {
+    expect(new World(1).playerCount).toBe(1)
+    expect(new World(1, 'nkcell').playerCount).toBe(1)
+  })
+
+  it('全員存活時 hasLost 為 false', () => {
+    const w = new World(1, ['macrophage', 'neutrophil'])
+    expect(w.hasLost()).toBe(false)
+  })
+
+  it('敵人追最近的存活玩家', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.pos = { x: -500, y: 0 }
+    w.players[1].entity.pos = { x: 500, y: 0 }
+    const e = w.spawnEnemyAt({ x: 480, y: 0 }) // 靠近玩家 1
+    const dBefore = Math.abs(e.pos.x - 500)
+    for (let i = 0; i < 30; i++) w.step(1 / 60)
+    expect(Math.abs(e.pos.x - 500)).toBeLessThan(dBefore) // 朝玩家 1 靠近
+  })
+
+  it('接觸傷害只打到重疊的玩家', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.pos = { x: -500, y: 0 }
+    w.players[1].entity.pos = { x: 500, y: 0 }
+    const hp0 = w.players[0].entity.hp, hp1 = w.players[1].entity.hp
+    w.spawnEnemyAt({ x: 500, y: 0 }) // 與玩家 1 重疊
+    w.step(1 / 60)
+    expect(w.players[1].entity.hp).toBeLessThan(hp1)
+    expect(w.players[0].entity.hp).toBe(hp0)
+  })
+
+  it('寶石只給碰到它的玩家經驗（各自升級）', () => {
+    const w = new World(1, ['macrophage', 'macrophage'])
+    w.players[0].entity.pos = { x: -1000, y: 0 }
+    w.players[1].entity.pos = { x: 1000, y: 0 }
+    w.players[0].stats.pickupRadius = 0
+    w.players[1].stats.pickupRadius = 0
+    const before1 = w.players[1].xp + w.players[1].level
+    // 在玩家 1 腳下放一顆大經驗寶石
+    w.spawnGemForTest({ x: 1000, y: 0 }, 100)
+    w.step(1 / 60)
+    expect(w.players[1].xp + w.players[1].level).toBeGreaterThan(before1)
+    expect(w.players[0].xp).toBe(0)
+    expect(w.players[0].level).toBe(1)
+  })
+
+  it('生怪間隔依人數縮短（2 人為一半）', () => {
+    let c1 = 0, c2 = 0
+    const w1b = new World(2)
+    const w2b = new World(2, ['macrophage', 'macrophage'])
+    for (let i = 0; i < 10 * 60; i++) { w1b.step(1 / 60); w2b.step(1 / 60) }
+    c1 = w1b.enemies.length
+    c2 = w2b.enemies.length
+    expect(c2).toBeGreaterThan(c1) // 2 人生怪更多
+  })
+
+  it('Boss 與終局 Boss hp 依人數放大', () => {
+    const w1 = new World(1)
+    const w2 = new World(1, ['macrophage', 'macrophage'])
+    const b1 = w1.spawnBossAt({ x: 100, y: 0 })
+    const b2 = w2.spawnBossAt({ x: 100, y: 0 })
+    expect(b2.maxHp).toBeCloseTo(b1.maxHp * 2, 5)
+    const f1 = w1.spawnFinalBossAt({ x: 100, y: 0 })
+    const f2 = w2.spawnFinalBossAt({ x: 100, y: 0 })
+    expect(f2.maxHp).toBe(f1.maxHp * 2)
+  })
+})
+
+describe('N=1 回復紅線', () => {
+  it('持回復被動的玩家瀕死當格不被回血救回（N=1 等價）', () => {
+    const w = new World(1)
+    w.stats.regen = 0.6 // 模擬 tomato 回復被動
+    w.player.hp = -0.005 // 落在 (-regen*dt, 0] 區間
+    w.step(1 / 60)
+    expect(w.isPlayerDead()).toBe(true)
   })
 })
