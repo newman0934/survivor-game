@@ -21,16 +21,17 @@ import { steerEnemy, spitterTick } from './systems/enemyAI'
 import { ENEMY_DEFS, ENEMY_ORDER } from './systems/enemyDefs'
 import { SpatialGrid } from './core/spatialGrid'
 import { CHARACTER_DEFS } from './systems/characterDefs'
-import { PASSIVE_DEFS } from './systems/passiveDefs'
+import { PASSIVE_DEFS, PASSIVE_ORDER } from './systems/passiveDefs'
 import { MAP_DEFS } from './systems/mapDefs'
 import { fireWand, fireKnife, orbitPositions, garlicTick,
   phagocyteSweep, chainTargets, novaBurst, PHAGOCYTE_HALF_ANGLE, CASCADE_FALLOFF } from './systems/weapons'
-import { WEAPON_DEFS } from './systems/weaponDefs'
-import { ELITE_AFFIX_DEFS } from './systems/eliteDefs'
+import { WEAPON_DEFS, WEAPON_ORDER } from './systems/weaponDefs'
+import { ELITE_AFFIX_DEFS, ELITE_AFFIX_ORDER } from './systems/eliteDefs'
 import { pickEvent, pickAffix } from './systems/events'
 import { GAME_EVENT_DEFS } from './systems/eventDefs'
 import { circlesOverlap } from './systems/collision'
 import { attractGem } from './systems/pickup'
+import { Checksum } from './core/checksum'
 import { xpForLevel, applyUpgradeById, rollUpgrades } from './systems/leveling'
 import type { Summary, LoadoutSnapshot, UpgradeDescriptor } from '../stores/game'
 
@@ -963,6 +964,48 @@ export class World {
       weapons: this.weapons.map((w) => ({ kind: w.kind, level: w.level, evolved: !!w.evolved })),
       passives: this.passives.map((p) => ({ kind: p.kind, level: p.level })),
     }
+  }
+
+  /**
+   * 規範化模擬狀態的確定性雜湊（供回放確定性測試與未來連線 desync 偵測）。
+   * 以固定順序餵入標量、各玩家、各敵人與各類實體計數；唯讀、不改狀態。
+   */
+  checksum(): number {
+    const c = new Checksum()
+    c.add(this.elapsed)
+    c.addInt(this.playerCount)
+    c.addInt(this.bossCount)
+    c.addInt(this.finalBossSpawned ? 1 : 0)
+    c.addInt(this.won ? 1 : 0)
+    c.add(this.spawnTimer); c.add(this.bossTimer); c.add(this.eventTimer)
+    for (const p of this.players) {
+      c.add(p.entity.pos.x); c.add(p.entity.pos.y)
+      c.add(p.entity.hp); c.add(p.entity.maxHp)
+      c.addInt(p.level); c.add(p.xp); c.addInt(p.pendingLevelUps); c.addInt(p.alive ? 1 : 0)
+      c.addInt(p.weapons.length)
+      for (const w of p.weapons) {
+        c.addInt(WEAPON_ORDER.indexOf(w.kind)); c.addInt(w.level); c.addInt(w.evolved ? 1 : 0)
+      }
+      c.addInt(p.passives.length)
+      for (const ps of p.passives) {
+        c.addInt(PASSIVE_ORDER.indexOf(ps.kind)); c.addInt(ps.level)
+      }
+    }
+    c.addInt(this.enemies.length)
+    for (const e of this.enemies) {
+      c.add(e.pos.x); c.add(e.pos.y); c.add(e.hp)
+      c.addInt(e.enemyKind ? ENEMY_ORDER.indexOf(e.enemyKind) : -1)
+      c.addInt(e.affix ? ELITE_AFFIX_ORDER.indexOf(e.affix) : -1)
+    }
+    c.addInt(this.projectiles.length)
+    c.addInt(this.enemyProjectiles.length)
+    c.addInt(this.chestEntities.length)
+    c.addInt(this.pickupEntities.length)
+    c.addInt(this.gemEntities.length)
+    let gemXp = 0
+    for (const g of this.gemEntities) gemXp += g.xp
+    c.add(gemXp)
+    return c.value()
   }
 
   /**
