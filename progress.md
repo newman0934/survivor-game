@@ -64,6 +64,13 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 終局 Boss / 勝利條件（Spec B） — run 改有限關卡：15:00 生成終局 Boss（新敵種 finalboss，停 60s Boss/事件）→ 擊敗即通關（新 `won` phase + 勝利畫面）；存檔記 cleared/clears、排行榜 ★ 標記 → specs/final-boss-victory/
 - [ ] 解鎖 — 用 `CumulativeStats` 鎖/解角色與地圖（尚未開始）
 
+### 多人合作連線（規畫見 specs/2026-06-26-multiplayer-coop-design.md，4 子專案 1→2→3→4）
+- [x] 子專案 1A — 多玩家 World 結構重構：`World` 改 `players: PlayerState[]`，移動/武器/聖經/敵人AI/接觸傷害/經驗/撿取逐玩家化、難度依人數（生怪÷N、Boss/終局 Boss hp×N）、死亡觀戰/hasLost；相容存取器保 N=1 零退化（Game/renderer 零改動）→ specs/coop-multiplayer-world/
+- [ ] 子專案 1B — 非阻塞升級流程（D-1：世界不暫停 + 逾時確定性自動選）（尚未開始）
+- [ ] 子專案 2 — 確定性全面稽核 + 回放雜湊測試（尚未開始）
+- [ ] 子專案 3 — 本地多人 + 選單/等待室外殼（多鏡頭/HUD）（尚未開始）
+- [ ] 子專案 4 — 網路傳輸層（lockstep 輸入廣播）（尚未開始）
+
 ### 平台支援 ✅
 手機觸控 + RWD — 浮動虛擬搖桿（與鍵盤並存）、視口防捲動縮放、主選單與升級彈窗窄螢幕適配。
 
@@ -76,7 +83,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 
 | 項目 | 結果 |
 |---------|------|
-| 單元測試（Vitest） | 227 通過（FINAL_BOSS_TIME 可注入，終局 Boss 測試 ~2s） |
+| 單元測試（Vitest） | 241 通過（含多玩家 World 1A；N=1 既有測試零改動） |
 | 型別檢查（vue-tsc） | 乾淨 |
 | Production build | 乾淨 |
 | 瀏覽器煙霧測試 | 階段 1–3 + 美術 + 特效 + 新武器/敵種 + 武器進化 + 進度存檔 + 排行榜 + 手機 + 音效 驗收通過（偶見既有 favicon 404，與功能無關） |
