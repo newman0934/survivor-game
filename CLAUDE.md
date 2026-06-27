@@ -38,15 +38,20 @@ src/
 ├─ App.vue                 # 狀態機：menu / playing / upgrading / over；掛載引擎
 ├─ stores/game.ts          # Pinia 橋接 — 只放純 summary 資料 + {id,label} 升級描述
 ├─ ui/                     # MainMenu, Hud, UpgradeModal, GameOver（純呈現）
-└─ engine/                 # 純 TS — 無 Vue/Pinia 執行期依賴
+└─ engine/                 # 純 TS — 無 Vue/Pinia 執行期依賴（依職責分層）
    ├─ types.ts             # Entity, PlayerStats, UpgradeOption
-   ├─ core/                # vector, rng（seeded mulberry32）, objectPool, spatialGrid, input
-   ├─ systems/             # movement, spawn, combat, collision, pickup, leveling（無狀態函式）
+   ├─ core/                # 純確定性原語：vector, rng（seeded mulberry32）, spatialGrid, objectPool, noise, checksum, hitStop
+   ├─ systems/             # movement, spawn, combat, collision, pickup, leveling（無狀態函式）+ *Defs
    ├─ entities/factory.ts  # createPlayer/Enemy/Projectile/Gem
+   ├─ net/                 # lockstep 介面 + LoopbackSession/Transport（多人）
+   ├─ render/              # PixiRenderer, sprites, effects, noiseBackground, postProcessing（皆 import PixiJS）
+   ├─ audio/               # soundManager（Web Audio 合成 SFX/BGM）
+   ├─ input/               # input（鍵盤）, touchInput（虛擬搖桿）
    ├─ World.ts             # 持有 entities，每個 step() 依序跑 systems  ← 核心模擬
-   ├─ PixiRenderer.ts      # entity → PixiJS Graphics + 跟隨玩家的鏡頭
-   └─ Game.ts              # 固定步長 raf 迴圈；串接 World + renderer + input + store
+   └─ Game.ts              # 固定步長 raf 迴圈；串接 World + render + input + audio + store
 ```
+
+> 真連線 Playroom adapter 在 app 層 `src/net/playroom/`（僅 import type 引擎），不在純引擎內。
 
 ## 指令
 
