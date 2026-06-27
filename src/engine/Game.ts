@@ -21,6 +21,8 @@ import { rollUpgrades } from './systems/leveling'
 import { createRng } from './core/rng'
 import { useGameStore } from '../stores/game'
 import type { CharacterKind, MapKind } from './types'
+import { LockstepRunner } from './net/lockstep'
+import type { NetTransport } from './net/types'
 
 /** 固定步長：每格模擬代表 1/60 秒。 */
 const STEP = 1 / 60
@@ -43,6 +45,10 @@ export class Game {
   private stopped = false
   /** 升級抽選專用的亂數來源（與模擬 rng 分離）。 */
   private upgradeRng: ReturnType<typeof createRng>
+  /** 多人 lockstep 協調器；單人為 null（決定 loop 走哪一支）。 */
+  private runner: LockstepRunner | null = null
+  /** 本地玩家這幀待送的升級選擇（多人 pick）；送出後清空。 */
+  private pendingPick: string | null = null
 
   /** 本地玩家索引（單人＝0；SP4 連線時為自己的位置）。 */
   private localPlayerIndex: number
@@ -86,6 +92,31 @@ export class Game {
     return game
   }
 
+  /**
+   * 建立並啟動一場多人局（lockstep）。
+   * @param characters 各玩家角色（依玩家 index）。
+   * @param transport in-game 逐幀輸入傳輸（由 NetSession.toTransport 提供）。
+   * @param localIndex 本地玩家索引。
+   */
+  static async startMultiplayer(
+    canvasParent: HTMLElement, seed: number, characters: CharacterKind[], map: MapKind,
+    transport: NetTransport, localIndex: number, bloomEnabled = true,
+  ): Promise<Game> {
+    const world = new World(seed, characters, map)
+    const renderer = await PixiRenderer.create(canvasParent, bloomEnabled)
+    const game = new Game(world, renderer, seed, localIndex)
+    game.runner = new LockstepRunner(world, transport)
+    game.store.setLoadout(world.loadoutSnapshot(localIndex))
+    game.input.attach()
+    game.touch.attach(canvasParent)
+    soundManager.resume()
+    soundManager.startMusic(map)
+    // M-1：多人升級走 pick；本地選定 → 下次 submitLocalInput 帶上。
+    game.store.onMultiUpgradePicked = (id: string) => { game.pendingPick = id }
+    game.loop(0)
+    return game
+  }
+
   /** 運行時切換 bloom（委派 renderer）。 */
   setBloom(enabled: boolean): void {
     this.renderer.setBloom(enabled)
@@ -113,44 +144,65 @@ export class Game {
 
     if (!this.paused && !this.renderer.isHitStopped()) {
       const tdir = this.touch.direction()
-      this.world.setMoveInput(this.localPlayerIndex, (tdir.x !== 0 || tdir.y !== 0) ? tdir : this.input.direction())
-      // 固定步長累積器：把真實時間存進累積器，再以整數倍的 STEP 消化，確保每步皆為 1/60 秒。
+      const dir = (tdir.x !== 0 || tdir.y !== 0) ? tdir : this.input.direction()
       this.accumulator += frameTime
-      while (this.accumulator >= STEP) {
-        this.world.step(STEP)
-        this.accumulator -= STEP
 
-        // 升級握手：偵測到本步升級即提供 3 選 1、設定選後 callback、暫停迴圈並中斷消化。
-        if (this.world.consumeLevelUp()) {
-          const opts = rollUpgrades(this.upgradeRng, 3, this.world.upgradeContext())
-          this.store.setLoadout(this.world.loadoutSnapshot(this.localPlayerIndex))
-          this.store.offerUpgrades(opts.map((o) => ({ id: o.id, label: o.label })))
-          this.store.onUpgradePicked = (id: string) => {
-            this.world.applyUpgrade(id)
-            this.store.setLoadout(this.world.loadoutSnapshot(this.localPlayerIndex)) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
-            this.paused = false // 玩家選定後恢復
-          }
-          this.paused = true
-          break // 暫停期間停止繼續消化累積器
+      if (this.runner) {
+        // 多人：每 STEP 送一筆本地輸入（含 pick），再把到齊的 tick 推到底。
+        while (this.accumulator >= STEP) {
+          this.runner.submitLocalInput({ move: dir, pick: this.pendingPick })
+          this.pendingPick = null
+          this.accumulator -= STEP
         }
-        // 通關（擊敗終局 Boss）：勝利優先於死亡；推送最終 summary、播勝利音效、切勝利畫面並停迴圈。
+        while (this.runner.tryAdvance()) { /* drain ready ticks */ }
         if (this.world.hasWon()) {
           this.store.updateSummary(this.world.summary(this.localPlayerIndex))
-          soundManager.play('chest')
-          this.store.victory()
-          this.stop()
-          return
+          soundManager.play('chest'); this.store.victory(); this.stop(); return
         }
-        // 死亡即推送最終 summary、通知 store 遊戲結束並停掉迴圈。
-        if (this.world.isPlayerDead()) {
+        if (this.world.hasLost()) {
           this.store.updateSummary(this.world.summary(this.localPlayerIndex))
-          soundManager.play('gameover')
-          this.store.gameOver()
-          this.stop()
-          return
+          soundManager.play('gameover'); this.store.gameOver(); this.stop(); return
+        }
+      } else {
+        // 單人：既有邏輯（設輸入 + 固定步長消化 + 升級暫停握手 + 勝利/死亡）。
+        this.world.setMoveInput(this.localPlayerIndex, dir)
+        while (this.accumulator >= STEP) {
+          this.world.step(STEP)
+          this.accumulator -= STEP
+
+          // 升級握手：偵測到本步升級即提供 3 選 1、設定選後 callback、暫停迴圈並中斷消化。
+          if (this.world.consumeLevelUp()) {
+            const opts = rollUpgrades(this.upgradeRng, 3, this.world.upgradeContext())
+            this.store.setLoadout(this.world.loadoutSnapshot(this.localPlayerIndex))
+            this.store.offerUpgrades(opts.map((o) => ({ id: o.id, label: o.label })))
+            this.store.onUpgradePicked = (id: string) => {
+              this.world.applyUpgrade(id)
+              this.store.setLoadout(this.world.loadoutSnapshot(this.localPlayerIndex)) // 套用後立即刷新持有快照，讓新武器/被動馬上出現在 HUD 持有列
+              this.paused = false // 玩家選定後恢復
+            }
+            this.paused = true
+            break // 暫停期間停止繼續消化累積器
+          }
+          // 通關（擊敗終局 Boss）：勝利優先於死亡；推送最終 summary、播勝利音效、切勝利畫面並停迴圈。
+          if (this.world.hasWon()) {
+            this.store.updateSummary(this.world.summary(this.localPlayerIndex))
+            soundManager.play('chest')
+            this.store.victory()
+            this.stop()
+            return
+          }
+          // 死亡即推送最終 summary、通知 store 遊戲結束並停掉迴圈。
+          if (this.world.isPlayerDead()) {
+            this.store.updateSummary(this.world.summary(this.localPlayerIndex))
+            soundManager.play('gameover')
+            this.store.gameOver()
+            this.stop()
+            return
+          }
         }
       }
-      // 每幀（消化完該幀步數後）推送一次 summary 給 store 更新 HUD。
+
+      // 共用尾段：推 summary + 多人 offer + 排空音效/fx（playerCount 1 不推 multiOffer）。
       this.store.updateSummary(this.world.summary(this.localPlayerIndex))
       // 多人非阻塞升級：推送本地玩家待選（單人 playerCount 1 不進此分支，multiOffer 保持 null）。
       if (this.world.playerCount > 1) {

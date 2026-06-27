@@ -1,6 +1,7 @@
 /** 行程內單機 NetSession（測試/開發；真 Playroom 屬 4C）。 */
 import type { CharacterKind, MapKind } from '../types'
 import { MAX_PLAYERS, type LobbyPlayer, type NetSession } from './session'
+import type { NetTransport, PlayerInput } from './types'
 
 export class LoopbackSession implements NetSession {
   readonly localId: string
@@ -49,5 +50,25 @@ export class LoopbackSession implements NetSession {
   removeFakePlayer(id: string): void {
     this.list = this.list.filter((p) => p.id !== id)
     this.notify()
+  }
+
+  /** in-game 傳輸：本地輸入經此送出；非本地玩家每 tick 自動補中性（單機可跑、隊友待命）。 */
+  toTransport(localIndex: number): NetTransport {
+    const playerCount = this.list.length
+    const local = new Map<number, PlayerInput>()
+    return {
+      playerCount,
+      localIndex,
+      sendInput(tick: number, input: PlayerInput): void { local.set(tick, input) },
+      inputsForTick(tick: number): PlayerInput[] | null {
+        const mine = local.get(tick)
+        if (!mine) return null
+        const arr: PlayerInput[] = []
+        for (let i = 0; i < playerCount; i++) {
+          arr.push(i === localIndex ? mine : { move: { x: 0, y: 0 } })
+        }
+        return arr
+      },
+    }
   }
 }

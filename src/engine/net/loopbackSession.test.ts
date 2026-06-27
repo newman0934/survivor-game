@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { LoopbackSession } from './loopbackSession'
+import { World } from '../World'
+import { LockstepRunner } from './lockstep'
 
 describe('LoopbackSession', () => {
   it('建立者為房主、含本地玩家一人', () => {
@@ -43,5 +45,45 @@ describe('LoopbackSession', () => {
     s.addFakePlayer(); s.setReady(true)
     s.start(123)
     expect(onStart).toHaveBeenCalledWith(123, 'lung', expect.any(Array))
+  })
+})
+
+describe('LoopbackSession.toTransport（4B-2）', () => {
+  it('只送本地輸入即可取得整幀（非本地自動補中性）', () => {
+    const s = new LoopbackSession()
+    s.addFakePlayer() // 2 玩家
+    const t = s.toTransport(0)
+    expect(t.playerCount).toBe(2)
+    expect(t.inputsForTick(0)).toBeNull()          // 本地未送
+    t.sendInput(0, { move: { x: 1, y: 0 } })
+    const inputs = t.inputsForTick(0)
+    expect(inputs).not.toBeNull()
+    expect(inputs![0].move.x).toBe(1)              // 本地
+    expect(inputs![1].move).toEqual({ x: 0, y: 0 }) // 非本地自動中性
+  })
+
+  it('runner + auto-neutral transport：單機多人持續推進', () => {
+    const s = new LoopbackSession()
+    s.addFakePlayer()
+    const w = new World(1, ['macrophage', 'neutrophil'])
+    const r = new LockstepRunner(w, s.toTransport(0))
+    const x0 = w.players[0].entity.pos.x
+    for (let f = 0; f < 60; f++) {
+      r.submitLocalInput({ move: { x: 1, y: 0 } })
+      while (r.tryAdvance()) { /* */ }
+    }
+    expect(r.getCurrentTick()).toBeGreaterThan(0) // 有推進、未停滯
+    expect(w.players[0].entity.pos.x).toBeGreaterThan(x0) // 本地玩家右移
+  })
+
+  it('全員死亡 → world.hasLost 為 true', () => {
+    const s = new LoopbackSession()
+    s.addFakePlayer()
+    const w = new World(1, ['macrophage', 'neutrophil'])
+    const r = new LockstepRunner(w, s.toTransport(0))
+    w.players[0].entity.hp = 0; w.players[1].entity.hp = 0
+    r.submitLocalInput({ move: { x: 0, y: 0 } })
+    while (r.tryAdvance()) { /* */ }
+    expect(w.hasLost()).toBe(true)
   })
 })

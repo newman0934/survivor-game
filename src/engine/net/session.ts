@@ -1,5 +1,6 @@
 /** 等待室階段的連線會話抽象（與遊戲中的 NetTransport 分離）。 */
 import type { CharacterKind, MapKind } from '../types'
+import type { NetTransport } from './types'
 
 /** 玩家上限。 */
 export const MAX_PLAYERS = 4
@@ -29,5 +30,7 @@ export interface NetSession {
   /** 僅房主：canStart 才觸發 onStart。 */
   start(seed: number): void
   onStart(cb: (seed: number, map: MapKind, players: LobbyPlayer[]) => void): void
+  /** 進遊戲時產生逐幀輸入傳輸（lockstep 用）。 */
+  toTransport(localIndex: number): NetTransport
   leave(): void
 }
