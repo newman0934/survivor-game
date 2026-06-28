@@ -40,6 +40,7 @@ export class LockstepRunner {
       if (pick) this.world.chooseUpgrade(i, pick)
     }
     this.world.step(1 / 60)
+    this.transport.forgetTick?.(this.currentTick) // 釋放已消化 tick 緩衝（長局/多場不累積）
     this.currentTick += 1
     return true
   }

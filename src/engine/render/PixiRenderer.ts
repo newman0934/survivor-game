@@ -8,6 +8,7 @@
 import { Application, Container, Graphics } from 'pixi.js'
 import type { World } from '../World'
 import type { Entity, CharacterKind, FxEvent } from '../types'
+import type { Vec2 } from '../core/vector'
 import {
   drawPlayer, drawEnemy, drawGem, drawProjectile, drawOrbit, drawChest, drawPickup,
   drawMapBackground, drawGarlicAura,
@@ -25,6 +26,8 @@ interface Sprite {
   lastSeen: number
   /** 待機動畫相位（建立時隨機，使各單位脈動/搖擺錯開、不同步）。 */
   phase: number
+  /** 玩家朝向（該玩家自己的 lastMoveDir）；多人時各玩家獨立，不再共用 players[0]。 */
+  faceDir?: Vec2
 }
 
 export class PixiRenderer {
@@ -122,8 +125,9 @@ export class PixiRenderer {
   }
 
   /** 處理單一 entity：取得/建立 sprite、更新位置與動畫、戳記本幀。選填 playerColor/playerCharacter 可 override 預設值（多人各自外觀）。 */
-  private syncSprite(e: Entity, world: World, playerColor = world.playerColor, playerCharacter = world.playerCharacter): void {
+  private syncSprite(e: Entity, world: World, playerColor = world.playerColor, playerCharacter = world.playerCharacter, faceDir?: Vec2): void {
     const s = this.spriteFor(e, playerColor, playerCharacter)
+    if (faceDir) s.faceDir = faceDir
     s.root.position.set(e.pos.x, e.pos.y)
     s.root.visible = true
     s.lastSeen = this.frameId
@@ -175,9 +179,9 @@ export class PixiRenderer {
     // 渲染全部玩家（各自 color/character）；本地玩家最後畫（最上層）。
     for (const pl of world.players) {
       if (pl === lp) continue
-      this.syncSprite(pl.entity, world, pl.color, pl.character)
+      this.syncSprite(pl.entity, world, pl.color, pl.character, pl.lastMoveDir)
     }
-    this.syncSprite(local, world, lp.color, lp.character)
+    this.syncSprite(local, world, lp.color, lp.character, lp.lastMoveDir)
     // 回收：本幀未戳記者（已消失）銷毀並移出對照表，避免洩漏。
     for (const [e, s] of this.sprites) {
       if (s.lastSeen !== this.frameId) {
@@ -242,8 +246,9 @@ export class PixiRenderer {
         s.root.rotation = Math.atan2(e.vel.y, e.vel.x)
         break
       case 'player': {
-        // 細胞：朝向 + 微搖擺；緩慢呼吸擠壓拉伸（果凍感）
-        s.root.rotation = Math.atan2(world.lastMoveDir.y, world.lastMoveDir.x) + 0.06 * Math.sin(t * 2 + ph)
+        // 細胞：朝向（該玩家自己的 faceDir，多人各自獨立）+ 微搖擺；緩慢呼吸擠壓拉伸（果凍感）
+        const dir = s.faceDir ?? world.lastMoveDir
+        s.root.rotation = Math.atan2(dir.y, dir.x) + 0.06 * Math.sin(t * 2 + ph)
         const b = 0.05 * Math.sin(t * 1.8 + ph)
         s.root.scale.set(1 + b, 1 - b)
         break

@@ -22,4 +22,6 @@ export interface NetTransport {
   sendInput(tick: number, input: PlayerInput): void
   /** 取某 tick 全員輸入；尚未到齊回 null。 */
   inputsForTick(tick: number): TickInputs | null
+  /** 釋放已消化 tick 的緩衝（lockstep 推進後呼叫，避免長局累積）；選用。 */
+  forgetTick?(tick: number): void
 }
