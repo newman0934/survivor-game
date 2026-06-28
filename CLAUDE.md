@@ -59,10 +59,11 @@ src/
 
 ```bash
 npm run dev        # Vite 開發伺服器 http://localhost:5173
-npm test           # Vitest（引擎單元測試）
+npm test           # Vitest（src/**/*.test.ts 單元測試）
+npm run e2e        # Playwright 關鍵流程煙霧測試（e2e/**/*.spec.ts，自動起 dev server）
 npm run typecheck  # vue-tsc --noEmit
 npm run build      # 型別檢查 + production build
-npm run lint       # eslint --fix
+npm run lint       # eslint --fix（typescript-eslint，含 .vue）
 ```
 
 ## 慣例
