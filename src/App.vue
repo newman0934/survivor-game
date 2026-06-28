@@ -11,7 +11,9 @@
  */
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useGameStore } from './stores/game'
-import { Game } from './engine/Game'
+// 引擎（含 PixiJS）以動態 import 懶載入：主選單不需 Pixi，開始遊戲時才下載引擎 chunk。
+// 型別專用 import（編譯後抹除）保留 `game: Game | null` 標註，不進初始 bundle。
+import type { Game } from './engine/Game'
 import type { CharacterKind, MapKind } from './engine/types'
 import { loadSave, recordRun, type CumulativeStats, type RunRecord } from './persistence/saveStore'
 import { loadSettings, saveSettings } from './persistence/settingsStore'
@@ -29,7 +31,8 @@ import MultiplayerMenu from './ui/screens/MultiplayerMenu.vue'
 import WaitingRoom from './ui/screens/WaitingRoom.vue'
 // LoopbackSession 保留供本地單機測試切換用；正式多人改用 PlayroomSession。
 // import { LoopbackSession } from './engine/net/loopbackSession'
-import { PlayroomSession } from './net/playroom/playroomSession'
+// PlayroomSession（含 playroomkit SDK，體積大）以動態 import 懶載入：
+// 僅在玩家進入多人流程時才下載，主選單/單人不背這個重量。
 import type { NetSession } from './engine/net/session'
 
 const store = useGameStore()
@@ -69,7 +72,8 @@ function pushLobby() {
   })
 }
 function openMultiplayer() { showMultiMenu.value = true }
-function createOrJoin(code?: string) {
+async function createOrJoin(code?: string) {
+  const { PlayroomSession } = await import('./net/playroom/playroomSession')
   session = new PlayroomSession({ roomCode: code || undefined, localCharacter: 'macrophage' })
   session.onChange(pushLobby)
   session.onPeerLeft(() => {
@@ -82,6 +86,7 @@ function createOrJoin(code?: string) {
     const localIndex = players.findIndex((p) => p.id === session!.localId)
     store.setCharacter(players[localIndex]?.character ?? 'macrophage')
     store.start() // phase → playing
+    const { Game } = await import('./engine/Game')
     game = await Game.startMultiplayer(
       canvasParent.value, seed, players.map((p) => p.character), map,
       session.toTransport(localIndex), localIndex, bloomEnabled.value,
@@ -115,6 +120,7 @@ async function startGame(opts: { character: CharacterKind; map: MapKind } = sele
   store.start()
   store.setCharacter(opts.character)
   if (!canvasParent.value) return
+  const { Game } = await import('./engine/Game')
   game = await Game.start(canvasParent.value, seed++, opts.character, opts.map, bloomEnabled.value)
 }
 
