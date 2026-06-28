@@ -5,6 +5,7 @@
 import type { World } from '../World'
 import type { NetTransport, PlayerInput } from './types'
 
+/** 中性輸入（不移動、不選卡）；補在尚無資料的 tick 以維持各端推進一致。 */
 const NEUTRAL: PlayerInput = { move: { x: 0, y: 0 } }
 
 export class LockstepRunner {
