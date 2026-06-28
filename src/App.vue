@@ -81,19 +81,28 @@ async function createOrJoin(code?: string) {
     store.toMenu()
     store.setNotice('有玩家離線，本局結束')
   })
-  session.onStart(async (seed, map, players) => {
-    if (!session || !canvasParent.value) return
-    const localIndex = players.findIndex((p) => p.id === session!.localId)
+  session.onStart(async (runSeed, map, players) => {
+    const sess = session
+    if (!sess || !canvasParent.value) return
+    const localIndex = players.findIndex((p) => p.id === sess.localId)
     const localCharacter = players[localIndex]?.character ?? 'macrophage'
     store.setCharacter(localCharacter)
     // 記錄當局 metadata（本地角色 + 房主地圖），使結算 recordRun 用對多人設定而非殘留的單人 selected。
     selected = { character: localCharacter, map }
     store.start() // phase → playing
-    const { Game } = await import('./engine/Game')
-    game = await Game.startMultiplayer(
-      canvasParent.value, seed, players.map((p) => p.character), map,
-      session.toTransport(localIndex), localIndex, bloomEnabled.value,
-    )
+    try {
+      const { Game } = await import('./engine/Game')
+      if (!canvasParent.value || store.phase !== 'playing') return // 載入期間已離開
+      const g = await Game.startMultiplayer(
+        canvasParent.value, runSeed, players.map((p) => p.character), map,
+        sess.toTransport(localIndex), localIndex, bloomEnabled.value,
+      )
+      if (store.phase !== 'playing') { g.stop(); return } // 啟動期間已離開 → 不留孤兒引擎
+      game = g
+    } catch {
+      store.toMenu()
+      store.setNotice('載入失敗，請重試')
+    }
   })
   showMultiMenu.value = false
   pushLobby()
@@ -123,8 +132,16 @@ async function startGame(opts: { character: CharacterKind; map: MapKind } = sele
   store.start()
   store.setCharacter(opts.character)
   if (!canvasParent.value) return
-  const { Game } = await import('./engine/Game')
-  game = await Game.start(canvasParent.value, seed++, opts.character, opts.map, bloomEnabled.value)
+  try {
+    const { Game } = await import('./engine/Game')
+    if (!canvasParent.value || store.phase !== 'playing') return // 載入期間已離開
+    const g = await Game.start(canvasParent.value, seed++, opts.character, opts.map, bloomEnabled.value)
+    if (store.phase !== 'playing') { g.stop(); return } // 啟動期間已離開 → 不留孤兒引擎
+    game = g
+  } catch {
+    store.toMenu()
+    store.setNotice('載入失敗，請重試')
+  }
 }
 
 // 重新開始：先停掉舊引擎（Game.stop 為冪等）並清空參照，再以同角色+地圖開新的一場。
