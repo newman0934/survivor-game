@@ -53,4 +53,9 @@ export class PlayroomTransport implements NetTransport {
     for (let i = 0; i < this.playerCount; i++) if (!row[i]) return null
     return row as TickInputs
   }
+
+  /** 釋放已消化 tick 的緩衝列（lockstep 推進後呼叫）。 */
+  forgetTick(tick: number): void {
+    this.buffer.delete(tick)
+  }
 }

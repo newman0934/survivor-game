@@ -70,6 +70,7 @@ export class LoopbackSession implements NetSession {
         }
         return arr
       },
+      forgetTick(tick: number): void { local.delete(tick) },
     }
   }
 }

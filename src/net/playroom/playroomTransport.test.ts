@@ -63,4 +63,15 @@ describe('PlayroomTransport', () => {
     f.deliver({ tick: 0, input: mv(9, 9) }, 'ghost') // 不在快照
     expect(t.inputsForTick(0)).toBeNull() // 仍缺 b
   })
+
+  it('forgetTick 釋放已消化 tick 緩衝（避免長局累積）', () => {
+    const ids = sortPlayerIds(['a', 'b'])
+    const f = fakeChannel()
+    const t = new PlayroomTransport(ids, 'a', f.ch)
+    t.sendInput(3, mv(1, 0))
+    f.deliver({ tick: 3, input: mv(-1, 0) }, 'b')
+    expect(t.inputsForTick(3)).toEqual([mv(1, 0), mv(-1, 0)]) // 到齊
+    t.forgetTick(3)
+    expect(t.inputsForTick(3)).toBeNull() // 已釋放
+  })
 })

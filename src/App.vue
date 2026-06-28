@@ -84,7 +84,10 @@ async function createOrJoin(code?: string) {
   session.onStart(async (seed, map, players) => {
     if (!session || !canvasParent.value) return
     const localIndex = players.findIndex((p) => p.id === session!.localId)
-    store.setCharacter(players[localIndex]?.character ?? 'macrophage')
+    const localCharacter = players[localIndex]?.character ?? 'macrophage'
+    store.setCharacter(localCharacter)
+    // 記錄當局 metadata（本地角色 + 房主地圖），使結算 recordRun 用對多人設定而非殘留的單人 selected。
+    selected = { character: localCharacter, map }
     store.start() // phase → playing
     const { Game } = await import('./engine/Game')
     game = await Game.startMultiplayer(
