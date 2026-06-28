@@ -2,7 +2,7 @@
 
 Survivor Game — 開發進度與路線圖。各功能詳細規格見 `docs/superpowers/specs/<feature>/`。
 
-_最後更新：2026-06-28_
+_最後更新：2026-06-28（4C 完成 + 引擎/UI 架構重構 + 懶載入效能優化）_
 
 ## 狀態
 
@@ -10,7 +10,7 @@ _最後更新：2026-06-28_
 
 「**免疫大戰**」主題（免疫細胞 vs 病原體，場景在血管／胃／肺泡／腸道／腦）：7 武器（各有進化層）、8 病原（含遠程／分裂／自爆）、
 Boss、10 被動、5 角色、5 地圖；進度存檔記錄戰績與累積統計，主選單顯示統計與排行榜，結算可「再玩一次」或
-「回主選單」重選。**319 測試全綠、型別檢查乾淨、production build 乾淨。** 多人合作連線地基（1A→4B-2）✅ + Playroom adapter（4C）我方可驗部分 ✅；真跨機同步待使用者兩機實測（見 `specs/coop-playroom-adapter/manual-test-guide.md`）。
+「回主選單」重選。**323 測試全綠、型別檢查乾淨、production build 乾淨。** 多人合作連線地基（1A→4B-2）✅ + Playroom adapter（4C）我方可驗部分 ✅；真跨機同步待使用者兩機實測（見 `specs/coop-playroom-adapter/manual-test-guide.md`）。
 
 > 多人合作連線設計文件 → `specs/2026-06-26-multiplayer-coop-design.md`
 
@@ -72,12 +72,20 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 - [x] 子專案 4A（lockstep 核心）— 傳輸抽象 `NetTransport` + `LoopbackTransport` + `LockstepRunner`（inputDelay 緩衝、到齊推進、升級走 pick 輸入）；以 `World.checksum()` 驗兩端同步；純新增 `engine/net/`、零退化 → specs/coop-lockstep-core/
 - [x] 子專案 4B-1 — `NetSession` 抽象 + `LoopbackSession` + 主選單單人/多人分層 + `MultiplayerMenu`/`WaitingRoom`（建立/加入/等待室，房主選圖+就緒+開始觸發 onStart）；單人零退化 → specs/coop-lobby-session/
 - [x] 子專案 4B-2 — Game 多人 lockstep 模式：`NetSession.toTransport`（LoopbackSession auto-neutral，單機可跑）+ `Game.startMultiplayer`（LockstepRunner 驅動）+ loop 多人分支（M-1：不暫停、升級走 pick）+ hasWon/hasLost 結束 + App onStart 接線；單人逐行等價零退化 → specs/coop-game-lockstep/
-- [x] 子專案 4C — Playroom（Free）adapter：實作 NetSession + NetTransport（真房間/碼/onPlayerJoin/RPC/種子廣播/斷線）+ App 接線 + store notice 離線提示 + 兩機測試指南；我方可驗部分完成（typecheck/build/319 測試全綠）；真跨機同步待使用者兩機實測
+- [x] 子專案 4C — Playroom（Free）adapter：實作 NetSession + NetTransport（真房間/碼/onPlayerJoin/RPC/種子廣播/斷線）+ App 接線 + store notice 離線提示 + 兩機測試指南；我方可驗部分完成（typecheck/build/323 測試全綠）；真跨機同步待使用者兩機實測
 
 ### 平台支援 ✅
 手機觸控 + RWD — 浮動虛擬搖桿（與鍵盤並存）、視口防捲動縮放、主選單與升級彈窗窄螢幕適配。
 
-## 效能最佳化（行為不變、純內部）
+## 架構重構（行為不變、零退化，determinism 回放 + 測試把關）
+- **engine/ 依職責分層**：`core`（純確定性原語）/`systems`（無狀態系統函式）+ `systems/defs`（純資料表）/`entities`/`net`/`render` + `render/sprites`（程式化繪製）/`audio`/`input`；純引擎與 PixiJS 渲染界線在目錄上一目了然
+- **ui/ 依職責分層**：`common`（Overlay/Panel/GameIcon）/`screens`/`hud`/`upgrade`/`icons`
+- **World.ts 上帝物件拆解**：1038→680 行，step() 的生怪/死亡結算/升級/開火叢集抽成 `systems/{enemySpawning,enemyDeath,playerProgress,weaponFiring}`，World 退為「狀態 + step 編排」；公開 API 留薄殼委派（既有測試零改動）
+- **sprites.ts 拆分**：654→barrel + `render/sprites/{helpers,cast,entities,background}`
+- 命名：`spawning.ts`→`enemySpawning.ts`（消除與生怪曲線 `spawn.ts` 混淆）
+
+## 效能最佳化（行為不變）
+- **懶載入引擎與 Playroom**：`App.vue` 改動態 import `Game`（→PixiJS）與 `PlayroomSession`（→playroomkit SDK）；初始 bundle **1.53MB → 115KB**（−93%），pixi+引擎（~366KB）只在開始遊戲時下載、playroomkit（~1.17MB）只在進多人時下載
 - **SpatialGrid** 改巢狀數值索引（`Map<string>` → `Map<cx, Map<cy>>`），免每幀字串 key 配置
 - **findNearestN** 改單次掃描 top-k，免全排序與中間陣列/包裝物件
 - **PixiRenderer.render** 改 frame 戳記回收，免每幀合併陣列／filter／Set
@@ -86,7 +94,7 @@ PixiJS 渲染 + 跟隨鏡頭、Pinia 橋接 store、核心工具（seeded RNG／
 
 | 項目 | 結果 |
 |---------|------|
-| 單元測試（Vitest） | 312 通過（含多人 1A/1B/SP2/SP3/4A/4B-1/4B-2） |
+| 單元測試（Vitest） | 323 通過（含多人 1A→4C + 確定性回放/原始碼守護） |
 | 型別檢查（vue-tsc） | 乾淨 |
-| Production build | 乾淨 |
+| Production build | 乾淨（初始 bundle 115KB；pixi/playroomkit 懶載） |
 | 瀏覽器煙霧測試 | 階段 1–3 + 美術 + 特效 + 新武器/敵種 + 武器進化 + 進度存檔 + 排行榜 + 手機 + 音效 驗收通過（偶見既有 favicon 404，與功能無關） |
