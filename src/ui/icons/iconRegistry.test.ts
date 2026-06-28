@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { resolveOptionIcon, WEAPON_ICONS, PASSIVE_ICONS, CHARACTER_ICONS } from './iconRegistry'
-import { WEAPON_ORDER } from '../../engine/systems/weaponDefs'
-import { PASSIVE_ORDER } from '../../engine/systems/passiveDefs'
-import { CHARACTER_ORDER } from '../../engine/systems/characterDefs'
+import { WEAPON_ORDER } from '../../engine/systems/defs/weaponDefs'
+import { PASSIVE_ORDER } from '../../engine/systems/defs/passiveDefs'
+import { CHARACTER_ORDER } from '../../engine/systems/defs/characterDefs'
 
 const HEX = /^#[0-9a-fA-F]{6}$/
 

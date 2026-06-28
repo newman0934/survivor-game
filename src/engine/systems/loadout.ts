@@ -5,7 +5,7 @@
  * 判定條件與 leveling.buildCandidates 一致（滿級 + 持有指定被動）。純 TS、無 Vue/Pinia。
  */
 import type { WeaponKind, PassiveKind } from '../types'
-import { WEAPON_DEFS } from './weaponDefs'
+import { WEAPON_DEFS } from './defs/weaponDefs'
 
 /** 武器進化狀態：已進化 / 可進化 / 尚未滿足。 */
 export type EvolutionStatus = 'evolved' | 'ready' | 'pending'

@@ -39,10 +39,10 @@ describe('原始碼守護：模擬路徑無非確定性 global（SP2）', () => 
    */
   const EXCLUDE = new Set([
     './Game.ts',
-    './render/PixiRenderer.ts', './render/sprites.ts', './render/postProcessing.ts',
+    './render/PixiRenderer.ts', './render/postProcessing.ts',
     './render/noiseBackground.ts', './render/effects.ts',
-    './render/spriteHelpers.ts', './render/spriteCast.ts',
-    './render/spriteEntities.ts', './render/spriteBackground.ts',
+    './render/sprites/index.ts', './render/sprites/helpers.ts', './render/sprites/cast.ts',
+    './render/sprites/entities.ts', './render/sprites/background.ts',
     './audio/soundManager.ts', './input/input.ts', './input/touchInput.ts',
     './core/hitStop.ts', './core/noise.ts',
   ])

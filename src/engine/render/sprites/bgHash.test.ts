@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bgHash } from './sprites'
+import { bgHash } from './helpers'
 
 describe('bgHash', () => {
   it('相同輸入回傳相同值（確定性）', () => {

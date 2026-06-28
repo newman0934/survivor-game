@@ -3,10 +3,10 @@
  * 純繪製、不修改模擬狀態；動畫由 PixiRenderer 以 transform 每幀套用。
  */
 import { Graphics } from 'pixi.js'
-import type { Entity, CharacterKind } from '../types'
-import { ENEMY_DEFS } from '../systems/enemyDefs'
-import { ELITE_AFFIX_DEFS } from '../systems/eliteDefs'
-import { dim, lighten, shaded, membrane, innerShade, rimLight, specular, emissiveCore, CELL_CORE } from './spriteHelpers'
+import type { Entity, CharacterKind } from '../../types'
+import { ENEMY_DEFS } from '../../systems/defs/enemyDefs'
+import { ELITE_AFFIX_DEFS } from '../../systems/defs/eliteDefs'
+import { dim, lighten, shaded, membrane, innerShade, rimLight, specular, emissiveCore, CELL_CORE } from './helpers'
 
 /**
  * 玩家：四種免疫細胞各有獨特輪廓（依玩法定位 + 生物特徵），顏色為角色色。

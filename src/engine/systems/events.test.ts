@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { createRng } from '../core/rng'
 import { pickEvent, pickAffix } from './events'
-import { GAME_EVENT_ORDER } from './eventDefs'
-import { ELITE_AFFIX_ORDER } from './eliteDefs'
+import { GAME_EVENT_ORDER } from './defs/eventDefs'
+import { ELITE_AFFIX_ORDER } from './defs/eliteDefs'
 
 describe('events 純函式', () => {
   it('pickEvent 回傳合法事件且確定性（同 seed 同序列）', () => {

@@ -10,7 +10,7 @@
  * 每個繪製函式把某種 entity 的造型用 PixiJS Graphics 畫出（畫一次靜態幾何）；動畫（旋轉/脈動/
  * 閃白）由 PixiRenderer 以 transform 每幀套用。純繪製、不修改模擬狀態。
  */
-export { bgHash } from './spriteHelpers'
-export { drawPlayer, drawEnemy } from './spriteCast'
-export { drawGem, drawProjectile, drawOrbit, drawChest, drawPickup } from './spriteEntities'
-export { drawBackgroundGrid, drawMapBackground, drawGarlicAura } from './spriteBackground'
+export { bgHash } from './helpers'
+export { drawPlayer, drawEnemy } from './cast'
+export { drawGem, drawProjectile, drawOrbit, drawChest, drawPickup } from './entities'
+export { drawBackgroundGrid, drawMapBackground, drawGarlicAura } from './background'

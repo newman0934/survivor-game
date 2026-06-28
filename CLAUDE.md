@@ -41,10 +41,12 @@ src/
 └─ engine/                 # 純 TS — 無 Vue/Pinia 執行期依賴（依職責分層）
    ├─ types.ts             # Entity, PlayerStats, UpgradeOption
    ├─ core/                # 純確定性原語：vector, rng（seeded mulberry32）, spatialGrid, objectPool, noise, checksum, hitStop
-   ├─ systems/             # movement, spawn, combat, collision, pickup, leveling（無狀態函式）+ *Defs
+   ├─ systems/             # 無狀態系統函式：movement, enemyAI, combat, collision, pickup, leveling, weapons/weaponFiring, enemySpawning, enemyDeath, playerProgress, events…
+   │  └─ defs/             #   純資料表：character/enemy/elite/event/map/passive/pickup/weaponDefs
    ├─ entities/factory.ts  # createPlayer/Enemy/Projectile/Gem
    ├─ net/                 # lockstep 介面 + LoopbackSession/Transport（多人）
-   ├─ render/              # PixiRenderer, sprites, effects, noiseBackground, postProcessing（皆 import PixiJS）
+   ├─ render/              # PixiRenderer, effects, noiseBackground, postProcessing（皆 import PixiJS）
+   │  └─ sprites/          #   程式化繪製：index(barrel)/helpers/cast/entities/background
    ├─ audio/               # soundManager（Web Audio 合成 SFX/BGM）
    ├─ input/               # input（鍵盤）, touchInput（虛擬搖桿）
    ├─ World.ts             # 持有 entities，每個 step() 依序跑 systems  ← 核心模擬

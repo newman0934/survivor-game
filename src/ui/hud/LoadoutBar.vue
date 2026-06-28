@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /** LoadoutBar.vue — 左下持有圖示列（純讀取）。武器+被動小圖示 + 等級 pip + 進化金邊。 */
 import { useGameStore, type LoadoutSnapshot } from '../../stores/game'
-import { WEAPON_DEFS } from '../../engine/systems/weaponDefs'
-import { PASSIVE_DEFS } from '../../engine/systems/passiveDefs'
+import { WEAPON_DEFS } from '../../engine/systems/defs/weaponDefs'
+import { PASSIVE_DEFS } from '../../engine/systems/defs/passiveDefs'
 import GameIcon from '../common/GameIcon.vue'
 
 const store = useGameStore()

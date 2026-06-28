@@ -7,7 +7,7 @@
  */
 import type { Vec2 } from '../core/vector'
 import type { Entity, EnemyKind, PickupKind } from '../types'
-import { ENEMY_DEFS } from '../systems/enemyDefs'
+import { ENEMY_DEFS } from '../systems/defs/enemyDefs'
 
 /** 共用的 entity 基底；各工廠以此為底再覆寫專屬欄位（避免漏填欄位）。 */
 const base = (): Entity => ({

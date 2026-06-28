@@ -2,7 +2,7 @@
  * 精英詞綴定義表（純資料）。每個詞綴的數值乘區、回血、死亡爆炸與光環色。
  * 新增詞綴或調數值都從這裡下手。
  */
-import type { EliteAffix, EliteAffixDef } from '../types'
+import type { EliteAffix, EliteAffixDef } from '../../types'
 
 /** 確定性迭代/抽選用的固定順序。 */
 export const ELITE_AFFIX_ORDER: EliteAffix[] = ['giant', 'frenzy', 'regen', 'volatile']

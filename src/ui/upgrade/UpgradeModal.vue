@@ -8,8 +8,8 @@
  */
 import { computed } from 'vue'
 import { useGameStore, type LoadoutSnapshot } from '../../stores/game'
-import { WEAPON_DEFS } from '../../engine/systems/weaponDefs'
-import { PASSIVE_DEFS } from '../../engine/systems/passiveDefs'
+import { WEAPON_DEFS } from '../../engine/systems/defs/weaponDefs'
+import { PASSIVE_DEFS } from '../../engine/systems/defs/passiveDefs'
 import { evolutionStatus } from '../../engine/systems/loadout'
 import Overlay from '../common/Overlay.vue'
 import Panel from '../common/Panel.vue'
