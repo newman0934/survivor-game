@@ -7,6 +7,7 @@
  */
 import type { SoundEvent, MapKind } from '../types'
 
+/** 可播放的音效事件：模擬層 SoundEvent 再加 UI 端的 'gameover'。 */
 type Event = SoundEvent | 'gameover'
 
 /** 一個和弦：低音根音 + 三個分解和弦音。 */

@@ -5,6 +5,7 @@
  */
 import type { StorageLike } from './saveStore'
 
+/** localStorage key（版號內嵌，方便日後遷移）。 */
 const SETTINGS_KEY = 'survivor-settings-v1'
 
 /** 使用者設定。 */
@@ -18,6 +19,7 @@ function defaults(): Settings {
   return { bloom: true }
 }
 
+/** 正式環境的儲存來源：瀏覽器 localStorage；非瀏覽器（如測試/SSR）回 null。 */
 function defaultStorage(): StorageLike | null {
   return typeof window !== 'undefined' && window.localStorage ? window.localStorage : null
 }
